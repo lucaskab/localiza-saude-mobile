@@ -1,6 +1,14 @@
-# Welcome to your Expo app 👋
+# Localiza Saúde Mobile 🏥
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A React Native mobile application for finding and booking appointments with healthcare professionals.
+
+## Tech Stack
+
+- **React Native 0.83** with React 19
+- **Expo SDK 55** with Expo Router
+- **React Native Unistyles v3** for theming
+- **TypeScript** for type safety
+- **EAS Build** for local and cloud builds
 
 ## Get started
 
@@ -8,49 +16,115 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
    ```bash
    npm install
+   # or
+   bun install
    ```
 
-2. Start the app
+2. Start the development server
 
    ```bash
-   npx expo start
+   npm start
    ```
 
-In the output, you'll find options to open the app in a
+3. Run on a device
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+   Since this app uses native modules (Unistyles v3), you need a development build:
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+   ```bash
+   # iOS
+   npm run ios
+   
+   # Android
+   npm run android
+   ```
 
-## Get a fresh project
+## Building the App
 
-When you're ready, run:
+This project includes scripts for building the app locally using EAS Build.
+
+### Quick Build Commands
 
 ```bash
-npm run reset-project
+# Development builds (with debug tools)
+npm run build:dev:ios        # iOS simulator
+npm run build:dev:android    # Android APK
+npm run build:dev:all        # All platforms
+
+# Production builds
+npm run build:prod:ios       # iOS device
+npm run build:prod:android   # Android APK
+npm run build:prod:all       # All platforms
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Using the Build Script
 
-### Other setup steps
+For more control, use the build script directly:
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+node scripts/build-local.js [dev|prod] [ios|android|all]
+```
 
-## Learn more
+**Examples:**
+```bash
+node scripts/build-local.js dev ios       # Development iOS
+node scripts/build-local.js prod android  # Production Android
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+### Build Profiles
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- **Development (`dev`)**: Includes debug tools, source maps, and development client
+  - App ID: `com.llf.localiza-saude.dev`
+  - App Name: "Localiza Saúde (Dev)"
+  
+- **Production (`prod`)**: Optimized, minified, production-ready
+  - App ID: `com.llf.localiza-saude`
+  - App Name: "Localiza Saúde"
 
-## Join the community
+📖 **For detailed build instructions, see [BUILD.md](./BUILD.md)**
 
-Join our community of developers creating universal apps.
+## Project Structure
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```
+src/
+├── app/                    # Expo Router screens
+│   ├── (bottom-tabs)/     # Main app tabs
+│   ├── login.tsx          # Login screen
+│   └── _layout.tsx        # Root layout with auth
+├── components/
+│   ├── ui/                # Reusable UI components
+│   │   └── button.tsx     # Button component
+│   └── icons.tsx          # App icons
+├── contexts/
+│   └── auth.tsx           # Authentication context
+└── styles/
+    └── unistyles.ts       # Theme configuration
+```
+
+## Features
+
+- ✅ Modern React 19 patterns (no forwardRef needed)
+- ✅ Full TypeScript support
+- ✅ Light/Dark theme support with Unistyles
+- ✅ Authentication flow (Google, Apple, Email)
+- ✅ File-based routing with Expo Router
+- ✅ Local EAS builds
+- ✅ Development and Production variants
+
+## Development
+
+### Linting
+
+```bash
+npm run lint
+```
+
+## Resources
+
+- [Expo Documentation](https://docs.expo.dev/)
+- [React Native Unistyles](https://reactnativeunistyles.vercel.app/)
+- [Expo Router](https://docs.expo.dev/router/introduction/)
+- [EAS Build](https://docs.expo.dev/build/introduction/)
+
+## License
+
+[Add your license here]

@@ -1,16 +1,29 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import React from 'react';
-import { useColorScheme } from 'react-native';
+import { Stack } from "expo-router";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { AuthProvider } from "@/contexts/auth";
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+function RootNavigator() {
+	return (
+		<AuthProvider>
+			<Stack
+				screenOptions={{
+					headerShown: false,
+					animation: "none",
+				}}
+			>
+				<Stack.Screen name="login" />
+				<Stack.Screen name="(bottom-tabs)" />
+				<Stack.Screen name="search" />
+				<Stack.Screen name="auth/callback" />
+			</Stack>
+		</AuthProvider>
+	);
+}
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
-  );
+export default function Layout() {
+	return (
+		<GestureHandlerRootView style={{ flex: 1 }}>
+			<RootNavigator />
+		</GestureHandlerRootView>
+	);
 }

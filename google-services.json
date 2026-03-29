@@ -1,0 +1,98 @@
+{
+  "project_info": {
+    "project_number": "522030499069",
+    "project_id": "localiza-saude-cc7e3",
+    "storage_bucket": "localiza-saude-cc7e3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:522030499069:android:2ad5c949dd969f0882aa94",
+        "android_client_info": {
+          "package_name": "com.llf.localizasaude"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "522030499069-0uc30n9plaurdf21fsoof68qisvdp3rj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.llf.localizasaude",
+            "certificate_hash": "25ccbe0071c11b8bfebe2450108b7bf35ae6b1fe"
+          }
+        },
+        {
+          "client_id": "522030499069-ldtptggdu6d5sij39mf6dch74b2qhe0r.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZgbVfnITDHWRy60t28PqmZt6LGq-6M0o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "522030499069-ldtptggdu6d5sij39mf6dch74b2qhe0r.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "522030499069-5afmntj5rq5hjro7fjrrnp537l96llt6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.llf.localizasaude"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:522030499069:android:f90b0bc96d14fba382aa94",
+        "android_client_info": {
+          "package_name": "com.llf.localizasaude.dev"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "522030499069-vcc1ac7fenhsj1i86gusf6lvchk5rmes.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.llf.localizasaude.dev",
+            "certificate_hash": "8e36fb735fa26d94a7016f72d3449475491f1c58"
+          }
+        },
+        {
+          "client_id": "522030499069-ldtptggdu6d5sij39mf6dch74b2qhe0r.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZgbVfnITDHWRy60t28PqmZt6LGq-6M0o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "522030499069-ldtptggdu6d5sij39mf6dch74b2qhe0r.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "522030499069-5afmntj5rq5hjro7fjrrnp537l96llt6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.llf.localizasaude"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
