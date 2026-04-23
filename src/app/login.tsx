@@ -32,139 +32,6 @@ export default function Login() {
 		);
 	};
 
-	const handleDevLogin = () => {
-		// Quick dev login bypass
-		Alert.alert(
-			"Dev Mode",
-			"This will skip authentication (development only)",
-			[
-				{ text: "Cancel", style: "cancel" },
-				{
-					text: "Continue",
-					onPress: () => router.replace("/(bottom-tabs)/home"),
-				},
-			],
-		);
-	};
-
-	const testBackendConnection = async () => {
-		setIsTesting(true);
-		const results: string[] = [];
-
-		try {
-			console.log("🧪 Testing backend connection...");
-			console.log("📍 Backend URL:", env.EXPO_PUBLIC_BASE_URL);
-			console.log("📱 App Scheme:", env.EXPO_PUBLIC_SCHEME);
-
-			results.push(`Backend: ${env.EXPO_PUBLIC_BASE_URL}`);
-			results.push(`Scheme: ${env.EXPO_PUBLIC_SCHEME}`);
-			results.push("");
-
-			// Test 1: Health check
-			console.log("Test 1: Health check...");
-			try {
-				const healthResponse = await fetch(
-					`${env.EXPO_PUBLIC_BASE_URL}/health`,
-					{
-						method: "GET",
-					},
-				);
-				const healthData = await healthResponse.json();
-				console.log("✅ Health check:", healthResponse.status, healthData);
-				results.push(`✅ Health: ${healthResponse.status}`);
-			} catch (error) {
-				console.error("❌ Health check failed:", error);
-				results.push(`❌ Health: FAILED`);
-				throw error;
-			}
-
-			// Test 2: Root endpoint
-			console.log("Test 2: Root endpoint...");
-			try {
-				const rootResponse = await fetch(`${env.EXPO_PUBLIC_BASE_URL}/`, {
-					method: "GET",
-				});
-				console.log("✅ Root endpoint:", rootResponse.status);
-				results.push(`✅ Root: ${rootResponse.status}`);
-			} catch (error) {
-				console.error("❌ Root endpoint failed:", error);
-				results.push(`❌ Root: FAILED`);
-			}
-
-			// Test 3: Auth session endpoint
-			console.log("Test 3: Auth session...");
-			try {
-				const sessionResponse = await fetch(
-					`${env.EXPO_PUBLIC_BASE_URL}/auth/session`,
-					{
-						method: "GET",
-					},
-				);
-				console.log("✅ Auth session:", sessionResponse.status);
-				results.push(`✅ Session: ${sessionResponse.status}`);
-			} catch (error) {
-				console.error("❌ Session check failed:", error);
-				results.push(`❌ Session: FAILED`);
-			}
-
-			// Test 4: Google OAuth initiation URL
-			console.log("Test 4: OAuth URL...");
-			const oauthUrl = `${env.EXPO_PUBLIC_BASE_URL}/auth/sign-in/social?provider=google`;
-			console.log("🔗 OAuth URL:", oauthUrl);
-			results.push("");
-			results.push(`OAuth URL:`);
-			results.push(oauthUrl);
-			results.push("");
-
-			// Test 5: Callback URL
-			const callbackUrl = `${env.EXPO_PUBLIC_BASE_URL}/auth/callback/google`;
-			console.log("🔗 Callback URL:", callbackUrl);
-			results.push(`Callback URL:`);
-			results.push(callbackUrl);
-
-			Alert.alert("✅ Connection Test Passed", results.join("\n"), [
-				{
-					text: "Copy URLs",
-					onPress: () => {
-						console.log("=== Connection Test Results ===");
-						console.log(results.join("\n"));
-						console.log("================================");
-					},
-				},
-				{ text: "OK" },
-			]);
-		} catch (error) {
-			console.error("❌ Connection test failed:", error);
-			results.push("");
-			results.push(
-				`Error: ${error instanceof Error ? error.message : "Unknown"}`,
-			);
-
-			Alert.alert(
-				"❌ Connection Failed",
-				results.join("\n") + "\n\nCheck console for details",
-				[
-					{
-						text: "Troubleshooting",
-						onPress: () => {
-							Alert.alert(
-								"Troubleshooting",
-								"1. Backend must be running\n" +
-									"2. Use ngrok or your computer's IP\n" +
-									"3. Both devices on same WiFi\n" +
-									"4. Check backend logs\n" +
-									"5. Verify BETTER_AUTH_URL in backend .env",
-							);
-						},
-					},
-					{ text: "OK" },
-				],
-			);
-		} finally {
-			setIsTesting(false);
-		}
-	};
-
 	return (
 		<View style={styles.container}>
 			<ScrollView
@@ -191,29 +58,6 @@ export default function Login() {
 
 				{/* Login Buttons Section */}
 				<View style={styles.buttonsContainer}>
-					{/* Dev Login Button (Development Only) */}
-					{__DEV__ && (
-						<Button
-							onPress={handleDevLogin}
-							variant="ghost"
-							size="sm"
-							style={styles.button}
-						>
-							🔧 Dev Login (Skip Auth)
-						</Button>
-					)}
-
-					{/* Test Connection Button */}
-					<Button
-						onPress={testBackendConnection}
-						variant="secondary"
-						size="lg"
-						style={styles.button}
-						loading={isTesting}
-						disabled={isTesting}
-					>
-						{isTesting ? "Testing..." : "🧪 Test Backend Connection"}
-					</Button>
 					{/* Google Login */}
 					<Button
 						onPress={handleGoogleLogin}
@@ -244,7 +88,7 @@ export default function Login() {
 					</Pressable>
 
 					{/* Email Login Option */}
-					<Button
+					{/*<Button
 						variant="ghost"
 						size="lg"
 						style={styles.button}
@@ -258,7 +102,7 @@ export default function Login() {
 								Continue with Email
 							</Text>
 						</View>
-					</Button>
+					</Button>*/}
 
 					{/* Terms */}
 					<View style={styles.termsContainer}>

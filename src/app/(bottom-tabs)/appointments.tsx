@@ -1,29 +1,154 @@
-import { Calendar, Clock, MapPin, Phone, Video } from "lucide-react-native";
+import { useRouter } from "expo-router";
+import {
+	Calendar,
+	Clock,
+	MapPin,
+	MessageCircle,
+	Phone,
+	Video,
+} from "lucide-react-native";
 import { useState } from "react";
-import { Image, Pressable, ScrollView, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+	ActivityIndicator,
+	Alert,
+	Image,
+	Pressable,
+	RefreshControl,
+	ScrollView,
+	Text,
+	View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { mockAppointments } from "@/data/appointments";
+import { useAuth } from "@/contexts/auth";
+import { useAppointmentsByCustomer } from "@/hooks/use-appointments";
+import { useGetOrCreateConversation } from "@/hooks/use-conversations";
+import type { Appointment } from "@/types/appointment";
 
 export default function Appointments() {
+	const router = useRouter();
 	const { theme } = useUnistyles();
-	const insets = useSafeAreaInsets();
+	const { customer, isCustomer } = useAuth();
+
+	const createConversationMutation = useGetOrCreateConversation();
 	const [activeTab, setActiveTab] = useState<"upcoming" | "completed">(
 		"upcoming",
 	);
 
-	const filteredAppointments = mockAppointments.filter(
-		(appointment) =>
-			(activeTab === "upcoming" && appointment.status === "upcoming") ||
-			(activeTab === "completed" && appointment.status === "completed"),
+	// Fetch appointments using customer ID from auth context
+	const {
+		data: appointmentsData,
+		isLoading: isLoadingAppointments,
+		error: appointmentsError,
+		refetch,
+	} = useAppointmentsByCustomer(customer?.id || "", !!customer?.id);
+
+	const [isRefreshing, setIsRefreshing] = useState(false);
+
+	const handleRefresh = async () => {
+		setIsRefreshing(true);
+		await refetch();
+		setIsRefreshing(false);
+	};
+
+	// Filter appointments based on status
+	const filteredAppointments = (appointmentsData?.appointments || []).filter(
+		(appointment) => {
+			if (activeTab === "upcoming") {
+				return (
+					appointment.status === "SCHEDULED" ||
+					appointment.status === "CONFIRMED" ||
+					appointment.status === "IN_PROGRESS"
+				);
+			}
+			return appointment.status === "COMPLETED";
+		},
 	);
 
+	// Format date and time
+	const formatDateTime = (dateString: string) => {
+		const date = new Date(dateString);
+		const formattedDate = date.toLocaleDateString("en-US", {
+			month: "long",
+			day: "numeric",
+			year: "numeric",
+		});
+		const formattedTime = date.toLocaleTimeString("en-US", {
+			hour: "numeric",
+			minute: "2-digit",
+			hour12: true,
+		});
+		return { date: formattedDate, time: formattedTime };
+	};
+
+	// Format price
+	const formatPrice = (priceInCents: number) => {
+		return `$${(priceInCents / 100).toFixed(2)}`;
+	};
+
+	const handleOpenChat = async (providerUserId: string) => {
+		try {
+			const result = await createConversationMutation.mutateAsync({
+				participantId: providerUserId,
+			});
+			router.push(`/chat/${result.conversation.id}`);
+		} catch (error) {
+			Alert.alert("Error", "Failed to open chat");
+		}
+	};
+
+	// Get status badge
+	const getStatusBadge = (appointment: Appointment) => {
+		switch (appointment.status) {
+			case "SCHEDULED":
+				return (
+					<Badge variant="accent" style={styles.badge}>
+						Scheduled
+					</Badge>
+				);
+			case "CONFIRMED":
+				return (
+					<Badge variant="default" style={styles.badge}>
+						Confirmed
+					</Badge>
+				);
+			case "IN_PROGRESS":
+				return (
+					<Badge variant="default" style={styles.badge}>
+						In Progress
+					</Badge>
+				);
+			default:
+				return null;
+		}
+	};
+
+	// Show message if user is not a customer
+	if (!isCustomer) {
+		return (
+			<View style={styles.container}>
+				<View style={styles.centerContainer}>
+					<Calendar
+						size={64}
+						color={theme.colors.mutedForeground}
+						strokeWidth={1.5}
+						style={styles.emptyIcon}
+					/>
+					<Text style={styles.emptyTitle}>Not Available</Text>
+					<Text style={styles.emptyText}>
+						Appointments are only available for customer accounts.
+					</Text>
+				</View>
+			</View>
+		);
+	}
+
 	return (
-		<View style={styles.container}>
+		<SafeAreaView edges={["top"]} style={styles.container}>
 			{/* Header */}
-			<View style={[styles.header, { paddingTop: insets.top + theme.gap(3) }]}>
+			<View style={styles.header}>
 				<Text style={styles.headerTitle}>My Appointments</Text>
 
 				{/* Tabs */}
@@ -67,12 +192,53 @@ export default function Appointments() {
 				</View>
 			</View>
 
-			{/* Appointments List */}
+			{/* Content */}
 			<ScrollView
 				style={styles.listContainer}
+				contentContainerStyle={
+					filteredAppointments.length === 0 ||
+					isLoadingAppointments ||
+					appointmentsError
+						? styles.scrollContentEmpty
+						: styles.scrollContent
+				}
 				showsVerticalScrollIndicator={false}
+				refreshControl={
+					<RefreshControl
+						refreshing={isRefreshing}
+						onRefresh={handleRefresh}
+						tintColor={theme.colors.primary}
+						colors={[theme.colors.primary]}
+					/>
+				}
 			>
-				{filteredAppointments.length === 0 ? (
+				{isLoadingAppointments ? (
+					<View style={styles.centerContainer}>
+						<ActivityIndicator size="large" color={theme.colors.primary} />
+						<Text style={styles.loadingText}>Loading appointments...</Text>
+					</View>
+				) : appointmentsError ? (
+					<View style={styles.centerContainer}>
+						<Calendar
+							size={64}
+							color={theme.colors.destructive}
+							strokeWidth={1.5}
+							style={styles.emptyIcon}
+						/>
+						<Text style={styles.errorTitle}>Error loading appointments</Text>
+						<Text style={styles.errorText}>
+							Please try again later or pull to refresh
+						</Text>
+						<Button
+							variant="outline"
+							size="sm"
+							onPress={handleRefresh}
+							style={{ marginTop: theme.gap(2) }}
+						>
+							Retry
+						</Button>
+					</View>
+				) : filteredAppointments.length === 0 ? (
 					<View style={styles.emptyContainer}>
 						<Calendar
 							size={64}
@@ -80,123 +246,217 @@ export default function Appointments() {
 							strokeWidth={1.5}
 							style={styles.emptyIcon}
 						/>
-						<Text style={styles.emptyTitle}>No {activeTab} appointments</Text>
+						<Text style={styles.emptyTitle}>
+							{activeTab === "upcoming"
+								? "No Upcoming Appointments"
+								: "No Completed Appointments"}
+						</Text>
 						<Text style={styles.emptyText}>
-							You don't have any {activeTab} appointments yet
+							{activeTab === "upcoming"
+								? "You don't have any scheduled appointments.\nFind a healthcare provider to get started."
+								: "You haven't completed any appointments yet.\nYour appointment history will appear here."}
 						</Text>
 					</View>
 				) : (
 					<View style={styles.appointmentsList}>
-						{filteredAppointments.map((appointment) => (
-							<View key={appointment.id} style={styles.appointmentCard}>
-								{/* Status Badge */}
-								{appointment.status === "upcoming" && (
-									<Badge variant="accent" style={styles.badge}>
-										Upcoming
-									</Badge>
-								)}
+						{filteredAppointments.map((appointment) => {
+							const { date, time } = formatDateTime(appointment.scheduledAt);
+							const provider = appointment.healthcareProvider;
+							const providerUser = provider.user;
 
-								{/* Professional Info */}
-								<View style={styles.professionalInfo}>
-									<Image
-										source={{ uri: appointment.professional.image }}
-										style={styles.professionalImage}
-									/>
-									<View style={styles.professionalDetails}>
-										<Text style={styles.professionalName}>
-											{appointment.professional.name}
-										</Text>
-										<Text style={styles.professionalSpecialty}>
-											{appointment.professional.specialty}
-										</Text>
-										<Text style={styles.appointmentType}>
-											{appointment.type}
-										</Text>
-									</View>
-								</View>
+							return (
+								<Pressable
+									key={appointment.id}
+									style={({ pressed }) => [
+										styles.appointmentCard,
+										pressed && styles.appointmentCardPressed,
+									]}
+									onPress={() => router.push(`/appointment/${appointment.id}`)}
+									android_ripple={{
+										color: theme.colors.primary,
+										borderless: false,
+									}}
+								>
+									{/* Status Badge */}
+									{activeTab === "upcoming" && getStatusBadge(appointment)}
 
-								{/* Appointment Details */}
-								<View style={styles.detailsContainer}>
-									<View style={styles.detailRow}>
-										<Calendar
-											size={16}
-											color={theme.colors.primary}
-											strokeWidth={2}
-										/>
-										<Text style={styles.detailText}>{appointment.date}</Text>
-									</View>
-									<View style={styles.detailRow}>
-										<Clock
-											size={16}
-											color={theme.colors.primary}
-											strokeWidth={2}
-										/>
-										<Text style={styles.detailText}>{appointment.time}</Text>
-									</View>
-									<View style={styles.detailRow}>
-										<MapPin
-											size={16}
-											color={theme.colors.primary}
-											strokeWidth={2}
-										/>
-										<Text style={styles.detailText}>
-											{appointment.professional.distance} away
-										</Text>
-									</View>
-								</View>
-
-								{/* Actions */}
-								{appointment.status === "upcoming" && (
-									<View style={styles.actionsContainer}>
-										<Button
-											variant="outline"
-											size="sm"
-											style={styles.actionButton}
-										>
-											<View style={styles.iconButton}>
-												<Phone
-													size={16}
-													color={theme.colors.foreground}
-													strokeWidth={2}
-												/>
-												<Text style={styles.detailText}>Call</Text>
-											</View>
-										</Button>
-										<Button size="sm" style={styles.actionButton}>
-											<View style={styles.iconButton}>
-												<Video
-													size={16}
-													color={theme.colors.primaryForeground}
-													strokeWidth={2}
-												/>
-												<Text
-													style={[
-														styles.detailText,
-														{ color: theme.colors.primaryForeground },
-													]}
-												>
-													Start Video
+									{/* Professional Info */}
+									<View style={styles.professionalInfo}>
+										{providerUser.image ? (
+											<Image
+												source={{ uri: providerUser.image }}
+												style={styles.professionalImage}
+											/>
+										) : (
+											<View
+												style={[
+													styles.professionalImage,
+													styles.professionalImagePlaceholder,
+												]}
+											>
+												<Text style={styles.professionalImageInitial}>
+													{providerUser.name.charAt(0).toUpperCase()}
 												</Text>
 											</View>
-										</Button>
+										)}
+										<View style={styles.professionalDetails}>
+											<Text style={styles.professionalName}>
+												{providerUser.name}
+											</Text>
+											{provider.specialty && (
+												<Text style={styles.professionalSpecialty}>
+													{provider.specialty}
+												</Text>
+											)}
+											<Text style={styles.appointmentType}>
+												{appointment.appointmentProcedures.length > 0
+													? appointment.appointmentProcedures
+															.map((ap) => ap.procedure.name)
+															.join(", ")
+													: "Consultation"}
+											</Text>
+										</View>
 									</View>
-								)}
 
-								{appointment.status === "completed" && (
-									<Button
-										variant="outline"
-										size="sm"
-										style={styles.fullWidthButton}
-									>
-										Book Again
-									</Button>
-								)}
-							</View>
-						))}
+									{/* Appointment Details */}
+									<View style={styles.detailsContainer}>
+										<View style={styles.detailRow}>
+											<Calendar
+												size={16}
+												color={theme.colors.primary}
+												strokeWidth={2}
+											/>
+											<Text style={styles.detailText}>{date}</Text>
+										</View>
+										<View style={styles.detailRow}>
+											<Clock
+												size={16}
+												color={theme.colors.primary}
+												strokeWidth={2}
+											/>
+											<Text style={styles.detailText}>
+												{time} ({appointment.totalDurationMinutes} min)
+											</Text>
+										</View>
+										<View style={styles.detailRow}>
+											<MapPin
+												size={16}
+												color={theme.colors.primary}
+												strokeWidth={2}
+											/>
+											<Text style={styles.detailText}>
+												{formatPrice(appointment.totalPriceCents)}
+											</Text>
+										</View>
+									</View>
+
+									{/* Notes */}
+									{appointment.notes && (
+										<View style={styles.notesContainer}>
+											<Text style={styles.notesLabel}>Notes:</Text>
+											<Text style={styles.notesText}>{appointment.notes}</Text>
+										</View>
+									)}
+
+									{/* Actions */}
+									{activeTab === "upcoming" && (
+										<View style={styles.actionsContainer}>
+											<Button
+												variant="outline"
+												size="sm"
+												style={styles.actionButton}
+												onPress={() =>
+													handleOpenChat(appointment.healthcareProvider.user.id)
+												}
+												disabled={createConversationMutation.isPending}
+											>
+												<View style={styles.iconButton}>
+													<MessageCircle
+														size={16}
+														color={theme.colors.foreground}
+														strokeWidth={2}
+													/>
+													<Text style={styles.detailText}>Chat</Text>
+												</View>
+											</Button>
+											{providerUser.phone && (
+												<Button
+													variant="outline"
+													size="sm"
+													style={styles.actionButton}
+												>
+													<View style={styles.iconButton}>
+														<Phone
+															size={16}
+															color={theme.colors.foreground}
+															strokeWidth={2}
+														/>
+														<Text style={styles.detailText}>Call</Text>
+													</View>
+												</Button>
+											)}
+											<Button
+												size="sm"
+												style={styles.actionButton}
+												onPress={() =>
+													router.push(`/appointment/${appointment.id}`)
+												}
+											>
+												<View style={styles.iconButton}>
+													<Video
+														size={16}
+														color={theme.colors.primaryForeground}
+														strokeWidth={2}
+													/>
+													<Text
+														style={[
+															styles.detailText,
+															{ color: theme.colors.primaryForeground },
+														]}
+													>
+														Details
+													</Text>
+												</View>
+											</Button>
+										</View>
+									)}
+
+									{activeTab === "completed" && (
+										<View style={styles.actionsContainer}>
+											<Button
+												variant="outline"
+												size="sm"
+												style={styles.actionButton}
+												onPress={() =>
+													handleOpenChat(appointment.healthcareProvider.user.id)
+												}
+												disabled={createConversationMutation.isPending}
+											>
+												<View style={styles.iconButton}>
+													<MessageCircle
+														size={16}
+														color={theme.colors.foreground}
+														strokeWidth={2}
+													/>
+													<Text style={styles.detailText}>Chat</Text>
+												</View>
+											</Button>
+											<Button
+												variant="outline"
+												size="sm"
+												style={styles.actionButton}
+											>
+												Book Again
+											</Button>
+										</View>
+									)}
+								</Pressable>
+							);
+						})}
 					</View>
 				)}
 			</ScrollView>
-		</View>
+		</SafeAreaView>
 	);
 }
 
@@ -207,6 +467,7 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	header: {
 		backgroundColor: theme.colors.surfacePrimary,
+		paddingTop: theme.gap(3),
 		paddingHorizontal: theme.gap(3),
 		paddingBottom: theme.gap(2),
 		borderBottomWidth: 1,
@@ -247,8 +508,39 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	listContainer: {
 		flex: 1,
+	},
+	scrollContent: {
 		paddingHorizontal: theme.gap(3),
 		paddingVertical: theme.gap(3),
+	},
+	scrollContentEmpty: {
+		flexGrow: 1,
+		paddingHorizontal: theme.gap(3),
+		paddingVertical: theme.gap(3),
+	},
+	centerContainer: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
+		paddingVertical: theme.gap(8),
+	},
+	loadingText: {
+		fontSize: 14,
+		color: theme.colors.mutedForeground,
+		marginTop: theme.gap(2),
+	},
+	errorTitle: {
+		fontSize: 18,
+		fontWeight: "500",
+		color: theme.colors.destructive,
+		marginBottom: theme.gap(1),
+	},
+	errorText: {
+		fontSize: 14,
+		color: theme.colors.mutedForeground,
+		textAlign: "center",
+		paddingHorizontal: theme.gap(4),
+		marginBottom: theme.gap(1),
 	},
 	emptyContainer: {
 		flex: 1,
@@ -269,6 +561,8 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 14,
 		color: theme.colors.mutedForeground,
 		textAlign: "center",
+		paddingHorizontal: theme.gap(4),
+		lineHeight: 20,
 	},
 	appointmentsList: {
 		gap: theme.gap(2),
@@ -287,6 +581,11 @@ const styles = StyleSheet.create((theme) => ({
 		shadowOpacity: 0.05,
 		shadowRadius: 4,
 		elevation: 2,
+		gap: theme.gap(2),
+	},
+	appointmentCardPressed: {
+		opacity: 0.7,
+		backgroundColor: theme.colors.surfaceSecondary,
 	},
 	badge: {
 		marginBottom: theme.gap(1.5),
@@ -300,6 +599,16 @@ const styles = StyleSheet.create((theme) => ({
 		width: 64,
 		height: 64,
 		borderRadius: theme.radius.lg,
+	},
+	professionalImagePlaceholder: {
+		backgroundColor: theme.colors.primary,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	professionalImageInitial: {
+		fontSize: 24,
+		fontWeight: "600",
+		color: theme.colors.primaryForeground,
 	},
 	professionalDetails: {
 		flex: 1,
@@ -333,6 +642,22 @@ const styles = StyleSheet.create((theme) => ({
 		gap: theme.gap(1),
 	},
 	detailText: {
+		fontSize: 14,
+		color: theme.colors.foreground,
+	},
+	notesContainer: {
+		backgroundColor: `${theme.colors.muted}80`,
+		borderRadius: theme.radius.lg,
+		padding: theme.gap(1.5),
+		marginBottom: theme.gap(2),
+	},
+	notesLabel: {
+		fontSize: 12,
+		fontWeight: "500",
+		color: theme.colors.mutedForeground,
+		marginBottom: theme.gap(0.5),
+	},
+	notesText: {
 		fontSize: 14,
 		color: theme.colors.foreground,
 	},

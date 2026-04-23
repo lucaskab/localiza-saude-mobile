@@ -33,6 +33,9 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => ({
 		bundleIdentifier: getUniqueIdentifier(),
 		infoPlist: {
 			ITSAppUsesNonExemptEncryption: false,
+			NSBonjourServices: ["_expo._tcp"],
+			NSLocalNetworkUsageDescription:
+				"This app uses the local network to connect to the Expo development server.",
 		},
 	},
 	android: {
@@ -53,6 +56,31 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => ({
 	plugins: [
 		"expo-router",
 		"expo-secure-store",
+		"expo-font",
+		"expo-web-browser",
+		"@config-plugins/react-native-blob-util",
+		"@config-plugins/react-native-pdf",
+		[
+			"expo-image-picker",
+			{
+				photosPermission:
+					"The app accesses your photos to let you share them with your friends.",
+				colors: {
+					cropToolbarColor: "#000000",
+				},
+				dark: {
+					colors: {
+						cropToolbarColor: "#000000",
+					},
+				},
+			},
+		],
+		[
+			"expo-document-picker",
+			{
+				iCloudContainerEnvironment: "Production",
+			},
+		],
 		[
 			"expo-dev-client",
 			{

@@ -18,7 +18,6 @@ interface ButtonProps extends Omit<PressableProps, "style" | "children"> {
 	disabled?: boolean;
 	loading?: boolean;
 	style?: ViewStyle;
-	ref?: React.Ref<View>;
 }
 
 export function Button({
@@ -29,7 +28,6 @@ export function Button({
 	disabled = false,
 	loading = false,
 	style,
-	ref,
 	...props
 }: ButtonProps) {
 	const { theme } = useUnistyles();
@@ -195,7 +193,6 @@ export function Button({
 
 	return (
 		<Pressable
-			ref={ref}
 			onPress={onPress}
 			disabled={isDisabled}
 			style={({ pressed }) => [

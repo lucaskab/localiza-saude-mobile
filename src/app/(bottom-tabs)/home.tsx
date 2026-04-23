@@ -1,12 +1,19 @@
 import { useRouter } from "expo-router";
 import { MapPin, Search, Star } from "lucide-react-native";
 import { useState } from "react";
-import { Image, Pressable, ScrollView, Text, View } from "react-native";
+import {
+	ActivityIndicator,
+	Image,
+	Pressable,
+	RefreshControl,
+	ScrollView,
+	Text,
+	View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
-import type { Category } from "@/data/professionals";
-import { categories, professionals } from "@/data/professionals";
+import { useCategories, getProvidersByCategory } from "@/hooks/use-categories";
 
 export default function Home() {
 	const { theme } = useUnistyles();
@@ -14,11 +21,33 @@ export default function Home() {
 	const router = useRouter();
 	const [selectedCategory, setSelectedCategory] = useState("all");
 
-	const featuredProfessionals = professionals.slice(0, 4);
+	// Fetch categories with their healthcare providers
+	const { data, isLoading, error, refetch, isRefetching } = useCategories();
+
+	const categories = data?.categories || [];
+
+	// Get providers based on selected category
+	const providers = getProvidersByCategory(categories, selectedCategory);
+	const featuredProfessionals = providers.slice(0, 4);
+
+	// Handle refresh
+	const onRefresh = async () => {
+		await refetch();
+	};
 
 	return (
 		<View style={styles.container}>
-			<ScrollView showsVerticalScrollIndicator={false}>
+			<ScrollView
+				showsVerticalScrollIndicator={false}
+				refreshControl={
+					<RefreshControl
+						refreshing={isRefetching}
+						onRefresh={onRefresh}
+						tintColor={theme.colors.primary}
+						colors={[theme.colors.primary]}
+					/>
+				}
+			>
 				{/* Header */}
 				<View
 					style={[styles.header, { paddingTop: insets.top + theme.gap(3) }]}
@@ -40,7 +69,7 @@ export default function Home() {
 					{/* Search Bar */}
 					<Pressable
 						style={styles.searchContainer}
-						onPress={() => router.push("/search")}
+						onPress={() => router.push("/(bottom-tabs)/search")}
 					>
 						<Search
 							size={20}
@@ -57,100 +86,198 @@ export default function Home() {
 				{/* Categories */}
 				<View style={styles.categoriesSection}>
 					<Text style={styles.sectionTitle}>Categories</Text>
-					<ScrollView
-						horizontal
-						showsHorizontalScrollIndicator={false}
-						contentContainerStyle={styles.categoriesScroll}
-					>
-						{categories.map((category: Category) => (
+
+					{isLoading && (
+						<View style={styles.categoriesLoading}>
+							<ActivityIndicator size="small" color={theme.colors.primary} />
+						</View>
+					)}
+
+					{!isLoading && categories.length > 0 && (
+						<ScrollView
+							horizontal
+							showsHorizontalScrollIndicator={false}
+							contentContainerStyle={styles.categoriesScroll}
+						>
+							{/* All Categories */}
 							<Pressable
-								key={category.id}
-								onPress={() => setSelectedCategory(category.id)}
+								onPress={() => setSelectedCategory("all")}
 								style={[
 									styles.categoryButton,
-									selectedCategory === category.id &&
-										styles.categoryButtonActive,
+									selectedCategory === "all" && styles.categoryButtonActive,
 								]}
 							>
-								<Text style={styles.categoryIcon}>{category.icon}</Text>
-								<Text style={styles.categoryName}>{category.name}</Text>
+								<Text style={styles.categoryIcon}>🏥</Text>
+								<Text style={styles.categoryName}>All</Text>
 							</Pressable>
-						))}
-					</ScrollView>
+
+							{/* API Categories */}
+							{categories.map((category) => (
+								<Pressable
+									key={category.id}
+									onPress={() => setSelectedCategory(category.id)}
+									style={[
+										styles.categoryButton,
+										selectedCategory === category.id &&
+											styles.categoryButtonActive,
+									]}
+								>
+									<Text style={styles.categoryIcon}>
+										{getCategoryIcon(category.name)}
+									</Text>
+									<Text style={styles.categoryName}>{category.name}</Text>
+								</Pressable>
+							))}
+						</ScrollView>
+					)}
 				</View>
 
 				{/* Featured Professionals */}
 				<View style={styles.professionalsSection}>
 					<View style={styles.sectionHeader}>
 						<Text style={styles.sectionTitle}>Top Rated</Text>
-						<Pressable onPress={() => router.push("/search")}>
+						<Pressable onPress={() => router.push("/(bottom-tabs)/search")}>
 							<Text style={styles.seeAllButton}>See All</Text>
 						</Pressable>
 					</View>
 
-					<View style={styles.professionalsList}>
-						{featuredProfessionals.map((professional) => (
-							<View key={professional.id} style={styles.professionalCard}>
-								<View style={styles.professionalContent}>
-									<Image
-										source={{ uri: professional.image }}
-										style={styles.professionalImage}
-									/>
-									<View style={styles.professionalInfo}>
-										<View style={styles.professionalHeader}>
-											<Text style={styles.professionalName} numberOfLines={1}>
-												{professional.name}
-											</Text>
-											{professional.verified && (
-												<View style={styles.verifiedBadge}>
-													<Text style={styles.verifiedText}>✓</Text>
+					{/* Loading State */}
+					{isLoading && (
+						<View style={styles.loadingContainer}>
+							<ActivityIndicator size="large" color={theme.colors.primary} />
+							<Text style={styles.loadingText}>Loading providers...</Text>
+						</View>
+					)}
+
+					{/* Error State */}
+					{error && !isLoading && (
+						<View style={styles.errorContainer}>
+							<Text style={styles.errorText}>
+								Failed to load healthcare providers
+							</Text>
+							<Button onPress={() => refetch()} size="sm">
+								Retry
+							</Button>
+						</View>
+					)}
+
+					{/* Empty State */}
+					{!isLoading && !error && providers.length === 0 && (
+						<View style={styles.emptyContainer}>
+							<Text style={styles.emptyText}>
+								No providers found
+								{selectedCategory !== "all" ? " for this category" : ""}
+							</Text>
+						</View>
+					)}
+
+					{/* Providers List */}
+					{!isLoading && !error && providers.length > 0 && (
+						<View style={styles.professionalsList}>
+							{featuredProfessionals.map((provider) => (
+								<Pressable
+									key={provider.id}
+									onPress={() => router.push(`/doctor/${provider.id}`)}
+								>
+									<View style={styles.professionalCard}>
+										<View style={styles.professionalContent}>
+											{provider.user.image ? (
+												<Image
+													source={{ uri: provider.user.image }}
+													style={styles.professionalImage}
+												/>
+											) : (
+												<View
+													style={[
+														styles.professionalImage,
+														styles.professionalImagePlaceholder,
+													]}
+												>
+													<Text style={styles.professionalImageInitial}>
+														{provider.user.name.charAt(0).toUpperCase()}
+													</Text>
 												</View>
 											)}
-										</View>
-										<Text style={styles.professionalSpecialty}>
-											{professional.specialty}
-										</Text>
-										<View style={styles.professionalStats}>
-											<View style={styles.ratingContainer}>
-												<Star
-													size={14}
-													color={theme.colors.amber}
-													fill={theme.colors.amber}
-													strokeWidth={2}
-												/>
-												<Text style={styles.ratingText}>
-													{professional.rating}
+											<View style={styles.professionalInfo}>
+												<View style={styles.professionalHeader}>
+													<Text
+														style={styles.professionalName}
+														numberOfLines={1}
+													>
+														{provider.user.name}
+													</Text>
+												</View>
+												<Text style={styles.professionalSpecialty}>
+													{provider.specialty || "Healthcare Provider"}
 												</Text>
-												<Text style={styles.reviewsText}>
-													({professional.reviews})
+												<View style={styles.professionalStats}>
+													<View style={styles.ratingContainer}>
+														<Star
+															size={14}
+															color={theme.colors.amber}
+															fill={theme.colors.amber}
+															strokeWidth={2}
+														/>
+														<Text style={styles.ratingText}>4.8</Text>
+														<Text style={styles.reviewsText}>(120)</Text>
+													</View>
+												</View>
+											</View>
+										</View>
+										<View style={styles.professionalFooter}>
+											<View>
+												<Text style={styles.nextAvailableLabel}>
+													Next available
+												</Text>
+												<Text style={styles.nextAvailableTime}>
+													Today, 2:00 PM
 												</Text>
 											</View>
-											<Text style={styles.experienceText}>
-												{professional.experience} years
-											</Text>
+											<Button
+												size="sm"
+												style={styles.bookButton}
+												onPress={(e) => {
+													e?.stopPropagation();
+													router.push(`/doctor/${provider.id}/procedures`);
+												}}
+											>
+												Book Now
+											</Button>
 										</View>
 									</View>
-								</View>
-								<View style={styles.professionalFooter}>
-									<View>
-										<Text style={styles.nextAvailableLabel}>
-											Next available
-										</Text>
-										<Text style={styles.nextAvailableTime}>
-											{professional.nextAvailable}
-										</Text>
-									</View>
-									<Button size="sm" style={styles.bookButton}>
-										Book Now
-									</Button>
-								</View>
-							</View>
-						))}
-					</View>
+								</Pressable>
+							))}
+						</View>
+					)}
 				</View>
 			</ScrollView>
 		</View>
 	);
+}
+
+// Helper function to get category icon based on name
+function getCategoryIcon(categoryName: string): string {
+	const iconMap: Record<string, string> = {
+		Cardiology: "❤️",
+		Dermatology: "🧴",
+		Pediatrics: "👶",
+		Orthopedics: "🦴",
+		Neurology: "🧠",
+		Psychiatry: "🧘",
+		General: "👨‍⚕️",
+		Dentistry: "🦷",
+		Ophthalmology: "👁️",
+		ENT: "👂",
+		Gynecology: "🤰",
+		Urology: "💧",
+	};
+
+	// Try to find a match in the map
+	const match = Object.keys(iconMap).find((key) =>
+		categoryName.toLowerCase().includes(key.toLowerCase()),
+	);
+
+	return match ? iconMap[match] : "⚕️";
 }
 
 const styles = StyleSheet.create((theme) => ({
@@ -215,6 +342,10 @@ const styles = StyleSheet.create((theme) => ({
 		color: theme.colors.foreground,
 		marginBottom: theme.gap(2),
 		paddingHorizontal: theme.gap(3),
+	},
+	categoriesLoading: {
+		paddingVertical: theme.gap(4),
+		alignItems: "center",
 	},
 	categoriesScroll: {
 		paddingHorizontal: theme.gap(3),
@@ -287,6 +418,16 @@ const styles = StyleSheet.create((theme) => ({
 		height: 80,
 		borderRadius: theme.radius.xl,
 	},
+	professionalImagePlaceholder: {
+		backgroundColor: theme.colors.primary,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	professionalImageInitial: {
+		fontSize: 32,
+		fontWeight: "600",
+		color: theme.colors.primaryForeground,
+	},
 	professionalInfo: {
 		flex: 1,
 		minWidth: 0,
@@ -302,19 +443,6 @@ const styles = StyleSheet.create((theme) => ({
 		fontWeight: "500",
 		color: theme.colors.foreground,
 		flex: 1,
-	},
-	verifiedBadge: {
-		width: 20,
-		height: 20,
-		borderRadius: 10,
-		backgroundColor: theme.colors.primary,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	verifiedText: {
-		fontSize: 12,
-		color: theme.colors.primaryForeground,
-		fontWeight: "600",
 	},
 	professionalSpecialty: {
 		fontSize: 14,
@@ -340,10 +468,6 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 14,
 		color: theme.colors.mutedForeground,
 	},
-	experienceText: {
-		fontSize: 14,
-		color: theme.colors.mutedForeground,
-	},
 	professionalFooter: {
 		flexDirection: "row",
 		alignItems: "center",
@@ -364,5 +488,39 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	bookButton: {
 		borderRadius: theme.radius.full,
+	},
+	loadingContainer: {
+		paddingVertical: theme.gap(6),
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	loadingText: {
+		marginTop: theme.gap(2),
+		fontSize: 14,
+		color: theme.colors.mutedForeground,
+	},
+	errorContainer: {
+		paddingVertical: theme.gap(4),
+		paddingHorizontal: theme.gap(3),
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: theme.colors.surfaceMuted,
+		borderRadius: theme.radius.xl,
+	},
+	errorText: {
+		fontSize: 14,
+		color: theme.colors.destructive,
+		marginBottom: theme.gap(2),
+		textAlign: "center",
+	},
+	emptyContainer: {
+		paddingVertical: theme.gap(6),
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	emptyText: {
+		fontSize: 14,
+		color: theme.colors.mutedForeground,
+		textAlign: "center",
 	},
 }));

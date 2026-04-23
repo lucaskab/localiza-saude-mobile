@@ -1,22 +1,24 @@
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/contexts/auth";
+import { queryClient } from "@/services/query-client";
 
 function RootNavigator() {
 	return (
-		<AuthProvider>
-			<Stack
-				screenOptions={{
-					headerShown: false,
-					animation: "none",
-				}}
-			>
-				<Stack.Screen name="login" />
-				<Stack.Screen name="(bottom-tabs)" />
-				<Stack.Screen name="search" />
-				<Stack.Screen name="auth/callback" />
-			</Stack>
-		</AuthProvider>
+		<QueryClientProvider client={queryClient}>
+			<AuthProvider>
+				<Stack
+					screenOptions={{
+						headerShown: false,
+					}}
+				>
+					<Stack.Screen name="login" />
+					<Stack.Screen name="(bottom-tabs)" />
+					<Stack.Screen name="(provider-tabs)" />
+				</Stack>
+			</AuthProvider>
+		</QueryClientProvider>
 	);
 }
 
