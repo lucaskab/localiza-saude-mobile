@@ -1,5 +1,6 @@
 import { useRouter } from "expo-router";
 import {
+	Heart,
 	MessageCircle,
 	Search as SearchIcon,
 	SlidersHorizontal,
@@ -21,7 +22,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getProvidersByCategory, useCategories } from "@/hooks/use-categories";
 import { useGetOrCreateConversation } from "@/hooks/use-conversations";
+import {
+	useAddFavorite,
+	useFavorites,
+	useRemoveFavorite,
+} from "@/hooks/use-favorites";
+import { getErrorMessage } from "@/services/api";
 import { formatNextAvailableAt } from "@/utils/availability";
+import { formatAverageRating } from "@/utils/ratings";
 
 export default function Search() {
 	const router = useRouter();
@@ -29,8 +37,17 @@ export default function Search() {
 	const insets = useSafeAreaInsets();
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState("all");
+	const [favoriteMutationProviderId, setFavoriteMutationProviderId] = useState<
+		string | null
+	>(null);
 
 	const createConversationMutation = useGetOrCreateConversation();
+	const { data: favoritesData } = useFavorites();
+	const addFavoriteMutation = useAddFavorite();
+	const removeFavoriteMutation = useRemoveFavorite();
+	const favoriteProviderIds = new Set(
+		(favoritesData?.favorites || []).map((provider) => provider.id),
+	);
 
 	// Fetch categories with their healthcare providers
 	const { data, isLoading, error, refetch } = useCategories();
@@ -58,6 +75,25 @@ export default function Search() {
 			router.push(`/chat/${result.conversation.id}`);
 		} catch {
 			Alert.alert("Error", "Failed to open chat");
+		}
+	};
+
+	const handleToggleFavorite = async (
+		healthcareProviderId: string,
+		isFavorite: boolean,
+	) => {
+		setFavoriteMutationProviderId(healthcareProviderId);
+
+		try {
+			if (isFavorite) {
+				await removeFavoriteMutation.mutateAsync(healthcareProviderId);
+			} else {
+				await addFavoriteMutation.mutateAsync({ healthcareProviderId });
+			}
+		} catch (error) {
+			Alert.alert("Error", getErrorMessage(error));
+		} finally {
+			setFavoriteMutationProviderId(null);
 		}
 	};
 
@@ -193,6 +229,10 @@ export default function Search() {
 						{filteredProfessionals.length > 0 && (
 							<View style={styles.resultsList}>
 								{filteredProfessionals.map((provider) => {
+									const isFavorite = favoriteProviderIds.has(provider.id);
+									const isUpdatingFavorite =
+										favoriteMutationProviderId === provider.id;
+
 									return (
 										<Pressable
 											key={provider.id}
@@ -225,6 +265,32 @@ export default function Search() {
 															>
 																{provider.user.name}
 															</Text>
+															<Pressable
+																onPress={(e) => {
+																	e?.stopPropagation();
+																	handleToggleFavorite(provider.id, isFavorite);
+																}}
+																disabled={isUpdatingFavorite}
+																style={[
+																	styles.favoriteButton,
+																	isFavorite && styles.favoriteButtonActive,
+																]}
+															>
+																<Heart
+																	size={18}
+																	color={
+																		isFavorite
+																			? theme.colors.destructive
+																			: theme.colors.mutedForeground
+																	}
+																	fill={
+																		isFavorite
+																			? theme.colors.destructive
+																			: "transparent"
+																	}
+																	strokeWidth={2.2}
+																/>
+															</Pressable>
 														</View>
 														<Text
 															style={styles.professionalSpecialty}
@@ -248,8 +314,15 @@ export default function Search() {
 																	fill={theme.colors.amber}
 																	strokeWidth={2}
 																/>
-																<Text style={styles.ratingText}>4.8</Text>
+																<Text style={styles.ratingText}>
+																	{formatAverageRating(provider.averageRating)}
+																</Text>
 															</View>
+															<View style={styles.statDivider} />
+															<Text style={styles.ratingCountText}>
+																{provider.totalRatings ?? 0} rating
+																{provider.totalRatings === 1 ? "" : "s"}
+															</Text>
 															<View style={styles.statDivider} />
 															<Text style={styles.availableText}>
 																{formatNextAvailableAt(
@@ -462,6 +535,20 @@ const styles = StyleSheet.create((theme) => ({
 		color: theme.colors.foreground,
 		flex: 1,
 	},
+	favoriteButton: {
+		width: 36,
+		height: 36,
+		borderRadius: 18,
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: theme.colors.background,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+	},
+	favoriteButtonActive: {
+		backgroundColor: "#fee2e2",
+		borderColor: "#fecaca",
+	},
 	professionalSpecialty: {
 		fontSize: 14,
 		color: theme.colors.mutedForeground,
@@ -477,6 +564,7 @@ const styles = StyleSheet.create((theme) => ({
 		flexDirection: "row",
 		alignItems: "center",
 		gap: theme.gap(1.5),
+		flexWrap: "wrap",
 	},
 	professionalActions: {
 		flexDirection: "row",
@@ -527,6 +615,11 @@ const styles = StyleSheet.create((theme) => ({
 	ratingText: {
 		fontSize: 12,
 		color: theme.colors.foreground,
+		fontWeight: "500",
+	},
+	ratingCountText: {
+		fontSize: 12,
+		color: theme.colors.mutedForeground,
 		fontWeight: "500",
 	},
 	availableText: {

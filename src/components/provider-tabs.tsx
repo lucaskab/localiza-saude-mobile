@@ -4,6 +4,7 @@ import {
 	ClipboardList,
 	LayoutDashboard,
 	MessageCircle,
+	Star,
 	User,
 } from "lucide-react-native";
 import { useUnistyles } from "react-native-unistyles";
@@ -68,6 +69,19 @@ export default function ProviderTabs() {
 					title: "Chats",
 					tabBarIcon: ({ color, size, focused }) => (
 						<MessageCircle
+							size={size}
+							color={color}
+							strokeWidth={focused ? 2.5 : 2}
+						/>
+					),
+				}}
+			/>
+			<Tabs.Screen
+				name="ratings"
+				options={{
+					title: "Reviews",
+					tabBarIcon: ({ color, size, focused }) => (
+						<Star
 							size={size}
 							color={color}
 							strokeWidth={focused ? 2.5 : 2}

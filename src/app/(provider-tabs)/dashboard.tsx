@@ -27,6 +27,7 @@ import {
 	useUpdateAppointment,
 } from "@/hooks/use-appointments";
 import { useDashboard } from "@/hooks/use-dashboard";
+import { formatAverageRating } from "@/utils/ratings";
 
 export default function ProviderDashboard() {
 	const { theme } = useUnistyles();
@@ -104,7 +105,7 @@ export default function ProviderDashboard() {
 		},
 		{
 			label: "Avg. Rating",
-			value: dashboardData?.ratings.averageRating.toFixed(1) || "0.0",
+			value: formatAverageRating(dashboardData?.ratings.averageRating),
 			icon: TrendingUp,
 			color: "#d97706",
 		},

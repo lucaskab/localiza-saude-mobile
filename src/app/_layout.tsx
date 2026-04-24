@@ -16,6 +16,7 @@ function RootNavigator() {
 					<Stack.Screen name="login" />
 					<Stack.Screen name="(bottom-tabs)" />
 					<Stack.Screen name="(provider-tabs)" />
+					<Stack.Screen name="favorites" />
 				</Stack>
 			</AuthProvider>
 		</QueryClientProvider>

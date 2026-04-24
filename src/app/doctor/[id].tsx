@@ -6,35 +6,99 @@ import {
 	CheckCircle2,
 	Clock,
 	DollarSign,
+	Sparkles,
 	Star,
 	Briefcase,
+	X,
 } from "lucide-react-native";
 import {
 	ActivityIndicator,
+	Alert,
 	Image,
+	KeyboardAvoidingView,
+	Modal,
 	Pressable,
 	ScrollView,
 	Text,
 	View,
 } from "react-native";
+import { useEffect, useMemo, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/auth";
 import { useHealthcareProvider } from "@/hooks/use-healthcare-providers";
+import {
+	useCreateRating,
+	useRatingsByProvider,
+	useUpdateRating,
+} from "@/hooks/use-ratings";
+import { getErrorMessage } from "@/services/api";
+import type { Rating } from "@/types/rating";
+import {
+	fivePointRatingToApiRating,
+	formatAverageRating,
+	formatReviewCount,
+	ratingToFivePointScale,
+} from "@/utils/ratings";
 
 export default function DoctorDetails() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const router = useRouter();
 	const { theme } = useUnistyles();
 	const insets = useSafeAreaInsets();
+	const { customer, isCustomer, user } = useAuth();
+	const [selectedRating, setSelectedRating] = useState(0);
+	const [ratingComment, setRatingComment] = useState("");
+	const [isRatingModalVisible, setIsRatingModalVisible] = useState(false);
 
 	// Fetch healthcare provider from API
 	const { data, isLoading, error, refetch } = useHealthcareProvider(
 		id || "",
 		!!id,
 	);
+	const { data: ratingsData, refetch: refetchRatings } = useRatingsByProvider(
+		id || "",
+		!!id,
+	);
+	const createRatingMutation = useCreateRating();
+	const updateRatingMutation = useUpdateRating();
 
 	const provider = data?.healthcareProvider;
+	const isOwnRating = (rating: Rating) =>
+		rating.customerId === customer?.id || rating.customer.userId === user?.id;
+	const existingRating = useMemo(
+		() => ratingsData?.ratings.find(isOwnRating),
+		[customer?.id, ratingsData?.ratings, user?.id],
+	);
+	const isSavingRating =
+		createRatingMutation.isPending || updateRatingMutation.isPending;
+	const ratingLabels = ["", "Poor", "Fair", "Good", "Great", "Excellent"];
+	const ratingLabel = selectedRating > 0 ? ratingLabels[selectedRating] : "Rate";
+
+	const openRatingModal = () => {
+		if (existingRating) {
+			setSelectedRating(ratingToFivePointScale(existingRating.rating));
+			setRatingComment(existingRating.comment ?? "");
+		} else {
+			setSelectedRating(0);
+			setRatingComment("");
+		}
+
+		setIsRatingModalVisible(true);
+	};
+
+	useEffect(() => {
+		if (!existingRating) {
+			setSelectedRating(0);
+			setRatingComment("");
+			return;
+		}
+
+		setSelectedRating(ratingToFivePointScale(existingRating.rating));
+		setRatingComment(existingRating.comment ?? "");
+	}, [existingRating]);
 
 	// Loading state
 	if (isLoading) {
@@ -71,6 +135,54 @@ export default function DoctorDetails() {
 	}
 
 	const providerUser = provider.user;
+	const averageRating = ratingsData?.stats.averageRating ?? provider.averageRating;
+	const totalRatings = ratingsData?.stats.totalRatings ?? provider.totalRatings;
+
+	const handleSubmitRating = async () => {
+		if (!provider || selectedRating === 0) {
+			Alert.alert("Rating required", "Choose a star rating before submitting.");
+			return;
+		}
+		if (!customer?.id) {
+			Alert.alert(
+				"Customer profile required",
+				"We could not find your customer profile. Please sign in again and try once more.",
+			);
+			return;
+		}
+
+		const payload = {
+			rating: fivePointRatingToApiRating(selectedRating),
+			comment: ratingComment.trim() || null,
+		};
+
+		try {
+			const latestRatings = existingRating
+				? ratingsData
+				: (await refetchRatings()).data;
+			const ratingToUpdate =
+				existingRating || latestRatings?.ratings.find(isOwnRating);
+
+			if (ratingToUpdate) {
+				await updateRatingMutation.mutateAsync({
+					ratingId: ratingToUpdate.id,
+					healthcareProviderId: provider.id,
+					data: payload,
+				});
+			} else {
+				await createRatingMutation.mutateAsync({
+					customerId: customer.id,
+					healthcareProviderId: provider.id,
+					...payload,
+				});
+			}
+
+			setIsRatingModalVisible(false);
+			Alert.alert("Thank you", "Your rating was saved.");
+		} catch (error) {
+			Alert.alert("Error", getErrorMessage(error));
+		}
+	};
 
 	// Calculate stats
 	const totalProcedures = provider.procedures.length;
@@ -167,8 +279,12 @@ export default function DoctorDetails() {
 								fill={theme.colors.amber}
 								strokeWidth={2}
 							/>
-							<Text style={styles.statValue}>4.8</Text>
-							<Text style={styles.statLabel}>(120 reviews)</Text>
+							<Text style={styles.statValue}>
+								{formatAverageRating(averageRating)}
+							</Text>
+							<Text style={styles.statLabel}>
+								({formatReviewCount(totalRatings)})
+							</Text>
 						</View>
 						<View style={styles.statItem}>
 							<Briefcase
@@ -218,6 +334,38 @@ export default function DoctorDetails() {
 						<Text style={styles.sectionTitle}>About</Text>
 						<Text style={styles.aboutText}>{provider.bio}</Text>
 					</View>
+				)}
+
+				{/* Rating Prompt */}
+				{isCustomer && (
+					<Pressable
+						style={styles.ratingPrompt}
+						onPress={openRatingModal}
+						disabled={isSavingRating}
+					>
+						<View style={styles.ratingPromptIcon}>
+							<Sparkles size={22} color="#ffffff" strokeWidth={2.4} />
+						</View>
+						<View style={styles.ratingPromptContent}>
+							<Text style={styles.ratingPromptTitle}>
+								{existingRating ? "Update your rating" : "Rate this provider"}
+							</Text>
+							<Text style={styles.ratingPromptSubtitle}>
+								Your feedback helps other patients choose with confidence.
+							</Text>
+						</View>
+						<View style={styles.ratingPromptStars}>
+							{[1, 2, 3].map((star) => (
+								<Star
+									key={star}
+									size={18}
+									color={theme.colors.amber}
+									fill={theme.colors.amber}
+									strokeWidth={2}
+								/>
+							))}
+						</View>
+					</Pressable>
 				)}
 
 				{/* Procedures */}
@@ -338,6 +486,102 @@ export default function DoctorDetails() {
 					</Button>
 				</View>
 			</View>
+
+			<Modal
+				animationType="fade"
+				transparent
+				visible={isRatingModalVisible}
+				onRequestClose={() => setIsRatingModalVisible(false)}
+			>
+				<KeyboardAvoidingView
+					behavior={process.env.EXPO_OS === "ios" ? "padding" : undefined}
+					style={styles.ratingModalOverlay}
+				>
+					<Pressable
+						style={styles.ratingModalBackdrop}
+						onPress={() => setIsRatingModalVisible(false)}
+						disabled={isSavingRating}
+					/>
+					<View style={styles.ratingModalCard}>
+						<Pressable
+							style={styles.ratingModalCloseButton}
+							onPress={() => setIsRatingModalVisible(false)}
+							disabled={isSavingRating}
+						>
+							<X
+								size={20}
+								color={theme.colors.mutedForeground}
+								strokeWidth={2.2}
+							/>
+						</Pressable>
+
+						<View style={styles.ratingModalHero}>
+							<View style={styles.ratingModalBadge}>
+								<Sparkles size={28} color="#ffffff" strokeWidth={2.5} />
+							</View>
+							<Text style={styles.ratingModalTitle}>
+								{existingRating ? "Update your rating" : "How was your visit?"}
+							</Text>
+							<Text style={styles.ratingModalSubtitle}>
+								{providerUser.name} will receive your feedback after you submit.
+							</Text>
+						</View>
+
+						<View style={styles.ratingModalStars}>
+							{[1, 2, 3, 4, 5].map((rating) => {
+								const isSelected = rating <= selectedRating;
+
+								return (
+									<Pressable
+										key={rating}
+										onPress={() => setSelectedRating(rating)}
+										style={[
+											styles.ratingModalStarButton,
+											isSelected && styles.ratingModalStarButtonSelected,
+										]}
+										disabled={isSavingRating}
+									>
+										<Star
+											size={30}
+											color={theme.colors.amber}
+											fill={isSelected ? theme.colors.amber : "transparent"}
+											strokeWidth={2.2}
+										/>
+									</Pressable>
+								);
+							})}
+						</View>
+						<Text style={styles.ratingModalSelectedLabel}>{ratingLabel}</Text>
+
+						<Textarea
+							placeholder="Optional review"
+							value={ratingComment}
+							onChangeText={setRatingComment}
+							disabled={isSavingRating}
+							style={styles.ratingModalCommentInput}
+						/>
+
+						<View style={styles.ratingModalActions}>
+							<Button
+								variant="outline"
+								style={styles.ratingModalActionButton}
+								onPress={() => setIsRatingModalVisible(false)}
+								disabled={isSavingRating}
+							>
+								Cancel
+							</Button>
+							<Button
+								style={styles.ratingModalActionButton}
+								disabled={selectedRating === 0}
+								loading={isSavingRating}
+								onPress={handleSubmitRating}
+							>
+								{existingRating ? "Update" : "Submit"}
+							</Button>
+						</View>
+					</View>
+				</KeyboardAvoidingView>
+			</Modal>
 		</View>
 	);
 }
@@ -549,6 +793,147 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 14,
 		color: theme.colors.mutedForeground,
 		lineHeight: 22,
+	},
+	ratingPrompt: {
+		marginHorizontal: theme.gap(3),
+		marginTop: theme.gap(3),
+		backgroundColor: theme.colors.surfacePrimary,
+		borderRadius: theme.radius.xl,
+		padding: theme.gap(2.5),
+		borderWidth: 1,
+		borderColor: `${theme.colors.amber}66`,
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(2),
+		boxShadow: "0 10px 24px rgba(245, 158, 11, 0.16)",
+	},
+	ratingPromptIcon: {
+		width: 46,
+		height: 46,
+		borderRadius: 23,
+		backgroundColor: theme.colors.amber,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	ratingPromptContent: {
+		flex: 1,
+		gap: theme.gap(0.5),
+	},
+	ratingPromptTitle: {
+		fontSize: 16,
+		fontWeight: "700",
+		color: theme.colors.foreground,
+	},
+	ratingPromptSubtitle: {
+		fontSize: 13,
+		color: theme.colors.mutedForeground,
+		lineHeight: 18,
+	},
+	ratingPromptStars: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(0.25),
+	},
+	ratingModalOverlay: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
+		paddingHorizontal: theme.gap(2.5),
+		paddingVertical: theme.gap(4),
+	},
+	ratingModalBackdrop: {
+		...StyleSheet.absoluteFillObject,
+		backgroundColor: "rgba(15, 23, 42, 0.58)",
+	},
+	ratingModalCard: {
+		width: "100%",
+		maxWidth: 430,
+		backgroundColor: theme.colors.surfacePrimary,
+		borderRadius: theme.radius.xl,
+		padding: theme.gap(3),
+		borderWidth: 1,
+		borderColor: `${theme.colors.amber}4D`,
+		gap: theme.gap(2.25),
+		boxShadow: "0 22px 50px rgba(15, 23, 42, 0.24)",
+	},
+	ratingModalCloseButton: {
+		position: "absolute",
+		right: theme.gap(2),
+		top: theme.gap(2),
+		width: 44,
+		height: 44,
+		borderRadius: 22,
+		backgroundColor: theme.colors.background,
+		alignItems: "center",
+		justifyContent: "center",
+		zIndex: 1,
+	},
+	ratingModalHero: {
+		alignItems: "center",
+		paddingHorizontal: theme.gap(2),
+		paddingTop: theme.gap(1),
+		gap: theme.gap(1),
+	},
+	ratingModalBadge: {
+		width: 64,
+		height: 64,
+		borderRadius: 32,
+		backgroundColor: theme.colors.amber,
+		alignItems: "center",
+		justifyContent: "center",
+		marginBottom: theme.gap(0.5),
+		boxShadow: "0 10px 22px rgba(245, 158, 11, 0.28)",
+	},
+	ratingModalTitle: {
+		fontSize: 22,
+		fontWeight: "800",
+		color: theme.colors.foreground,
+		textAlign: "center",
+	},
+	ratingModalSubtitle: {
+		fontSize: 14,
+		color: theme.colors.mutedForeground,
+		textAlign: "center",
+		lineHeight: 20,
+	},
+	ratingModalStars: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+		gap: theme.gap(0.5),
+	},
+	ratingModalStarButton: {
+		width: 40,
+		height: 40,
+		borderRadius: 20,
+		alignItems: "center",
+		justifyContent: "center",
+		borderWidth: 1,
+		borderColor: "transparent",
+		backgroundColor: theme.colors.background,
+	},
+	ratingModalStarButtonSelected: {
+		backgroundColor: `${theme.colors.amber}1F`,
+		borderColor: `${theme.colors.amber}66`,
+	},
+	ratingModalSelectedLabel: {
+		fontSize: 14,
+		fontWeight: "700",
+		color: theme.colors.foreground,
+		textAlign: "center",
+		minHeight: 20,
+	},
+	ratingModalCommentInput: {
+		minHeight: 116,
+	},
+	ratingModalActions: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(1.5),
+	},
+	ratingModalActionButton: {
+		flex: 1,
+		borderRadius: theme.radius.full,
 	},
 	proceduresContainer: {
 		gap: theme.gap(2),

@@ -31,6 +31,8 @@ export interface HealthcareProvider {
 	professionalId: string | null;
 	bio: string | null;
 	nextAvailableAt?: string | null;
+	averageRating?: number;
+	totalRatings?: number;
 	createdAt: string;
 	updatedAt: string;
 	procedures: Procedure[];

@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import {
 	Bell,
 	ChevronRight,
@@ -13,6 +14,7 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/auth";
+import { useFavorites } from "@/hooks/use-favorites";
 
 const menuItems = [
 	{
@@ -46,6 +48,9 @@ export default function Profile() {
 	const { theme } = useUnistyles();
 	const { signOut, user } = useAuth();
 	const insets = useSafeAreaInsets();
+	const router = useRouter();
+	const { data: favoritesData } = useFavorites();
+	const favoritesCount = favoritesData?.favorites.length ?? 0;
 
 	return (
 		<View style={styles.container}>
@@ -84,7 +89,7 @@ export default function Profile() {
 						<Text style={styles.statLabel}>Reviews</Text>
 					</View>
 					<View style={styles.statCard}>
-						<Text style={styles.statValue}>8</Text>
+						<Text style={styles.statValue}>{favoritesCount}</Text>
 						<Text style={styles.statLabel}>Favorites</Text>
 					</View>
 				</View>
@@ -97,6 +102,11 @@ export default function Profile() {
 							return (
 								<Pressable
 									key={item.label}
+									onPress={() => {
+										if (item.label === "Favorites") {
+											router.push("/favorites");
+										}
+									}}
 									style={({ pressed }) => [
 										styles.menuItem,
 										pressed && styles.menuItemPressed,
