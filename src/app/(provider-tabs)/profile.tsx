@@ -4,6 +4,7 @@ import {
 	Plus,
 	Trash2,
 	AlertCircle,
+	ClipboardPlus,
 	Edit2,
 	User,
 	Briefcase,
@@ -21,6 +22,7 @@ import {
 	Alert,
 	type ScrollView as ScrollViewType,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { useForm, Controller } from "react-hook-form";
@@ -61,6 +63,7 @@ type ProcedureData = z.infer<typeof procedureSchema>;
 
 export default function ProviderProfile() {
 	const { theme } = useUnistyles();
+	const router = useRouter();
 	const { healthcareProvider, signOut } = useAuth();
 	const [isSaving, setIsSaving] = useState(false);
 	const [editingProcedureIndex, setEditingProcedureIndex] = useState<
@@ -699,6 +702,27 @@ export default function ProviderProfile() {
 						<View style={styles.section}>
 							<Text style={styles.sectionTitle}>Account</Text>
 							<Pressable
+								onPress={() => router.push("/medical-record")}
+								style={({ pressed }) => [
+									styles.accountCard,
+									pressed && styles.accountCardPressed,
+								]}
+							>
+								<View style={styles.accountIconContainer}>
+									<ClipboardPlus
+										size={20}
+										color={theme.colors.primary}
+										strokeWidth={2}
+									/>
+								</View>
+								<View style={styles.accountContent}>
+									<Text style={styles.accountTitle}>Medical Record</Text>
+									<Text style={styles.accountDescription}>
+										Manage your personal health information
+									</Text>
+								</View>
+							</Pressable>
+							<Pressable
 								onPress={handleSignOut}
 								style={({ pressed }) => [
 									styles.logoutCard,
@@ -894,6 +918,41 @@ const styles = StyleSheet.create((theme) => ({
 	metadataText: {
 		fontSize: 13,
 		color: theme.colors.mutedForeground,
+	},
+	accountCard: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(2),
+		backgroundColor: theme.colors.surfacePrimary,
+		borderRadius: theme.radius.lg,
+		padding: theme.gap(3),
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		marginBottom: theme.gap(2),
+	},
+	accountCardPressed: {
+		backgroundColor: theme.colors.secondary,
+	},
+	accountIconContainer: {
+		width: 44,
+		height: 44,
+		borderRadius: theme.radius.md,
+		backgroundColor: theme.colors.secondary,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	accountContent: {
+		flex: 1,
+	},
+	accountTitle: {
+		fontSize: 15,
+		fontWeight: "600",
+		color: theme.colors.foreground,
+	},
+	accountDescription: {
+		fontSize: 13,
+		color: theme.colors.mutedForeground,
+		marginTop: theme.gap(0.5),
 	},
 	logoutCard: {
 		flexDirection: "row",

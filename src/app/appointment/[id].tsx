@@ -3,11 +3,16 @@ import {
 	ArrowLeft,
 	Calendar,
 	Clock,
+	ClipboardPlus,
 	DollarSign,
+	Droplets,
 	FileText,
+	HeartPulse,
 	Mail,
 	MessageCircle,
 	Phone,
+	Pill,
+	ShieldPlus,
 	Stethoscope,
 	UserRound,
 } from "lucide-react-native";
@@ -18,7 +23,9 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
 import { useAppointment, useUpdateAppointment } from "@/hooks/use-appointments";
 import { useGetOrCreateConversation } from "@/hooks/use-conversations";
+import { useCustomerMedicalRecord } from "@/hooks/use-medical-record";
 import type { Appointment, AppointmentStatus } from "@/types/appointment";
+import type { MedicalRecord } from "@/types/medical-record";
 
 interface StatusAction {
 	label: string;
@@ -114,6 +121,39 @@ function DetailRow({
 	);
 }
 
+function MedicalRecordItem({
+	label,
+	value,
+}: {
+	label: string;
+	value?: string | null;
+}) {
+	return (
+		<View style={styles.medicalRecordItem}>
+			<Text style={styles.medicalRecordLabel}>{label}</Text>
+			<Text style={styles.medicalRecordValue}>
+				{value?.trim() || "Not informed"}
+			</Text>
+		</View>
+	);
+}
+
+function getMedicalRecordFields(record: MedicalRecord | null | undefined) {
+	return [
+		{ label: "Blood Type", value: record?.bloodType },
+		{ label: "Medications", value: record?.medications },
+		{ label: "Chronic Pain", value: record?.chronicPain },
+		{
+			label: "Pre-existing Conditions",
+			value: record?.preExistingConditions,
+		},
+		{ label: "Allergies", value: record?.allergies },
+		{ label: "Surgeries", value: record?.surgeries },
+		{ label: "Family History", value: record?.familyHistory },
+		{ label: "Lifestyle Notes", value: record?.lifestyleNotes },
+	].filter((field) => field.value?.trim());
+}
+
 export default function AppointmentDetails() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const router = useRouter();
@@ -125,6 +165,14 @@ export default function AppointmentDetails() {
 	const createConversationMutation = useGetOrCreateConversation();
 
 	const appointment = appointmentData?.appointment;
+	const {
+		data: medicalRecordData,
+		isLoading: isMedicalRecordLoading,
+		error: medicalRecordError,
+	} = useCustomerMedicalRecord(
+		appointment?.customerId || "",
+		isHealthcareProvider && !!appointment?.customerId,
+	);
 
 	const handleStatusUpdate = async (appointmentId: string, nextStatus: AppointmentStatus) => {
 		try {
@@ -180,6 +228,8 @@ export default function AppointmentDetails() {
 
 	const statusConfig = getStatusConfig(appointment.status);
 	const procedures = appointment.appointmentProcedures.map((ap) => ap.procedure);
+	const medicalRecord = medicalRecordData?.medicalRecord;
+	const medicalRecordFields = getMedicalRecordFields(medicalRecord);
 	const counterpart = isHealthcareProvider
 		? {
 				title: "Patient",
@@ -301,6 +351,154 @@ export default function AppointmentDetails() {
 						</Button>
 					</View>
 				</View>
+
+				{isHealthcareProvider ? (
+					<View style={styles.section}>
+						<Text style={styles.sectionTitle}>Medical Record</Text>
+						<View style={styles.infoCard}>
+							<View style={styles.medicalRecordHeader}>
+								<View style={styles.medicalRecordIcon}>
+									<ClipboardPlus
+										size={18}
+										color={theme.colors.primary}
+										strokeWidth={2.2}
+									/>
+								</View>
+								<View style={styles.medicalRecordHeaderText}>
+									<Text style={styles.medicalRecordTitle}>
+										Patient health summary
+									</Text>
+									<Text style={styles.medicalRecordSubtitle}>
+										Information shared by {appointment.customer.user.name}
+									</Text>
+								</View>
+							</View>
+
+							{isMedicalRecordLoading ? (
+								<View style={styles.medicalRecordState}>
+									<ActivityIndicator
+										size="small"
+										color={theme.colors.primary}
+									/>
+									<Text style={styles.medicalRecordStateText}>
+										Loading medical record...
+									</Text>
+								</View>
+							) : null}
+
+							{medicalRecordError && !isMedicalRecordLoading ? (
+								<View style={styles.medicalRecordState}>
+									<ShieldPlus
+										size={18}
+										color={theme.colors.destructive}
+										strokeWidth={2.2}
+									/>
+									<Text style={styles.medicalRecordStateText}>
+										Could not load this medical record.
+									</Text>
+								</View>
+							) : null}
+
+							{!isMedicalRecordLoading &&
+							!medicalRecordError &&
+							!medicalRecord ? (
+								<View style={styles.medicalRecordState}>
+									<ShieldPlus
+										size={18}
+										color={theme.colors.primary}
+										strokeWidth={2.2}
+									/>
+									<Text style={styles.medicalRecordStateText}>
+										This patient has not filled a medical record yet.
+									</Text>
+								</View>
+							) : null}
+
+							{!isMedicalRecordLoading &&
+							!medicalRecordError &&
+							medicalRecord ? (
+								<View style={styles.medicalRecordContent}>
+									<View style={styles.medicalQuickFacts}>
+										<View style={styles.medicalQuickFact}>
+											<Droplets
+												size={16}
+												color={theme.colors.destructive}
+												strokeWidth={2.2}
+											/>
+											<Text style={styles.medicalQuickFactText}>
+												{medicalRecord.bloodType || "Blood type not informed"}
+											</Text>
+										</View>
+										<View style={styles.medicalQuickFact}>
+											<Pill
+												size={16}
+												color={theme.colors.primary}
+												strokeWidth={2.2}
+											/>
+											<Text style={styles.medicalQuickFactText}>
+												{medicalRecord.medications
+													? "Uses medication"
+													: "No medications informed"}
+											</Text>
+										</View>
+										<View style={styles.medicalQuickFact}>
+											<HeartPulse
+												size={16}
+												color={theme.colors.coral500}
+												strokeWidth={2.2}
+											/>
+											<Text style={styles.medicalQuickFactText}>
+												{medicalRecord.preExistingConditions
+													? "Has health history"
+													: "No conditions informed"}
+											</Text>
+										</View>
+									</View>
+
+									{medicalRecordFields.length > 0 ? (
+										<View style={styles.medicalRecordList}>
+											{medicalRecordFields.map((field) => (
+												<MedicalRecordItem
+													key={field.label}
+													label={field.label}
+													value={field.value}
+												/>
+											))}
+										</View>
+									) : (
+										<Text style={styles.medicalRecordStateText}>
+											Only blank fields are available for this record.
+										</Text>
+									)}
+
+									{medicalRecord.emergencyContactName ||
+									medicalRecord.emergencyContactPhone ? (
+										<View style={styles.emergencyContact}>
+											<Phone
+												size={16}
+												color={theme.colors.destructive}
+												strokeWidth={2.2}
+											/>
+											<View style={styles.emergencyContactText}>
+												<Text style={styles.emergencyContactLabel}>
+													Emergency contact
+												</Text>
+												<Text style={styles.emergencyContactValue}>
+													{[
+														medicalRecord.emergencyContactName,
+														medicalRecord.emergencyContactPhone,
+													]
+														.filter(Boolean)
+														.join(" • ")}
+												</Text>
+											</View>
+										</View>
+									) : null}
+								</View>
+							) : null}
+						</View>
+					</View>
+				) : null}
 
 				<View style={styles.section}>
 					<Text style={styles.sectionTitle}>Procedures</Text>
@@ -630,6 +828,105 @@ const styles = StyleSheet.create((theme) => ({
 	notesText: {
 		fontSize: 14,
 		lineHeight: 21,
+		color: theme.colors.foreground,
+	},
+	medicalRecordHeader: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(1.5),
+	},
+	medicalRecordIcon: {
+		width: 38,
+		height: 38,
+		borderRadius: 19,
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: theme.colors.secondary,
+	},
+	medicalRecordHeaderText: {
+		flex: 1,
+		gap: theme.gap(0.25),
+	},
+	medicalRecordTitle: {
+		fontSize: 15,
+		fontWeight: "700",
+		color: theme.colors.foreground,
+	},
+	medicalRecordSubtitle: {
+		fontSize: 13,
+		color: theme.colors.mutedForeground,
+	},
+	medicalRecordState: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(1),
+		paddingVertical: theme.gap(1),
+	},
+	medicalRecordStateText: {
+		flex: 1,
+		fontSize: 14,
+		lineHeight: 20,
+		color: theme.colors.mutedForeground,
+	},
+	medicalRecordContent: {
+		gap: theme.gap(2),
+	},
+	medicalQuickFacts: {
+		gap: theme.gap(1),
+	},
+	medicalQuickFact: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(1),
+		backgroundColor: theme.colors.surfaceMuted,
+		borderRadius: theme.radius.lg,
+		paddingHorizontal: theme.gap(1.5),
+		paddingVertical: theme.gap(1.25),
+	},
+	medicalQuickFactText: {
+		flex: 1,
+		fontSize: 13,
+		fontWeight: "600",
+		color: theme.colors.foreground,
+	},
+	medicalRecordList: {
+		gap: theme.gap(1.25),
+	},
+	medicalRecordItem: {
+		gap: theme.gap(0.5),
+	},
+	medicalRecordLabel: {
+		fontSize: 12,
+		fontWeight: "700",
+		textTransform: "uppercase",
+		color: theme.colors.mutedForeground,
+	},
+	medicalRecordValue: {
+		fontSize: 14,
+		lineHeight: 20,
+		color: theme.colors.foreground,
+	},
+	emergencyContact: {
+		flexDirection: "row",
+		alignItems: "flex-start",
+		gap: theme.gap(1),
+		borderRadius: theme.radius.lg,
+		backgroundColor: theme.colors.accent,
+		padding: theme.gap(1.5),
+	},
+	emergencyContactText: {
+		flex: 1,
+		gap: theme.gap(0.25),
+	},
+	emergencyContactLabel: {
+		fontSize: 12,
+		fontWeight: "700",
+		textTransform: "uppercase",
+		color: theme.colors.accentForeground,
+	},
+	emergencyContactValue: {
+		fontSize: 14,
+		lineHeight: 20,
 		color: theme.colors.foreground,
 	},
 	statusActions: {

@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import {
 	Bell,
 	ChevronRight,
+	ClipboardPlus,
 	CreditCard,
 	Heart,
 	HelpCircle,
@@ -21,6 +22,11 @@ const menuItems = [
 		icon: Bell,
 		label: "Notifications",
 		description: "Manage your notifications",
+	},
+	{
+		icon: ClipboardPlus,
+		label: "Medical Record",
+		description: "Blood type, medications, and health history",
 	},
 	{
 		icon: Heart,
@@ -105,6 +111,9 @@ export default function Profile() {
 									onPress={() => {
 										if (item.label === "Favorites") {
 											router.push("/favorites");
+										}
+										if (item.label === "Medical Record") {
+											router.push("/medical-record");
 										}
 									}}
 									style={({ pressed }) => [
