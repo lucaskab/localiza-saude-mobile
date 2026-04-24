@@ -30,6 +30,7 @@ export interface HealthcareProvider {
 	specialty: string | null;
 	professionalId: string | null;
 	bio: string | null;
+	nextAvailableAt?: string | null;
 	createdAt: string;
 	updatedAt: string;
 	procedures: Procedure[];

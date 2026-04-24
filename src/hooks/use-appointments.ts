@@ -168,6 +168,8 @@ export const useAvailability = ({
 				procedureIds,
 			}),
 		enabled: enabled && !!healthcareProviderId && !!date,
+		staleTime: 0,
+		refetchOnMount: "always",
 	});
 };
 
@@ -216,6 +218,8 @@ export const useTimeSlots = ({
 			}),
 		enabled:
 			enabled && !!healthcareProviderId && !!date && procedureIds.length > 0,
+		staleTime: 0,
+		refetchOnMount: "always",
 	});
 };
 
@@ -238,6 +242,10 @@ export const useCreateAppointment = () => {
 		onSuccess: () => {
 			// Invalidate and refetch appointments
 			queryClient.invalidateQueries({ queryKey: ["appointments"] });
+			queryClient.invalidateQueries({ queryKey: ["availability"] });
+			queryClient.invalidateQueries({ queryKey: ["timeSlots"] });
+			queryClient.invalidateQueries({ queryKey: ["categories"] });
+			queryClient.invalidateQueries({ queryKey: ["healthcare-providers"] });
 		},
 	});
 };
@@ -271,6 +279,10 @@ export const useUpdateAppointment = () => {
 				queryKey: ["appointment", variables.appointmentId],
 			});
 			queryClient.invalidateQueries({ queryKey: ["appointments"] });
+			queryClient.invalidateQueries({ queryKey: ["availability"] });
+			queryClient.invalidateQueries({ queryKey: ["timeSlots"] });
+			queryClient.invalidateQueries({ queryKey: ["categories"] });
+			queryClient.invalidateQueries({ queryKey: ["healthcare-providers"] });
 		},
 	});
 };
@@ -293,6 +305,10 @@ export const useDeleteAppointment = () => {
 		onSuccess: () => {
 			// Invalidate appointments list
 			queryClient.invalidateQueries({ queryKey: ["appointments"] });
+			queryClient.invalidateQueries({ queryKey: ["availability"] });
+			queryClient.invalidateQueries({ queryKey: ["timeSlots"] });
+			queryClient.invalidateQueries({ queryKey: ["categories"] });
+			queryClient.invalidateQueries({ queryKey: ["healthcare-providers"] });
 		},
 	});
 };

@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { useCategories, getProvidersByCategory } from "@/hooks/use-categories";
+import { formatNextAvailableAt } from "@/utils/availability";
 
 export default function Home() {
 	const { theme } = useUnistyles();
@@ -230,7 +231,7 @@ export default function Home() {
 													Next available
 												</Text>
 												<Text style={styles.nextAvailableTime}>
-													Today, 2:00 PM
+													{formatNextAvailableAt(provider.nextAvailableAt)}
 												</Text>
 											</View>
 											<Button

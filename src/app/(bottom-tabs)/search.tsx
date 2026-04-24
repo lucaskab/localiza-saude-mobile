@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getProvidersByCategory, useCategories } from "@/hooks/use-categories";
 import { useGetOrCreateConversation } from "@/hooks/use-conversations";
+import { formatNextAvailableAt } from "@/utils/availability";
 
 export default function Search() {
 	const router = useRouter();
@@ -251,7 +252,9 @@ export default function Search() {
 															</View>
 															<View style={styles.statDivider} />
 															<Text style={styles.availableText}>
-																Available today
+																{formatNextAvailableAt(
+																	provider.nextAvailableAt,
+																)}
 															</Text>
 														</View>
 														<View style={styles.professionalActions}>

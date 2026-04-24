@@ -127,7 +127,8 @@ export const useCategories = (enabled: boolean = true) => {
 		queryKey: ["categories"],
 		queryFn: getCategories,
 		enabled,
-		staleTime: 5 * 60 * 1000, // Categories don't change often, cache for 5 minutes
+		staleTime: 0,
+		refetchOnMount: "always",
 	});
 };
 

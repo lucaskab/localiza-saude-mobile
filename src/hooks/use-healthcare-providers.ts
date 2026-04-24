@@ -39,6 +39,8 @@ export const useHealthcareProviders = ({
 				specialty,
 			}),
 		enabled,
+		staleTime: 0,
+		refetchOnMount: "always",
 	});
 };
 
