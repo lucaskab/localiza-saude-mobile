@@ -21,6 +21,15 @@ export const getCustomerMedicalRecord = async (
 	return data;
 };
 
+export const getAppointmentMedicalRecord = async (
+	appointmentId: string,
+): Promise<GetMedicalRecordResponse> => {
+	const { data } = await api.get<GetMedicalRecordResponse>(
+		`/appointments/${appointmentId}/medical-record`,
+	);
+	return data;
+};
+
 export const upsertMyMedicalRecord = async (
 	record: MedicalRecordData,
 ): Promise<UpsertMedicalRecordResponse> => {
@@ -50,6 +59,17 @@ export const useCustomerMedicalRecord = (
 	});
 };
 
+export const useAppointmentMedicalRecord = (
+	appointmentId: string,
+	enabled = true,
+) => {
+	return useQuery({
+		queryKey: ["medical-record", "appointment", appointmentId],
+		queryFn: () => getAppointmentMedicalRecord(appointmentId),
+		enabled: enabled && !!appointmentId,
+	});
+};
+
 export const useUpsertMyMedicalRecord = () => {
 	const queryClient = useQueryClient();
 
@@ -57,10 +77,12 @@ export const useUpsertMyMedicalRecord = () => {
 		mutationFn: upsertMyMedicalRecord,
 		onSuccess: (response) => {
 			queryClient.setQueryData(["medical-record", "me"], response);
-			queryClient.setQueryData(
-				["medical-record", "customer", response.medicalRecord.customerId],
-				response,
-			);
+			if (response.medicalRecord.customerId) {
+				queryClient.setQueryData(
+					["medical-record", "customer", response.medicalRecord.customerId],
+					response,
+				);
+			}
 		},
 	});
 };

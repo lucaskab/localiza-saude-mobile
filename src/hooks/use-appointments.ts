@@ -223,7 +223,7 @@ export const useTimeSlots = ({
 	});
 };
 
-// Create appointment mutation</text>
+// Create appointment mutation
 export const createAppointment = async (
 	data: CreateAppointmentData,
 ): Promise<CreateAppointmentResponse> => {
@@ -246,6 +246,7 @@ export const useCreateAppointment = () => {
 			queryClient.invalidateQueries({ queryKey: ["timeSlots"] });
 			queryClient.invalidateQueries({ queryKey: ["categories"] });
 			queryClient.invalidateQueries({ queryKey: ["healthcare-providers"] });
+			queryClient.invalidateQueries({ queryKey: ["patient-profiles"] });
 		},
 	});
 };

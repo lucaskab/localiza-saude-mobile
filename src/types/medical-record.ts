@@ -1,6 +1,7 @@
 export interface MedicalRecord {
 	id: string;
-	customerId: string;
+	customerId: string | null;
+	patientProfileId?: string | null;
 	bloodType: string | null;
 	medications: string | null;
 	chronicPain: string | null;

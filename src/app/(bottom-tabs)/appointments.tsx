@@ -26,6 +26,7 @@ import { useAuth } from "@/contexts/auth";
 import { useAppointmentsByCustomer } from "@/hooks/use-appointments";
 import { useGetOrCreateConversation } from "@/hooks/use-conversations";
 import type { Appointment } from "@/types/appointment";
+import { getAppointmentPatientName } from "@/utils/appointments";
 
 export default function Appointments() {
 	const router = useRouter();
@@ -263,6 +264,7 @@ export default function Appointments() {
 							const { date, time } = formatDateTime(appointment.scheduledAt);
 							const provider = appointment.healthcareProvider;
 							const providerUser = provider.user;
+							const patientName = getAppointmentPatientName(appointment);
 
 							return (
 								<Pressable
@@ -315,6 +317,11 @@ export default function Appointments() {
 															.join(", ")
 													: "Consultation"}
 											</Text>
+											{appointment.patientProfile ? (
+												<Text style={styles.patientForText}>
+													For {patientName}
+												</Text>
+											) : null}
 										</View>
 									</View>
 
@@ -628,6 +635,12 @@ const styles = StyleSheet.create((theme) => ({
 	appointmentType: {
 		fontSize: 12,
 		color: theme.colors.mutedForeground,
+	},
+	patientForText: {
+		fontSize: 12,
+		color: theme.colors.primary,
+		fontWeight: "600",
+		marginTop: theme.gap(0.5),
 	},
 	detailsContainer: {
 		backgroundColor: `${theme.colors.secondary}80`,

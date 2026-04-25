@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import {
 	ActivityIndicator,
 	Alert,
@@ -24,6 +24,8 @@ import {
 	Users,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
+import { Controller, useForm, useWatch } from "react-hook-form";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,13 +35,32 @@ import {
 	useUpsertMyMedicalRecord,
 } from "@/hooks/use-medical-record";
 import { getErrorMessage } from "@/services/api";
-import type { MedicalRecordData } from "@/types/medical-record";
 
-const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
 
-type MedicalRecordForm = Required<MedicalRecordData>;
+const medicalTextSchema = z.string().transform((value) => {
+	const trimmed = value.trim();
+	return trimmed.length > 0 ? trimmed : null;
+});
+const bloodTypeSchema = z.enum(BLOOD_TYPES).nullable();
 
-const emptyForm: MedicalRecordForm = {
+const medicalRecordFormSchema = z.object({
+	bloodType: bloodTypeSchema,
+	medications: medicalTextSchema,
+	chronicPain: medicalTextSchema,
+	preExistingConditions: medicalTextSchema,
+	allergies: medicalTextSchema,
+	surgeries: medicalTextSchema,
+	familyHistory: medicalTextSchema,
+	lifestyleNotes: medicalTextSchema,
+	emergencyContactName: medicalTextSchema,
+	emergencyContactPhone: medicalTextSchema,
+});
+
+type MedicalRecordFormValues = z.input<typeof medicalRecordFormSchema>;
+type MedicalRecordPayload = z.output<typeof medicalRecordFormSchema>;
+
+const emptyForm: MedicalRecordFormValues = {
 	bloodType: null,
 	medications: "",
 	chronicPain: "",
@@ -52,9 +73,11 @@ const emptyForm: MedicalRecordForm = {
 	emergencyContactPhone: "",
 };
 
-const textOrNull = (value: string | null | undefined) => {
-	const trimmed = value?.trim();
-	return trimmed ? trimmed : null;
+const parseBloodType = (
+	value: string | null,
+): MedicalRecordFormValues["bloodType"] => {
+	const parsed = bloodTypeSchema.safeParse(value);
+	return parsed.success ? parsed.data : null;
 };
 
 function FieldLabel({
@@ -81,18 +104,21 @@ export default function MedicalRecordScreen() {
 	const { user } = useAuth();
 	const { data, isLoading, error, refetch } = useMyMedicalRecord(!!user?.id);
 	const upsertMutation = useUpsertMyMedicalRecord();
-	const [form, setForm] = useState<MedicalRecordForm>(emptyForm);
+	const { control, handleSubmit, reset } = useForm<MedicalRecordFormValues>({
+		defaultValues: emptyForm,
+	});
+	const formValues = useWatch({ control });
 
 	useEffect(() => {
 		const record = data?.medicalRecord;
 
 		if (!record) {
-			setForm(emptyForm);
+			reset(emptyForm);
 			return;
 		}
 
-		setForm({
-			bloodType: record.bloodType,
+		reset({
+			bloodType: parseBloodType(record.bloodType),
 			medications: record.medications || "",
 			chronicPain: record.chronicPain || "",
 			preExistingConditions: record.preExistingConditions || "",
@@ -103,41 +129,34 @@ export default function MedicalRecordScreen() {
 			emergencyContactName: record.emergencyContactName || "",
 			emergencyContactPhone: record.emergencyContactPhone || "",
 		});
-	}, [data?.medicalRecord]);
+	}, [data?.medicalRecord, reset]);
 
 	const completedSections = useMemo(() => {
+		const parsed = medicalRecordFormSchema.safeParse({
+			...emptyForm,
+			...formValues,
+		});
+
+		if (!parsed.success) {
+			return 0;
+		}
+
 		return [
-			form.bloodType,
-			form.medications,
-			form.chronicPain,
-			form.preExistingConditions,
-			form.allergies,
-			form.emergencyContactName,
-			form.emergencyContactPhone,
-		].filter((value) => textOrNull(value)).length;
-	}, [form]);
+			parsed.data.bloodType,
+			parsed.data.medications,
+			parsed.data.chronicPain,
+			parsed.data.preExistingConditions,
+			parsed.data.allergies,
+			parsed.data.emergencyContactName,
+			parsed.data.emergencyContactPhone,
+		].filter(Boolean).length;
+	}, [formValues]);
 
-	const updateField = (field: keyof MedicalRecordForm, value: string | null) => {
-		setForm((current) => ({
-			...current,
-			[field]: value,
-		}));
-	};
-
-	const handleSave = async () => {
+	const handleSave = async (values: MedicalRecordFormValues) => {
 		try {
-			await upsertMutation.mutateAsync({
-				bloodType: form.bloodType,
-				medications: textOrNull(form.medications),
-				chronicPain: textOrNull(form.chronicPain),
-				preExistingConditions: textOrNull(form.preExistingConditions),
-				allergies: textOrNull(form.allergies),
-				surgeries: textOrNull(form.surgeries),
-				familyHistory: textOrNull(form.familyHistory),
-				lifestyleNotes: textOrNull(form.lifestyleNotes),
-				emergencyContactName: textOrNull(form.emergencyContactName),
-				emergencyContactPhone: textOrNull(form.emergencyContactPhone),
-			});
+			const payload: MedicalRecordPayload = medicalRecordFormSchema.parse(values);
+
+			await upsertMutation.mutateAsync(payload);
 			Alert.alert("Saved", "Your medical record was updated successfully.");
 		} catch (saveError) {
 			Alert.alert("Error", getErrorMessage(saveError));
@@ -233,126 +252,186 @@ export default function MedicalRecordScreen() {
 
 							<View style={styles.section}>
 								<FieldLabel icon={Droplets} label="Blood type" />
-								<View style={styles.bloodTypeGrid}>
-									{BLOOD_TYPES.map((bloodType) => {
-										const isSelected = form.bloodType === bloodType;
+								<Controller
+									control={control}
+									name="bloodType"
+									render={({ field }) => (
+										<View style={styles.bloodTypeGrid}>
+											{BLOOD_TYPES.map((bloodType) => {
+												const isSelected = field.value === bloodType;
 
-										return (
-											<Pressable
-												key={bloodType}
-												onPress={() =>
-													updateField(
-														"bloodType",
-														isSelected ? null : bloodType,
-													)
-												}
-												style={[
-													styles.bloodTypeButton,
-													isSelected && styles.bloodTypeButtonSelected,
-												]}
-											>
-												<Text
-													style={[
-														styles.bloodTypeText,
-														isSelected && styles.bloodTypeTextSelected,
-													]}
-												>
-													{bloodType}
-												</Text>
-											</Pressable>
-										);
-									})}
-								</View>
+												return (
+													<Pressable
+														key={bloodType}
+														onPress={() =>
+															field.onChange(isSelected ? null : bloodType)
+														}
+														style={[
+															styles.bloodTypeButton,
+															isSelected && styles.bloodTypeButtonSelected,
+														]}
+													>
+														<Text
+															style={[
+																styles.bloodTypeText,
+																isSelected && styles.bloodTypeTextSelected,
+															]}
+														>
+															{bloodType}
+														</Text>
+													</Pressable>
+												);
+											})}
+										</View>
+									)}
+								/>
 							</View>
 
 							<View style={styles.section}>
 								<FieldLabel icon={Pill} label="Medications" />
-								<Textarea
-									value={form.medications || ""}
-									onChangeText={(value) => updateField("medications", value)}
-									placeholder="List medication names, doses, and frequency"
+								<Controller
+									control={control}
+									name="medications"
+									render={({ field }) => (
+										<Textarea
+											value={field.value}
+											onChangeText={field.onChange}
+											onBlur={field.onBlur}
+											placeholder="List medication names, doses, and frequency"
+										/>
+									)}
 								/>
 							</View>
 
 							<View style={styles.section}>
 								<FieldLabel icon={Activity} label="Chronic pain" />
-								<Textarea
-									value={form.chronicPain || ""}
-									onChangeText={(value) => updateField("chronicPain", value)}
-									placeholder="Describe recurring pain, location, intensity, and duration"
+								<Controller
+									control={control}
+									name="chronicPain"
+									render={({ field }) => (
+										<Textarea
+											value={field.value}
+											onChangeText={field.onChange}
+											onBlur={field.onBlur}
+											placeholder="Describe recurring pain, location, intensity, and duration"
+										/>
+									)}
 								/>
 							</View>
 
 							<View style={styles.section}>
 								<FieldLabel icon={HeartPulse} label="Pre-existing conditions" />
-								<Textarea
-									value={form.preExistingConditions || ""}
-									onChangeText={(value) =>
-										updateField("preExistingConditions", value)
-									}
-									placeholder="Examples: asthma, diabetes, hypertension"
+								<Controller
+									control={control}
+									name="preExistingConditions"
+									render={({ field }) => (
+										<Textarea
+											value={field.value}
+											onChangeText={field.onChange}
+											onBlur={field.onBlur}
+											placeholder="Examples: asthma, diabetes, hypertension"
+										/>
+									)}
 								/>
 							</View>
 
 							<View style={styles.section}>
 								<FieldLabel icon={AlertCircle} label="Allergies" />
-								<Textarea
-									value={form.allergies || ""}
-									onChangeText={(value) => updateField("allergies", value)}
-									placeholder="Medication, food, latex, or other allergies"
+								<Controller
+									control={control}
+									name="allergies"
+									render={({ field }) => (
+										<Textarea
+											value={field.value}
+											onChangeText={field.onChange}
+											onBlur={field.onBlur}
+											placeholder="Medication, food, latex, or other allergies"
+										/>
+									)}
 								/>
 							</View>
 
 							<View style={styles.section}>
 								<FieldLabel icon={ShieldPlus} label="Surgeries" />
-								<Textarea
-									value={form.surgeries || ""}
-									onChangeText={(value) => updateField("surgeries", value)}
-									placeholder="Previous surgeries and approximate dates"
+								<Controller
+									control={control}
+									name="surgeries"
+									render={({ field }) => (
+										<Textarea
+											value={field.value}
+											onChangeText={field.onChange}
+											onBlur={field.onBlur}
+											placeholder="Previous surgeries and approximate dates"
+										/>
+									)}
 								/>
 							</View>
 
 							<View style={styles.section}>
 								<FieldLabel icon={Users} label="Family history" />
-								<Textarea
-									value={form.familyHistory || ""}
-									onChangeText={(value) => updateField("familyHistory", value)}
-									placeholder="Relevant conditions in close relatives"
+								<Controller
+									control={control}
+									name="familyHistory"
+									render={({ field }) => (
+										<Textarea
+											value={field.value}
+											onChangeText={field.onChange}
+											onBlur={field.onBlur}
+											placeholder="Relevant conditions in close relatives"
+										/>
+									)}
 								/>
 							</View>
 
 							<View style={styles.section}>
 								<FieldLabel icon={HeartPulse} label="Lifestyle notes" />
-								<Textarea
-									value={form.lifestyleNotes || ""}
-									onChangeText={(value) => updateField("lifestyleNotes", value)}
-									placeholder="Sleep, exercise, smoking, alcohol, diet, or other notes"
+								<Controller
+									control={control}
+									name="lifestyleNotes"
+									render={({ field }) => (
+										<Textarea
+											value={field.value}
+											onChangeText={field.onChange}
+											onBlur={field.onBlur}
+											placeholder="Sleep, exercise, smoking, alcohol, diet, or other notes"
+										/>
+									)}
 								/>
 							</View>
 
 							<View style={styles.section}>
 								<FieldLabel icon={Phone} label="Emergency contact" />
 								<View style={styles.contactFields}>
-									<Input
-										value={form.emergencyContactName || ""}
-										onChangeText={(value) =>
-											updateField("emergencyContactName", value)
-										}
-										placeholder="Contact name"
+									<Controller
+										control={control}
+										name="emergencyContactName"
+										render={({ field }) => (
+											<Input
+												value={field.value}
+												onChangeText={field.onChange}
+												onBlur={field.onBlur}
+												placeholder="Contact name"
+											/>
+										)}
 									/>
-									<Input
-										value={form.emergencyContactPhone || ""}
-										onChangeText={(value) =>
-											updateField("emergencyContactPhone", value)
-										}
-										placeholder="Contact phone"
-										keyboardType="phone-pad"
+									<Controller
+										control={control}
+										name="emergencyContactPhone"
+										render={({ field }) => (
+											<Input
+												value={field.value}
+												onChangeText={field.onChange}
+												onBlur={field.onBlur}
+												placeholder="Contact phone"
+												keyboardType="phone-pad"
+											/>
+										)}
 									/>
 								</View>
 							</View>
 
 							<Button
-								onPress={handleSave}
+								onPress={handleSubmit(handleSave)}
 								loading={upsertMutation.isPending}
 								disabled={upsertMutation.isPending}
 								style={styles.saveButton}

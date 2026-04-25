@@ -15,6 +15,7 @@ import {
 	ShieldPlus,
 	Stethoscope,
 	UserRound,
+	Users,
 } from "lucide-react-native";
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -23,9 +24,17 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
 import { useAppointment, useUpdateAppointment } from "@/hooks/use-appointments";
 import { useGetOrCreateConversation } from "@/hooks/use-conversations";
-import { useCustomerMedicalRecord } from "@/hooks/use-medical-record";
+import { useAppointmentMedicalRecord } from "@/hooks/use-medical-record";
 import type { Appointment, AppointmentStatus } from "@/types/appointment";
 import type { MedicalRecord } from "@/types/medical-record";
+import {
+	getAppointmentCustomerUserId,
+	getAppointmentPatientEmail,
+	getAppointmentPatientImage,
+	getAppointmentPatientName,
+	getAppointmentPatientPhone,
+	getAppointmentPatientSubtitle,
+} from "@/utils/appointments";
 
 interface StatusAction {
 	label: string;
@@ -46,6 +55,13 @@ const formatTime = (isoString: string) =>
 		hour: "numeric",
 		minute: "2-digit",
 		hour12: true,
+	});
+
+const formatShortDate = (isoString: string) =>
+	new Date(isoString).toLocaleDateString("en-US", {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
 	});
 
 const formatPrice = (priceInCents: number) => `$${(priceInCents / 100).toFixed(2)}`;
@@ -154,6 +170,18 @@ function getMedicalRecordFields(record: MedicalRecord | null | undefined) {
 	].filter((field) => field.value?.trim());
 }
 
+function hasMedicalRecordContent(record: MedicalRecord | null | undefined) {
+	if (!record) {
+		return false;
+	}
+
+	return [
+		...getMedicalRecordFields(record).map((field) => field.value),
+		record.emergencyContactName,
+		record.emergencyContactPhone,
+	].some((value) => Boolean(value?.trim()));
+}
+
 export default function AppointmentDetails() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const router = useRouter();
@@ -165,13 +193,15 @@ export default function AppointmentDetails() {
 	const createConversationMutation = useGetOrCreateConversation();
 
 	const appointment = appointmentData?.appointment;
+	const shouldRequestMedicalRecord =
+		isHealthcareProvider && appointment?.status === "CONFIRMED";
 	const {
 		data: medicalRecordData,
 		isLoading: isMedicalRecordLoading,
 		error: medicalRecordError,
-	} = useCustomerMedicalRecord(
-		appointment?.customerId || "",
-		isHealthcareProvider && !!appointment?.customerId,
+	} = useAppointmentMedicalRecord(
+		appointment?.id || "",
+		shouldRequestMedicalRecord && !!appointment?.id,
 	);
 
 	const handleStatusUpdate = async (appointmentId: string, nextStatus: AppointmentStatus) => {
@@ -190,8 +220,16 @@ export default function AppointmentDetails() {
 	const handleOpenChat = async (appointmentItem: Appointment) => {
 		try {
 			const participantId = isHealthcareProvider
-				? appointmentItem.customer.user.id
+				? getAppointmentCustomerUserId(appointmentItem)
 				: appointmentItem.healthcareProvider.user.id;
+
+			if (!participantId) {
+				Alert.alert(
+					"Chat unavailable",
+					"This patient does not have a customer account yet.",
+				);
+				return;
+			}
 
 			const result = await createConversationMutation.mutateAsync({
 				participantId,
@@ -230,14 +268,20 @@ export default function AppointmentDetails() {
 	const procedures = appointment.appointmentProcedures.map((ap) => ap.procedure);
 	const medicalRecord = medicalRecordData?.medicalRecord;
 	const medicalRecordFields = getMedicalRecordFields(medicalRecord);
+	const patientName = getAppointmentPatientName(appointment);
+	const canShowMedicalRecord =
+		shouldRequestMedicalRecord &&
+		(isMedicalRecordLoading ||
+			Boolean(medicalRecordError) ||
+			hasMedicalRecordContent(medicalRecord));
 	const counterpart = isHealthcareProvider
 		? {
 				title: "Patient",
-				name: appointment.customer.user.name,
-				subtitle: "Customer",
-				image: appointment.customer.user.image,
-				email: appointment.customer.user.email,
-				phone: appointment.customer.user.phone,
+				name: patientName,
+				subtitle: getAppointmentPatientSubtitle(appointment),
+				image: getAppointmentPatientImage(appointment),
+				email: getAppointmentPatientEmail(appointment) || "Not informed",
+				phone: getAppointmentPatientPhone(appointment),
 		  }
 		: {
 				title: "Provider",
@@ -252,6 +296,8 @@ export default function AppointmentDetails() {
 	const providerActions = isHealthcareProvider
 		? getProviderStatusActions(appointment.status)
 		: [];
+	const canOpenChat =
+		!isHealthcareProvider || Boolean(getAppointmentCustomerUserId(appointment));
 
 	return (
 		<SafeAreaView edges={["top"]} style={styles.container}>
@@ -332,27 +378,72 @@ export default function AppointmentDetails() {
 							<DetailRow icon={Phone} label="Phone" value={counterpart.phone} />
 						) : null}
 					</View>
-					<View style={styles.actionRow}>
-						<Button
-							variant="outline"
-							style={styles.flexButton}
-							onPress={() => handleOpenChat(appointment)}
-							disabled={createConversationMutation.isPending}
-							loading={createConversationMutation.isPending}
-						>
-							<View style={styles.inlineButtonContent}>
-								<MessageCircle
-									size={16}
-									color={theme.colors.foreground}
-									strokeWidth={2}
-								/>
-								<Text style={styles.inlineButtonLabel}>Open Chat</Text>
-							</View>
-						</Button>
-					</View>
+					{canOpenChat ? (
+						<View style={styles.actionRow}>
+							<Button
+								variant="outline"
+								style={styles.flexButton}
+								onPress={() => handleOpenChat(appointment)}
+								disabled={createConversationMutation.isPending}
+								loading={createConversationMutation.isPending}
+							>
+								<View style={styles.inlineButtonContent}>
+									<MessageCircle
+										size={16}
+										color={theme.colors.foreground}
+										strokeWidth={2}
+									/>
+									<Text style={styles.inlineButtonLabel}>Open Chat</Text>
+								</View>
+							</Button>
+						</View>
+					) : null}
 				</View>
 
-				{isHealthcareProvider ? (
+				{appointment.patientProfile ? (
+					<View style={styles.section}>
+						<Text style={styles.sectionTitle}>Patient Profile</Text>
+						<View style={styles.infoCard}>
+							{appointment.patientProfile.dateOfBirth ? (
+								<DetailRow
+									icon={Calendar}
+									label="Date of Birth"
+									value={formatShortDate(appointment.patientProfile.dateOfBirth)}
+								/>
+							) : null}
+							{appointment.patientProfile.gender ? (
+								<DetailRow
+									icon={UserRound}
+									label="Gender"
+									value={appointment.patientProfile.gender}
+								/>
+							) : null}
+							{appointment.patientProfile.cpf ? (
+								<DetailRow
+									icon={UserRound}
+									label="CPF"
+									value={appointment.patientProfile.cpf}
+								/>
+							) : null}
+							{appointment.patientProfile.relationshipToCustomer ? (
+								<DetailRow
+									icon={Users}
+									label="Relationship"
+									value={appointment.patientProfile.relationshipToCustomer}
+								/>
+							) : null}
+							{appointment.patientProfile.notes ? (
+								<DetailRow
+									icon={FileText}
+									label="Profile Notes"
+									value={appointment.patientProfile.notes}
+								/>
+							) : null}
+						</View>
+					</View>
+				) : null}
+
+				{canShowMedicalRecord ? (
 					<View style={styles.section}>
 						<Text style={styles.sectionTitle}>Medical Record</Text>
 						<View style={styles.infoCard}>
@@ -369,7 +460,7 @@ export default function AppointmentDetails() {
 										Patient health summary
 									</Text>
 									<Text style={styles.medicalRecordSubtitle}>
-										Information shared by {appointment.customer.user.name}
+										Information shared by {patientName}
 									</Text>
 								</View>
 							</View>
@@ -395,21 +486,6 @@ export default function AppointmentDetails() {
 									/>
 									<Text style={styles.medicalRecordStateText}>
 										Could not load this medical record.
-									</Text>
-								</View>
-							) : null}
-
-							{!isMedicalRecordLoading &&
-							!medicalRecordError &&
-							!medicalRecord ? (
-								<View style={styles.medicalRecordState}>
-									<ShieldPlus
-										size={18}
-										color={theme.colors.primary}
-										strokeWidth={2.2}
-									/>
-									<Text style={styles.medicalRecordStateText}>
-										This patient has not filled a medical record yet.
 									</Text>
 								</View>
 							) : null}
@@ -465,11 +541,7 @@ export default function AppointmentDetails() {
 												/>
 											))}
 										</View>
-									) : (
-										<Text style={styles.medicalRecordStateText}>
-											Only blank fields are available for this record.
-										</Text>
-									)}
+									) : null}
 
 									{medicalRecord.emergencyContactName ||
 									medicalRecord.emergencyContactPhone ? (
@@ -577,7 +649,18 @@ export default function AppointmentDetails() {
 				<View style={styles.section}>
 					<Text style={styles.sectionTitle}>Appointment Meta</Text>
 					<View style={styles.infoCard}>
-						<DetailRow icon={UserRound} label="Customer ID" value={appointment.customerId} />
+						<DetailRow
+							icon={UserRound}
+							label="Customer ID"
+							value={appointment.customerId || "No customer account"}
+						/>
+						{appointment.patientProfileId ? (
+							<DetailRow
+								icon={UserRound}
+								label="Patient Profile ID"
+								value={appointment.patientProfileId}
+							/>
+						) : null}
 						<DetailRow
 							icon={UserRound}
 							label="Provider ID"

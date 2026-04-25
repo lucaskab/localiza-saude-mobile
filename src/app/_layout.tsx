@@ -18,6 +18,7 @@ function RootNavigator() {
 					<Stack.Screen name="(provider-tabs)" />
 					<Stack.Screen name="favorites" />
 					<Stack.Screen name="medical-record" />
+					<Stack.Screen name="provider-create-appointment" />
 				</Stack>
 			</AuthProvider>
 		</QueryClientProvider>

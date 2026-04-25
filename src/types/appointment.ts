@@ -1,3 +1,5 @@
+import type { PatientProfile, PatientProfileData } from "@/types/patient-profile";
+
 export type AppointmentStatus =
 	| "SCHEDULED"
 	| "CONFIRMED"
@@ -54,8 +56,10 @@ export interface AppointmentProcedure {
 
 export interface Appointment {
 	id: string;
-	customerId: string;
-	customer: Customer;
+	customerId: string | null;
+	customer: Customer | null;
+	patientProfileId: string | null;
+	patientProfile: PatientProfile | null;
 	healthcareProviderId: string;
 	healthcareProvider: HealthcareProvider;
 	scheduledAt: string;
@@ -68,11 +72,17 @@ export interface Appointment {
 	appointmentProcedures: AppointmentProcedure[];
 }
 
+export type CreateAppointmentPatient =
+	| { type: "SELF" }
+	| { type: "EXISTING_PROFILE"; patientProfileId: string }
+	| { type: "NEW_PROFILE"; profile: PatientProfileData };
+
 export interface CreateAppointmentData {
-	healthcareProviderId: string;
+	healthcareProviderId?: string;
 	scheduledAt: Date | string;
 	procedureIds: string[];
 	notes?: string | null;
+	patient?: CreateAppointmentPatient;
 }
 
 export interface GetAppointmentsResponse {

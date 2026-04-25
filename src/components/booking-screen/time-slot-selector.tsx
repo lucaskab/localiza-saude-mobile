@@ -2,15 +2,9 @@ import { useMemo } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { Clock } from "lucide-react-native";
 import { Controller } from "react-hook-form";
-import type { Control } from "react-hook-form";
+import type { Control, FieldValues, Path } from "react-hook-form";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { useTimeSlots } from "@/hooks/use-appointments";
-
-interface BookingFormData {
-	selectedDate: Date;
-	selectedTime: string;
-	notes: string;
-}
 
 interface Procedure {
 	id: string;
@@ -18,19 +12,21 @@ interface Procedure {
 	durationInMinutes: number;
 }
 
-interface TimeSlotSelectorProps {
-	control: Control<BookingFormData>;
+interface TimeSlotSelectorProps<TFieldValues extends FieldValues> {
+	control: Control<TFieldValues>;
 	healthcareProviderId: string;
 	selectedDate: Date;
 	selectedProcedures: Procedure[];
+	name?: Path<TFieldValues>;
 }
 
-export function TimeSlotSelector({
+export function TimeSlotSelector<TFieldValues extends FieldValues>({
 	control,
 	healthcareProviderId,
 	selectedDate,
 	selectedProcedures,
-}: TimeSlotSelectorProps) {
+	name = "selectedTime" as Path<TFieldValues>,
+}: TimeSlotSelectorProps<TFieldValues>) {
 	const { theme } = useUnistyles();
 
 	// Format date to YYYY-MM-DD
@@ -109,7 +105,7 @@ export function TimeSlotSelector({
 
 			<Controller
 				control={control}
-				name="selectedTime"
+				name={name}
 				rules={{ required: "Please select a time" }}
 				render={({ field: { value, onChange } }) => (
 					<>

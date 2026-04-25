@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { Calendar, Clock, MessageCircle, Search } from "lucide-react-native";
+import { Calendar, Clock, MessageCircle, Plus, Search } from "lucide-react-native";
 import { useState } from "react";
 import {
 	ActivityIndicator,
@@ -22,6 +22,12 @@ import {
 } from "@/hooks/use-appointments";
 import { useGetOrCreateConversation } from "@/hooks/use-conversations";
 import type { Appointment, AppointmentStatus } from "@/types/appointment";
+import {
+	getAppointmentCustomerUserId,
+	getAppointmentPatientImage,
+	getAppointmentPatientName,
+	getAppointmentPatientSubtitle,
+} from "@/utils/appointments";
 
 type TabType = "upcoming" | "completed" | "cancelled";
 
@@ -100,7 +106,7 @@ export default function ProviderAppointments() {
 
 		const query = searchQuery.toLowerCase().trim();
 		return appointments.filter((apt) => {
-			const patientName = apt.customer.user.name.toLowerCase();
+			const patientName = getAppointmentPatientName(apt).toLowerCase();
 			const procedures = apt.appointmentProcedures
 				.map((ap) => ap.procedure.name.toLowerCase())
 				.join(" ");
@@ -237,7 +243,7 @@ export default function ProviderAppointments() {
 
 		Alert.alert(
 			"Update Status",
-			`Choose the next status for ${appointment.customer.user.name}.`,
+			`Choose the next status for ${getAppointmentPatientName(appointment)}.`,
 			[
 				...actions.map((action) => ({
 					text: action.text,
@@ -250,22 +256,26 @@ export default function ProviderAppointments() {
 	};
 
 	const getActionButtons = (appointment: Appointment) => {
+		const customerUserId = getAppointmentCustomerUserId(appointment);
+
 		return (
 			<>
-				<Button
-					variant="outline"
-					size="sm"
-					style={styles.actionButton}
-					onPress={() => handleOpenChat(appointment.customer.user.id)}
-					disabled={createConversationMutation.isPending}
-				>
-					<MessageCircle
-						size={16}
-						color={theme.colors.foreground}
-						strokeWidth={2}
-					/>
-					<Text style={{ marginLeft: theme.gap(1), fontSize: 14 }}>Chat</Text>
-				</Button>
+				{customerUserId ? (
+					<Button
+						variant="outline"
+						size="sm"
+						style={styles.actionButton}
+						onPress={() => handleOpenChat(customerUserId)}
+						disabled={createConversationMutation.isPending}
+					>
+						<MessageCircle
+							size={16}
+							color={theme.colors.foreground}
+							strokeWidth={2}
+						/>
+						<Text style={{ marginLeft: theme.gap(1), fontSize: 14 }}>Chat</Text>
+					</Button>
+				) : null}
 				<Button
 					variant="outline"
 					size="sm"
@@ -309,8 +319,26 @@ export default function ProviderAppointments() {
 			>
 				{/* Header */}
 				<View style={styles.header}>
-					<Text style={styles.headerTitle}>Appointments</Text>
-					<Text style={styles.headerSubtitle}>Manage your appointments</Text>
+					<View style={styles.headerRow}>
+						<View style={styles.headerCopy}>
+							<Text style={styles.headerTitle}>Appointments</Text>
+							<Text style={styles.headerSubtitle}>
+								Manage your appointments
+							</Text>
+						</View>
+						<Button
+							size="sm"
+							style={styles.newAppointmentButton}
+							onPress={() => router.push("/provider-create-appointment")}
+						>
+							<Plus
+								size={16}
+								color={theme.colors.primaryForeground}
+								strokeWidth={2}
+							/>
+							<Text style={styles.newAppointmentText}>New</Text>
+						</Button>
+					</View>
 				</View>
 
 				{/* Search Bar */}
@@ -439,6 +467,10 @@ export default function ProviderAppointments() {
 								const isCancelledOrNoShow =
 									appointment.status === "CANCELLED" ||
 									appointment.status === "NO_SHOW";
+								const patientName = getAppointmentPatientName(appointment);
+								const patientSubtitle =
+									getAppointmentPatientSubtitle(appointment);
+								const patientImage = getAppointmentPatientImage(appointment);
 
 								return (
 									<View
@@ -450,9 +482,9 @@ export default function ProviderAppointments() {
 									>
 										<View style={styles.appointmentContent}>
 											{/* Avatar */}
-											{appointment.customer.user.image ? (
+											{patientImage ? (
 												<Image
-													source={{ uri: appointment.customer.user.image }}
+													source={{ uri: patientImage }}
 													style={styles.appointmentAvatar}
 												/>
 											) : (
@@ -463,9 +495,7 @@ export default function ProviderAppointments() {
 													]}
 												>
 													<Text style={styles.appointmentAvatarText}>
-														{appointment.customer.user.name
-															.charAt(0)
-															.toUpperCase()}
+														{patientName.charAt(0).toUpperCase()}
 													</Text>
 												</View>
 											)}
@@ -474,9 +504,12 @@ export default function ProviderAppointments() {
 											<View style={styles.appointmentInfo}>
 												<View style={styles.appointmentHeader}>
 													<Text style={styles.appointmentPatientName}>
-														{appointment.customer.user.name}
+														{patientName}
 													</Text>
 												</View>
+												<Text style={styles.appointmentPatientSubtitle}>
+													{patientSubtitle}
+												</Text>
 
 												{/* Status Badge */}
 												<View style={styles.statusBadgeContainer}>
@@ -576,6 +609,15 @@ const styles = StyleSheet.create((theme) => ({
 		paddingTop: theme.gap(3),
 		paddingBottom: theme.gap(3),
 	},
+	headerRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		gap: theme.gap(2),
+	},
+	headerCopy: {
+		flex: 1,
+	},
 	headerTitle: {
 		fontSize: 28,
 		fontWeight: "700",
@@ -585,6 +627,16 @@ const styles = StyleSheet.create((theme) => ({
 	headerSubtitle: {
 		fontSize: 14,
 		color: theme.colors.mutedForeground,
+	},
+	newAppointmentButton: {
+		borderRadius: theme.radius.full,
+		gap: theme.gap(0.75),
+		paddingHorizontal: theme.gap(2),
+	},
+	newAppointmentText: {
+		fontSize: 13,
+		fontWeight: "700",
+		color: theme.colors.primaryForeground,
 	},
 	searchContainer: {
 		marginBottom: theme.gap(3),
@@ -688,6 +740,11 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 16,
 		fontWeight: "600",
 		color: theme.colors.foreground,
+	},
+	appointmentPatientSubtitle: {
+		fontSize: 12,
+		color: theme.colors.mutedForeground,
+		marginBottom: theme.gap(1),
 	},
 	statusBadgeContainer: {
 		marginBottom: theme.gap(1.5),

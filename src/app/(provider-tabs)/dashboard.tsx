@@ -27,6 +27,10 @@ import {
 	useUpdateAppointment,
 } from "@/hooks/use-appointments";
 import { useDashboard } from "@/hooks/use-dashboard";
+import {
+	getAppointmentPatientImage,
+	getAppointmentPatientName,
+} from "@/utils/appointments";
 import { formatAverageRating } from "@/utils/ratings";
 
 export default function ProviderDashboard() {
@@ -72,7 +76,7 @@ export default function ProviderDashboard() {
 	// Transform appointments to UI format
 	const todayAppointments = appointments.map((appointment) => ({
 		id: appointment.id,
-		patientName: appointment.customer.user.name,
+		patientName: getAppointmentPatientName(appointment),
 		time: formatTime(appointment.scheduledAt),
 		duration: appointment.totalDurationMinutes,
 		procedure:
@@ -80,7 +84,7 @@ export default function ProviderDashboard() {
 				.map((ap) => ap.procedure.name)
 				.join(", ") || "Appointment",
 		status: appointment.status.toLowerCase(),
-		avatar: appointment.customer.user.image || undefined,
+		avatar: getAppointmentPatientImage(appointment) || undefined,
 	}));
 
 	// Use dashboard data for stats
