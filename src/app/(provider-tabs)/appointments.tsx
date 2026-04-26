@@ -1,6 +1,13 @@
 import { useRouter } from "expo-router";
-import { Calendar, Clock, MessageCircle, Plus, Search } from "lucide-react-native";
-import { useState } from "react";
+import {
+	Calendar,
+	Clock,
+	MessageCircle,
+	Plus,
+	Search,
+	SlidersHorizontal,
+} from "lucide-react-native";
+import { useMemo, useState } from "react";
 import {
 	ActivityIndicator,
 	Alert,
@@ -30,6 +37,115 @@ import {
 } from "@/utils/appointments";
 
 type TabType = "upcoming" | "completed" | "cancelled";
+type DateFilter = "all" | "today" | "tomorrow" | "next7" | "past" | "custom";
+type PatientFilter = "all" | "account" | "third-party" | "unregistered";
+type SortOrder = "soonest" | "latest";
+type StatusFilter = "ALL" | AppointmentStatus;
+
+const tabStatuses: Record<TabType, AppointmentStatus[]> = {
+	upcoming: ["SCHEDULED", "CONFIRMED", "IN_PROGRESS"],
+	completed: ["COMPLETED"],
+	cancelled: ["CANCELLED", "NO_SHOW"],
+};
+
+const dateFilters: { label: string; value: DateFilter }[] = [
+	{ label: "All dates", value: "all" },
+	{ label: "Today", value: "today" },
+	{ label: "Tomorrow", value: "tomorrow" },
+	{ label: "Next 7 days", value: "next7" },
+	{ label: "Past", value: "past" },
+	{ label: "Custom", value: "custom" },
+];
+
+const patientFilters: { label: string; value: PatientFilter }[] = [
+	{ label: "All patients", value: "all" },
+	{ label: "Account holders", value: "account" },
+	{ label: "Third-party", value: "third-party" },
+	{ label: "No account", value: "unregistered" },
+];
+
+const sortOptions: { label: string; value: SortOrder }[] = [
+	{ label: "Soonest", value: "soonest" },
+	{ label: "Latest", value: "latest" },
+];
+
+const parseDateInput = (date: string, endOfDay = false) => {
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+		return null;
+	}
+
+	const [year, month, day] = date.split("-").map(Number);
+	const parsed = new Date(year, (month || 1) - 1, day || 1);
+
+	if (Number.isNaN(parsed.getTime())) {
+		return null;
+	}
+
+	if (endOfDay) {
+		parsed.setHours(23, 59, 59, 999);
+	} else {
+		parsed.setHours(0, 0, 0, 0);
+	}
+
+	return parsed;
+};
+
+const getDateRangeForFilter = (
+	filter: DateFilter,
+	customStartDate: string,
+	customEndDate: string,
+) => {
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+	const tomorrow = new Date(today);
+	tomorrow.setDate(tomorrow.getDate() + 1);
+	const sevenDaysFromNow = new Date(today);
+	sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+	sevenDaysFromNow.setHours(23, 59, 59, 999);
+
+	switch (filter) {
+		case "today": {
+			const end = new Date(today);
+			end.setHours(23, 59, 59, 999);
+			return { start: today, end };
+		}
+		case "tomorrow": {
+			const end = new Date(tomorrow);
+			end.setHours(23, 59, 59, 999);
+			return { start: tomorrow, end };
+		}
+		case "next7":
+			return { start: today, end: sevenDaysFromNow };
+		case "past": {
+			const end = new Date(today);
+			end.setMilliseconds(end.getMilliseconds() - 1);
+			return { start: null, end };
+		}
+		case "custom":
+			return {
+				start: customStartDate ? parseDateInput(customStartDate) : null,
+				end: customEndDate ? parseDateInput(customEndDate, true) : null,
+			};
+		default:
+			return { start: null, end: null };
+	}
+};
+
+const getPatientFilterMatch = (
+	appointment: Appointment,
+	filter: PatientFilter,
+) => {
+	switch (filter) {
+		case "account":
+			return Boolean(appointment.customer) && !appointment.patientProfile;
+		case "third-party":
+			return Boolean(appointment.customer) && Boolean(appointment.patientProfile);
+		case "unregistered":
+			return !appointment.customer && Boolean(appointment.patientProfile);
+		default:
+			return true;
+	}
+};
 
 export default function ProviderAppointments() {
 	const { theme } = useUnistyles();
@@ -38,6 +154,13 @@ export default function ProviderAppointments() {
 
 	const [activeTab, setActiveTab] = useState<TabType>("upcoming");
 	const [searchQuery, setSearchQuery] = useState("");
+	const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+	const [customStartDate, setCustomStartDate] = useState("");
+	const [customEndDate, setCustomEndDate] = useState("");
+	const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+	const [patientFilter, setPatientFilter] = useState<PatientFilter>("all");
+	const [procedureFilter, setProcedureFilter] = useState("all");
+	const [sortOrder, setSortOrder] = useState<SortOrder>("soonest");
 
 	// Fetch all appointments for this provider
 	const {
@@ -55,6 +178,22 @@ export default function ProviderAppointments() {
 	const createConversationMutation = useGetOrCreateConversation();
 
 	const appointments = appointmentsData?.appointments || [];
+	const procedureOptions = useMemo(() => {
+		const procedureMap = new Map<string, string>();
+
+		for (const appointment of appointments) {
+			for (const appointmentProcedure of appointment.appointmentProcedures) {
+				procedureMap.set(
+					appointmentProcedure.procedure.id,
+					appointmentProcedure.procedure.name,
+				);
+			}
+		}
+
+		return Array.from(procedureMap.entries())
+			.map(([id, name]) => ({ id, name }))
+			.sort((a, b) => a.name.localeCompare(b.name));
+	}, [appointments]);
 
 	// Format time from ISO string
 	const formatTime = (isoString: string) => {
@@ -77,47 +216,112 @@ export default function ProviderAppointments() {
 		});
 	};
 
-	// Filter appointments by status based on active tab
-	const getFilteredAppointmentsByTab = (
-		appointments: Appointment[],
-		tab: TabType,
-	): Appointment[] => {
-		switch (tab) {
-			case "upcoming":
-				return appointments.filter((apt) =>
-					["SCHEDULED", "CONFIRMED", "IN_PROGRESS"].includes(apt.status),
-				);
-			case "completed":
-				return appointments.filter((apt) => apt.status === "COMPLETED");
-			case "cancelled":
-				return appointments.filter((apt) =>
-					["CANCELLED", "NO_SHOW"].includes(apt.status),
-				);
-			default:
-				return appointments;
-		}
-	};
+	const getFilteredAppointmentsByTab = (tab: TabType): Appointment[] =>
+		appointments.filter((apt) => tabStatuses[tab].includes(apt.status));
 
-	// Filter by search query
-	const getSearchFilteredAppointments = (
-		appointments: Appointment[],
-	): Appointment[] => {
-		if (!searchQuery.trim()) return appointments;
-
+	const filteredAppointments = useMemo(() => {
 		const query = searchQuery.toLowerCase().trim();
-		return appointments.filter((apt) => {
-			const patientName = getAppointmentPatientName(apt).toLowerCase();
-			const procedures = apt.appointmentProcedures
-				.map((ap) => ap.procedure.name.toLowerCase())
-				.join(" ");
-			return patientName.includes(query) || procedures.includes(query);
-		});
+		const { start, end } = getDateRangeForFilter(
+			dateFilter,
+			customStartDate,
+			customEndDate,
+		);
+
+		return getFilteredAppointmentsByTab(activeTab)
+			.filter((appointment) => {
+				if (!query) {
+					return true;
+				}
+
+				const patientName = getAppointmentPatientName(appointment).toLowerCase();
+				const patientPhone =
+					appointment.patientProfile?.phone ||
+					appointment.customer?.user.phone ||
+					"";
+				const patientEmail =
+					appointment.patientProfile?.email ||
+					appointment.customer?.user.email ||
+					"";
+				const procedures = appointment.appointmentProcedures
+					.map((ap) => ap.procedure.name.toLowerCase())
+					.join(" ");
+
+				return (
+					patientName.includes(query) ||
+					patientPhone.toLowerCase().includes(query) ||
+					patientEmail.toLowerCase().includes(query) ||
+					procedures.includes(query)
+				);
+			})
+			.filter((appointment) =>
+				statusFilter === "ALL" ? true : appointment.status === statusFilter,
+			)
+			.filter((appointment) => {
+				if (!start && !end) {
+					return true;
+				}
+
+				const scheduledAt = new Date(appointment.scheduledAt);
+				if (start && scheduledAt < start) {
+					return false;
+				}
+				if (end && scheduledAt > end) {
+					return false;
+				}
+				return true;
+			})
+			.filter((appointment) =>
+				getPatientFilterMatch(appointment, patientFilter),
+			)
+			.filter((appointment) =>
+				procedureFilter === "all"
+					? true
+					: appointment.appointmentProcedures.some(
+							(ap) => ap.procedure.id === procedureFilter,
+						),
+			)
+			.sort((a, b) => {
+				const dateA = new Date(a.scheduledAt).getTime();
+				const dateB = new Date(b.scheduledAt).getTime();
+				return sortOrder === "soonest" ? dateA - dateB : dateB - dateA;
+			});
+	}, [
+		activeTab,
+		appointments,
+		customEndDate,
+		customStartDate,
+		dateFilter,
+		patientFilter,
+		procedureFilter,
+		searchQuery,
+		sortOrder,
+		statusFilter,
+	]);
+
+	const activeFilterCount = [
+		searchQuery.trim(),
+		dateFilter !== "all",
+		statusFilter !== "ALL",
+		patientFilter !== "all",
+		procedureFilter !== "all",
+		sortOrder !== "soonest",
+	].filter(Boolean).length;
+
+	const resetFilters = () => {
+		setSearchQuery("");
+		setDateFilter("all");
+		setCustomStartDate("");
+		setCustomEndDate("");
+		setStatusFilter("ALL");
+		setPatientFilter("all");
+		setProcedureFilter("all");
+		setSortOrder("soonest");
 	};
 
-	// Get final filtered appointments
-	const filteredAppointments = getSearchFilteredAppointments(
-		getFilteredAppointmentsByTab(appointments, activeTab),
-	);
+	const handleTabChange = (tab: TabType) => {
+		setActiveTab(tab);
+		setStatusFilter("ALL");
+	};
 
 	// Handle complete visit
 	const handleStatusUpdate = async (
@@ -301,8 +505,36 @@ export default function ProviderAppointments() {
 
 	// Get count for each tab
 	const getTabCount = (tab: TabType): number => {
-		return getFilteredAppointmentsByTab(appointments, tab).length;
+		return getFilteredAppointmentsByTab(tab).length;
 	};
+
+	const renderFilterChip = ({
+		label,
+		selected,
+		onPress,
+		chipKey,
+	}: {
+		label: string;
+		selected: boolean;
+		onPress: () => void;
+		chipKey?: string;
+	}) => (
+		<Pressable
+			key={chipKey}
+			onPress={onPress}
+			style={[styles.filterChip, selected && styles.filterChipActive]}
+		>
+			<Text
+				style={[
+					styles.filterChipText,
+					selected && styles.filterChipTextActive,
+				]}
+				numberOfLines={1}
+			>
+				{label}
+			</Text>
+		</Pressable>
+	);
 
 	return (
 		<SafeAreaView edges={["top"]} style={styles.container}>
@@ -354,7 +586,7 @@ export default function ProviderAppointments() {
 				<View style={styles.tabsContainer}>
 					<Pressable
 						style={[styles.tab, activeTab === "upcoming" && styles.tabActive]}
-						onPress={() => setActiveTab("upcoming")}
+						onPress={() => handleTabChange("upcoming")}
 					>
 						<Text
 							style={[
@@ -385,7 +617,7 @@ export default function ProviderAppointments() {
 
 					<Pressable
 						style={[styles.tab, activeTab === "completed" && styles.tabActive]}
-						onPress={() => setActiveTab("completed")}
+						onPress={() => handleTabChange("completed")}
 					>
 						<Text
 							style={[
@@ -416,7 +648,7 @@ export default function ProviderAppointments() {
 
 					<Pressable
 						style={[styles.tab, activeTab === "cancelled" && styles.tabActive]}
-						onPress={() => setActiveTab("cancelled")}
+						onPress={() => handleTabChange("cancelled")}
 					>
 						<Text
 							style={[
@@ -444,6 +676,159 @@ export default function ProviderAppointments() {
 							</View>
 						)}
 					</Pressable>
+				</View>
+
+				{/* Filters */}
+				<View style={styles.filtersPanel}>
+					<View style={styles.filtersHeader}>
+						<View style={styles.filtersTitleRow}>
+							<SlidersHorizontal
+								size={18}
+								color={theme.colors.primary}
+								strokeWidth={2}
+							/>
+							<Text style={styles.filtersTitle}>Filters</Text>
+							{activeFilterCount > 0 ? (
+								<View style={styles.activeFilterBadge}>
+									<Text style={styles.activeFilterBadgeText}>
+										{activeFilterCount}
+									</Text>
+								</View>
+							) : null}
+						</View>
+						<View style={styles.resultsPill}>
+							<Text style={styles.resultsPillText}>
+								{filteredAppointments.length} of{" "}
+								{getFilteredAppointmentsByTab(activeTab).length}
+							</Text>
+						</View>
+					</View>
+
+					<View style={styles.filterGroup}>
+						<Text style={styles.filterLabel}>Date</Text>
+						<ScrollView
+							horizontal
+							showsHorizontalScrollIndicator={false}
+							contentContainerStyle={styles.filterChipsRow}
+						>
+							{dateFilters.map((filter) =>
+								renderFilterChip({
+									label: filter.label,
+									selected: dateFilter === filter.value,
+									onPress: () => setDateFilter(filter.value),
+									chipKey: filter.value,
+								}),
+							)}
+						</ScrollView>
+						{dateFilter === "custom" ? (
+							<View style={styles.customDateRow}>
+								<Input
+									placeholder="From YYYY-MM-DD"
+									value={customStartDate}
+									onChangeText={setCustomStartDate}
+									containerStyle={styles.customDateInput}
+									keyboardType="numbers-and-punctuation"
+								/>
+								<Input
+									placeholder="To YYYY-MM-DD"
+									value={customEndDate}
+									onChangeText={setCustomEndDate}
+									containerStyle={styles.customDateInput}
+									keyboardType="numbers-and-punctuation"
+								/>
+							</View>
+						) : null}
+					</View>
+
+					<View style={styles.filterGroup}>
+						<Text style={styles.filterLabel}>Status</Text>
+						<ScrollView
+							horizontal
+							showsHorizontalScrollIndicator={false}
+							contentContainerStyle={styles.filterChipsRow}
+						>
+							{renderFilterChip({
+								label: "All statuses",
+								selected: statusFilter === "ALL",
+								onPress: () => setStatusFilter("ALL"),
+							})}
+							{tabStatuses[activeTab].map((status) =>
+								renderFilterChip({
+									label: getStatusConfig(status).label,
+									selected: statusFilter === status,
+									onPress: () => setStatusFilter(status),
+									chipKey: status,
+								}),
+							)}
+						</ScrollView>
+					</View>
+
+					<View style={styles.filterGroup}>
+						<Text style={styles.filterLabel}>Patient</Text>
+						<ScrollView
+							horizontal
+							showsHorizontalScrollIndicator={false}
+							contentContainerStyle={styles.filterChipsRow}
+						>
+							{patientFilters.map((filter) =>
+								renderFilterChip({
+									label: filter.label,
+									selected: patientFilter === filter.value,
+									onPress: () => setPatientFilter(filter.value),
+									chipKey: filter.value,
+								}),
+							)}
+						</ScrollView>
+					</View>
+
+					{procedureOptions.length > 0 ? (
+						<View style={styles.filterGroup}>
+							<Text style={styles.filterLabel}>Procedure</Text>
+							<ScrollView
+								horizontal
+								showsHorizontalScrollIndicator={false}
+								contentContainerStyle={styles.filterChipsRow}
+							>
+								{renderFilterChip({
+									label: "All procedures",
+									selected: procedureFilter === "all",
+									onPress: () => setProcedureFilter("all"),
+								})}
+								{procedureOptions.map((procedure) =>
+									renderFilterChip({
+										label: procedure.name,
+										selected: procedureFilter === procedure.id,
+										onPress: () => setProcedureFilter(procedure.id),
+										chipKey: procedure.id,
+									}),
+								)}
+							</ScrollView>
+						</View>
+					) : null}
+
+					<View style={styles.filterFooter}>
+						<View style={styles.sortGroup}>
+							<Text style={styles.filterLabel}>Sort</Text>
+							<View style={styles.sortChips}>
+								{sortOptions.map((option) =>
+									renderFilterChip({
+										label: option.label,
+										selected: sortOrder === option.value,
+										onPress: () => setSortOrder(option.value),
+										chipKey: option.value,
+									}),
+								)}
+							</View>
+						</View>
+						{activeFilterCount > 0 ? (
+							<Pressable
+								style={styles.clearFiltersButton}
+								onPress={resetFilters}
+							>
+								<Text style={styles.clearFiltersText}>Clear</Text>
+							</Pressable>
+						) : null}
+					</View>
 				</View>
 
 				{/* Appointments List */}
@@ -587,10 +972,20 @@ export default function ProviderAppointments() {
 								strokeWidth={2}
 							/>
 							<Text style={styles.emptyStateText}>
-								{searchQuery
-									? "No appointments found matching your search"
+								{activeFilterCount > 0
+									? "No appointments found with these filters"
 									: `No ${activeTab} appointments`}
 							</Text>
+							{activeFilterCount > 0 ? (
+								<Button
+									variant="outline"
+									size="sm"
+									style={styles.emptyClearButton}
+									onPress={resetFilters}
+								>
+									Clear Filters
+								</Button>
+							) : null}
 						</View>
 					)}
 				</View>
@@ -690,6 +1085,124 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	tabBadgeTextActive: {
 		color: theme.colors.primaryForeground,
+	},
+	filtersPanel: {
+		backgroundColor: theme.colors.surfacePrimary,
+		borderRadius: 12,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		padding: theme.gap(2),
+		marginBottom: theme.gap(3),
+		gap: theme.gap(2),
+	},
+	filtersHeader: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		gap: theme.gap(2),
+	},
+	filtersTitleRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(1),
+	},
+	filtersTitle: {
+		fontSize: 16,
+		fontWeight: "700",
+		color: theme.colors.foreground,
+	},
+	activeFilterBadge: {
+		minWidth: 22,
+		height: 22,
+		borderRadius: 11,
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: theme.colors.primary,
+	},
+	activeFilterBadgeText: {
+		fontSize: 11,
+		fontWeight: "700",
+		color: theme.colors.primaryForeground,
+	},
+	resultsPill: {
+		paddingHorizontal: theme.gap(1.5),
+		paddingVertical: theme.gap(0.75),
+		borderRadius: theme.radius.full,
+		backgroundColor: theme.colors.secondary,
+	},
+	resultsPillText: {
+		fontSize: 12,
+		fontWeight: "600",
+		color: theme.colors.secondaryForeground,
+	},
+	filterGroup: {
+		gap: theme.gap(1),
+	},
+	filterLabel: {
+		fontSize: 12,
+		fontWeight: "700",
+		textTransform: "uppercase",
+		color: theme.colors.mutedForeground,
+	},
+	filterChipsRow: {
+		gap: theme.gap(1),
+		paddingRight: theme.gap(2),
+	},
+	filterChip: {
+		height: 36,
+		alignItems: "center",
+		justifyContent: "center",
+		paddingHorizontal: theme.gap(1.75),
+		borderRadius: theme.radius.full,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		backgroundColor: theme.colors.background,
+	},
+	filterChipActive: {
+		backgroundColor: theme.colors.primary,
+		borderColor: theme.colors.primary,
+	},
+	filterChipText: {
+		fontSize: 12,
+		fontWeight: "600",
+		color: theme.colors.foreground,
+	},
+	filterChipTextActive: {
+		color: theme.colors.primaryForeground,
+	},
+	customDateRow: {
+		flexDirection: "row",
+		gap: theme.gap(1),
+	},
+	customDateInput: {
+		flex: 1,
+	},
+	filterFooter: {
+		flexDirection: "row",
+		alignItems: "flex-end",
+		justifyContent: "space-between",
+		gap: theme.gap(2),
+	},
+	sortGroup: {
+		flex: 1,
+		gap: theme.gap(1),
+	},
+	sortChips: {
+		flexDirection: "row",
+		gap: theme.gap(1),
+	},
+	clearFiltersButton: {
+		height: 36,
+		alignItems: "center",
+		justifyContent: "center",
+		paddingHorizontal: theme.gap(2),
+		borderRadius: theme.radius.full,
+		backgroundColor: theme.colors.secondary,
+	},
+	clearFiltersText: {
+		fontSize: 12,
+		fontWeight: "700",
+		color: theme.colors.secondaryForeground,
 	},
 	appointmentsSection: {
 		paddingBottom: theme.gap(4),
@@ -832,5 +1345,9 @@ const styles = StyleSheet.create((theme) => ({
 		color: theme.colors.mutedForeground,
 		marginTop: theme.gap(3),
 		textAlign: "center",
+	},
+	emptyClearButton: {
+		marginTop: theme.gap(3),
+		borderRadius: theme.radius.full,
 	},
 }));
