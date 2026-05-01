@@ -1,0 +1,15 @@
+appId: ${APP_ID}
+name: Customer - Discovery and booking entry points
+---
+- launchApp:
+    clearState: false
+- tapOn: "Início"
+- assertVisible: "Encontre seu cuidado"
+- assertVisible: "Categorias"
+- assertVisible: "Melhores avaliados"
+- tapOn: "Buscar"
+- assertVisible: "Encontrar profissional"
+- tapOn: "Buscar médicos, especialistas..."
+- inputText: "cardio"
+- hideKeyboard
+- assertVisible: "Encontrar profissional"

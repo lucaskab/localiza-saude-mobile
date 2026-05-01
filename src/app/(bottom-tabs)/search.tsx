@@ -17,6 +17,7 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,7 @@ import { formatAverageRating } from "@/utils/ratings";
 export default function Search() {
 	const router = useRouter();
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 	const insets = useSafeAreaInsets();
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState("all");
@@ -74,7 +76,7 @@ export default function Search() {
 			});
 			router.push(`/chat/${result.conversation.id}`);
 		} catch {
-			Alert.alert("Error", "Failed to open chat");
+			Alert.alert(t("common.error"), t("common.failedToOpenChat"));
 		}
 	};
 
@@ -91,7 +93,7 @@ export default function Search() {
 				await addFavoriteMutation.mutateAsync({ healthcareProviderId });
 			}
 		} catch (error) {
-			Alert.alert("Error", getErrorMessage(error));
+			Alert.alert(t("common.error"), getErrorMessage(error));
 		} finally {
 			setFavoriteMutationProviderId(null);
 		}
@@ -101,11 +103,11 @@ export default function Search() {
 		<View style={styles.container}>
 			{/* Header */}
 			<View style={[styles.header, { paddingTop: insets.top + theme.gap(3) }]}>
-				<Text style={styles.headerTitle}>Find Professional</Text>
+				<Text style={styles.headerTitle}>{t("common.findProfessional")}</Text>
 				<View style={styles.searchRow}>
 					<Input
 						leftIcon={SearchIcon}
-						placeholder="Search..."
+						placeholder={t("common.search2")}
 						value={searchQuery}
 						onChangeText={setSearchQuery}
 						containerStyle={styles.searchInputContainer}
@@ -147,7 +149,7 @@ export default function Search() {
 									selectedCategory === "all" && styles.categoryTextActive,
 								]}
 							>
-								All
+								{t("common.all")}
 							</Text>
 						</Pressable>
 
@@ -188,7 +190,7 @@ export default function Search() {
 				{isLoading && (
 					<View style={styles.loadingContainer}>
 						<ActivityIndicator size="large" color={theme.colors.primary} />
-						<Text style={styles.loadingText}>Searching providers...</Text>
+						<Text style={styles.loadingText}>{t("common.searchingProviders")}</Text>
 					</View>
 				)}
 
@@ -196,10 +198,10 @@ export default function Search() {
 				{error && !isLoading && (
 					<View style={styles.errorContainer}>
 						<Text style={styles.errorText}>
-							Failed to load healthcare providers
+							{t("common.failedToLoadHealthcareProviders")}
 						</Text>
 						<Button onPress={() => refetch()} size="sm">
-							Retry
+							{t("common.retry")}
 						</Button>
 					</View>
 				)}
@@ -208,8 +210,9 @@ export default function Search() {
 				{!isLoading && !error && (
 					<>
 						<Text style={styles.resultsCount}>
-							{filteredProfessionals.length} professional
-							{filteredProfessionals.length !== 1 ? "s" : ""} found
+							{t("common.professionalsFound", {
+								count: filteredProfessionals.length,
+							})}
 						</Text>
 
 						{/* Empty State */}
@@ -217,10 +220,12 @@ export default function Search() {
 							<View style={styles.emptyContainer}>
 								<Text style={styles.emptyText}>
 									{searchQuery
-										? `No providers found matching "${searchQuery}"`
+										? t("common.noProvidersFoundMatchingSearchQuery", {
+												searchQuery,
+											})
 										: selectedCategory !== "all"
-											? "No providers in this category"
-											: "No providers available"}
+											? t("common.noProvidersInThisCategory")
+											: t("common.noProvidersAvailable")}
 								</Text>
 							</View>
 						)}
@@ -296,7 +301,7 @@ export default function Search() {
 															style={styles.professionalSpecialty}
 															numberOfLines={1}
 														>
-															{provider.specialty || "Healthcare Provider"}
+															{provider.specialty || t("common.healthcareProvider")}
 														</Text>
 														{provider.bio && (
 															<Text
@@ -320,8 +325,9 @@ export default function Search() {
 															</View>
 															<View style={styles.statDivider} />
 															<Text style={styles.ratingCountText}>
-																{provider.totalRatings ?? 0} rating
-																{provider.totalRatings === 1 ? "" : "s"}
+																{t("common.ratingCount", {
+																	count: provider.totalRatings ?? 0,
+																})}
 															</Text>
 															<View style={styles.statDivider} />
 															<Text style={styles.availableText}>
@@ -344,7 +350,7 @@ export default function Search() {
 																	color={theme.colors.foreground}
 																	strokeWidth={2}
 																/>
-																<Text style={styles.chatButtonText}>Chat</Text>
+																<Text style={styles.chatButtonText}>{t("common.chat")}</Text>
 															</Pressable>
 															<Pressable
 																onPress={(e) => {
@@ -356,7 +362,7 @@ export default function Search() {
 																style={styles.bookButton}
 															>
 																<Text style={styles.bookButtonText}>
-																	Book Now
+																	{t("common.bookNow")}
 																</Text>
 															</Pressable>
 														</View>

@@ -20,12 +20,13 @@ import {
 	Text,
 	View,
 } from "react-native";
-import { Calendar } from "react-native-calendars";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { z } from "zod";
 import { TimeSlotSelector } from "@/components/booking-screen";
 import { Button } from "@/components/ui/button";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/auth";
@@ -125,6 +126,7 @@ export default function ProviderCreateAppointment() {
 	const router = useRouter();
 	const insets = useSafeAreaInsets();
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 	const { healthcareProvider } = useAuth();
 	const providerId = healthcareProvider?.id || "";
 
@@ -186,6 +188,7 @@ export default function ProviderCreateAppointment() {
 		() => formatUtcDateForApi(selectedDate),
 		[selectedDate],
 	);
+	const todayDate = useMemo(() => formatUtcDateForApi(new Date()), []);
 
 	const { markedDates, minDate, maxDate } = useMemo(() => {
 		const today = parseCalendarDateAsUtc(formatUtcDateForApi(new Date()));
@@ -247,8 +250,8 @@ export default function ProviderCreateAppointment() {
 
 		if (!parsed.success) {
 			Alert.alert(
-				"Check the form",
-				parsed.error.issues[0]?.message || "Please review the appointment.",
+				t("common.checkTheForm"),
+				parsed.error.issues[0]?.message || t("common.pleaseReviewTheAppointment"),
 			);
 			return;
 		}
@@ -302,14 +305,14 @@ export default function ProviderCreateAppointment() {
 				patient,
 			});
 
-			Alert.alert("Scheduled", "The appointment was created successfully.", [
+			Alert.alert(t("common.scheduled"), t("common.theAppointmentWasCreatedSuccessfully"), [
 				{
 					text: "OK",
 					onPress: () => router.replace("/(provider-tabs)/appointments"),
 				},
 			]);
 		} catch (error) {
-			Alert.alert("Error", getErrorMessage(error));
+			Alert.alert(t("common.error"), getErrorMessage(error));
 		}
 	};
 
@@ -317,29 +320,37 @@ export default function ProviderCreateAppointment() {
 		proceduresLoading || schedulesLoading || patientProfilesLoading;
 	const patientLabel =
 		patientMode === "existing"
-			? selectedPatientProfile?.fullName || "Saved patient"
-			: patientFullName.trim() || "New patient";
+			? selectedPatientProfile?.fullName || t("common.savedPatient")
+			: patientFullName.trim() || t("common.newPatient");
 
 	if (!providerId) {
 		return (
 			<SafeAreaView edges={["top"]} style={styles.container}>
 				<View style={styles.centerState}>
-					<Text style={styles.emptyTitle}>Provider profile required</Text>
-					<Button onPress={() => router.back()}>Go Back</Button>
+					<Text style={styles.emptyTitle}>{t("common.providerProfileRequired")}</Text>
+					<Button onPress={() => router.back()}>{t("common.goBack")}</Button>
 				</View>
 			</SafeAreaView>
 		);
 	}
 
 	return (
-		<SafeAreaView edges={["top"]} style={styles.container}>
+		<SafeAreaView
+			edges={["top"]}
+			style={styles.container}
+			testID="provider-create-appointment-screen"
+		>
 			<View style={styles.header}>
-				<Pressable onPress={() => router.back()} style={styles.backButton}>
+				<Pressable
+					testID="provider-create-appointment-back-button"
+					onPress={() => router.back()}
+					style={styles.backButton}
+				>
 					<ArrowLeft size={22} color={theme.colors.foreground} />
 				</Pressable>
 				<View style={styles.headerText}>
-					<Text style={styles.headerTitle}>New Appointment</Text>
-					<Text style={styles.headerSubtitle}>Schedule for your office</Text>
+					<Text style={styles.headerTitle}>{t("common.newAppointment")}</Text>
+					<Text style={styles.headerSubtitle}>{t("common.scheduleForYourOffice")}</Text>
 				</View>
 			</View>
 
@@ -353,7 +364,7 @@ export default function ProviderCreateAppointment() {
 				{isLoading ? (
 					<View style={styles.centerState}>
 						<ActivityIndicator size="large" color={theme.colors.primary} />
-						<Text style={styles.emptyText}>Loading schedule...</Text>
+						<Text style={styles.emptyText}>{t("common.loadingSchedule")}</Text>
 					</View>
 				) : (
 					<>
@@ -364,7 +375,7 @@ export default function ProviderCreateAppointment() {
 									color={theme.colors.primary}
 									strokeWidth={2}
 								/>
-								<Text style={styles.sectionTitle}>Patient</Text>
+								<Text style={styles.sectionTitle}>{t("common.patient")}</Text>
 							</View>
 
 							<View style={styles.modeGrid}>
@@ -390,7 +401,7 @@ export default function ProviderCreateAppointment() {
 												styles.modeButtonTextActive,
 										]}
 									>
-										New
+										{t("common.new")}
 									</Text>
 								</Pressable>
 								<Pressable
@@ -423,7 +434,7 @@ export default function ProviderCreateAppointment() {
 												styles.modeButtonTextActive,
 										]}
 									>
-										Saved
+										{t("common.saved")}
 									</Text>
 								</Pressable>
 							</View>
@@ -432,7 +443,7 @@ export default function ProviderCreateAppointment() {
 								<View style={styles.patientProfilesList}>
 									{patientProfiles.length === 0 ? (
 										<Text style={styles.emptyText}>
-											No saved patient profiles yet.
+											{t("common.noSavedPatientProfilesYet")}
 										</Text>
 									) : (
 										patientProfiles.map((profile) => {
@@ -466,7 +477,7 @@ export default function ProviderCreateAppointment() {
 														<Text style={styles.patientProfileMeta}>
 															{[profile.phone, profile.email]
 																.filter(Boolean)
-																.join(" • ") || "Patient profile"}
+																.join(" • ") || t("common.patientProfile2")}
 														</Text>
 													</View>
 												</Pressable>
@@ -484,7 +495,7 @@ export default function ProviderCreateAppointment() {
 										render={({ field: { value, onChange } }) => (
 											<Input
 												leftIcon={User}
-												placeholder="Full name"
+												placeholder={t("common.fullName")}
 												value={value}
 												onChangeText={onChange}
 											/>
@@ -495,11 +506,14 @@ export default function ProviderCreateAppointment() {
 											control={control}
 											name="patientDateOfBirth"
 											render={({ field: { value, onChange } }) => (
-												<Input
-													placeholder="Birth date"
+												<DatePickerInput
+													placeholder="common.birthDate"
+													title="common.selectBirthDate"
 													value={value}
-													onChangeText={onChange}
+													onChange={onChange}
 													containerStyle={styles.fieldHalf}
+													maxDate={todayDate}
+													allowClear
 												/>
 											)}
 										/>
@@ -508,7 +522,7 @@ export default function ProviderCreateAppointment() {
 											name="patientGender"
 											render={({ field: { value, onChange } }) => (
 												<Input
-													placeholder="Gender"
+													placeholder={t("common.gender")}
 													value={value}
 													onChangeText={onChange}
 													containerStyle={styles.fieldHalf}
@@ -523,7 +537,7 @@ export default function ProviderCreateAppointment() {
 											render={({ field: { value, onChange } }) => (
 												<Input
 													leftIcon={Phone}
-													placeholder="Phone"
+													placeholder={t("common.phone")}
 													value={value}
 													onChangeText={onChange}
 													keyboardType="phone-pad"
@@ -537,7 +551,7 @@ export default function ProviderCreateAppointment() {
 											render={({ field: { value, onChange } }) => (
 												<Input
 													leftIcon={Mail}
-													placeholder="Email"
+													placeholder={t("common.email")}
 													value={value}
 													onChangeText={onChange}
 													autoCapitalize="none"
@@ -552,13 +566,13 @@ export default function ProviderCreateAppointment() {
 										name="patientCpf"
 										render={({ field: { value, onChange } }) => (
 											<Input
-												placeholder="CPF"
+												placeholder={t("common.cPF")}
 												value={value}
 												onChangeText={onChange}
 											/>
 										)}
 									/>
-									<Text style={styles.fieldGroupTitle}>Health context</Text>
+									<Text style={styles.fieldGroupTitle}>{t("common.healthContext")}</Text>
 									<View style={styles.fieldRow}>
 										<Controller
 											control={control}
@@ -566,7 +580,7 @@ export default function ProviderCreateAppointment() {
 											render={({ field: { value, onChange } }) => (
 												<Input
 													leftIcon={ShieldPlus}
-													placeholder="Blood type"
+													placeholder={t("common.bloodType")}
 													value={value}
 													onChangeText={onChange}
 													containerStyle={styles.fieldHalf}
@@ -578,7 +592,7 @@ export default function ProviderCreateAppointment() {
 											name="patientMedications"
 											render={({ field: { value, onChange } }) => (
 												<Input
-													placeholder="Medications"
+													placeholder={t("common.medications")}
 													value={value}
 													onChangeText={onChange}
 													containerStyle={styles.fieldHalf}
@@ -592,7 +606,7 @@ export default function ProviderCreateAppointment() {
 										render={({ field: { value, onChange } }) => (
 											<Input
 												leftIcon={HeartPulse}
-												placeholder="Allergies"
+												placeholder={t("common.allergies")}
 												value={value}
 												onChangeText={onChange}
 											/>
@@ -604,7 +618,7 @@ export default function ProviderCreateAppointment() {
 										render={({ field: { value, onChange } }) => (
 											<Input
 												leftIcon={HeartPulse}
-												placeholder="Chronic pain"
+												placeholder={t("common.chronicPain2")}
 												value={value}
 												onChangeText={onChange}
 											/>
@@ -615,7 +629,7 @@ export default function ProviderCreateAppointment() {
 										name="patientPreExistingConditions"
 										render={({ field: { value, onChange } }) => (
 											<Textarea
-												placeholder="Pre-existing conditions, surgeries, family history..."
+												placeholder={t("common.preExistingConditionsSurgeriesFamilyHistory")}
 												value={value}
 												onChangeText={onChange}
 											/>
@@ -627,7 +641,7 @@ export default function ProviderCreateAppointment() {
 											name="patientEmergencyContactName"
 											render={({ field: { value, onChange } }) => (
 												<Input
-													placeholder="Emergency contact"
+													placeholder={t("common.emergencyContact")}
 													value={value}
 													onChangeText={onChange}
 													containerStyle={styles.fieldHalf}
@@ -639,7 +653,7 @@ export default function ProviderCreateAppointment() {
 											name="patientEmergencyContactPhone"
 											render={({ field: { value, onChange } }) => (
 												<Input
-													placeholder="Emergency phone"
+													placeholder={t("common.emergencyPhone")}
 													value={value}
 													onChangeText={onChange}
 													keyboardType="phone-pad"
@@ -653,7 +667,7 @@ export default function ProviderCreateAppointment() {
 										name="patientNotes"
 										render={({ field: { value, onChange } }) => (
 											<Textarea
-												placeholder="Additional patient notes"
+												placeholder={t("common.additionalPatientNotes")}
 												value={value}
 												onChangeText={onChange}
 											/>
@@ -670,7 +684,7 @@ export default function ProviderCreateAppointment() {
 									color={theme.colors.primary}
 									strokeWidth={2}
 								/>
-								<Text style={styles.sectionTitle}>Procedures</Text>
+								<Text style={styles.sectionTitle}>{t("common.procedures")}</Text>
 							</View>
 							<View style={styles.procedureGrid}>
 								{procedures.map((procedure) => {
@@ -717,37 +731,23 @@ export default function ProviderCreateAppointment() {
 									color={theme.colors.primary}
 									strokeWidth={2}
 								/>
-								<Text style={styles.sectionTitle}>Date</Text>
+								<Text style={styles.sectionTitle}>{t("common.date")}</Text>
 							</View>
 							<Controller
 								control={control}
 								name="selectedDate"
 								render={({ field: { onChange } }) => (
-									<Calendar
-										current={formattedDate}
+									<DatePickerInput
+										value={formattedDate}
+										placeholder="common.selectAppointmentDate"
+										title="common.selectAppointmentDate"
 										minDate={minDate}
 										maxDate={maxDate}
-										onDayPress={(day) => {
-											onChange(parseCalendarDateAsUtc(day.dateString));
+										onChange={(dateString) => {
+											onChange(parseCalendarDateAsUtc(dateString));
 											setValue("selectedTime", "");
 										}}
 										markedDates={markedDates}
-										theme={{
-											backgroundColor: theme.colors.background,
-											calendarBackground: theme.colors.surfacePrimary,
-											textSectionTitleColor:
-												theme.colors.mutedForeground,
-											selectedDayBackgroundColor: theme.colors.primary,
-											selectedDayTextColor:
-												theme.colors.primaryForeground,
-											todayTextColor: theme.colors.primary,
-											dayTextColor: theme.colors.foreground,
-											textDisabledColor:
-												theme.colors.mutedForeground,
-											arrowColor: theme.colors.primary,
-											monthTextColor: theme.colors.foreground,
-										}}
-										style={styles.calendar}
 									/>
 								)}
 							/>
@@ -761,13 +761,13 @@ export default function ProviderCreateAppointment() {
 						/>
 
 						<View style={styles.section}>
-							<Text style={styles.sectionTitle}>Appointment notes</Text>
+							<Text style={styles.sectionTitle}>{t("common.appointmentNotes2")}</Text>
 							<Controller
 								control={control}
 								name="notes"
 								render={({ field: { value, onChange } }) => (
 									<Textarea
-										placeholder="Internal notes or reason for visit"
+										placeholder={t("common.internalNotesOrReasonForVisit")}
 										value={value}
 										onChangeText={onChange}
 									/>
@@ -777,11 +777,11 @@ export default function ProviderCreateAppointment() {
 
 						<View style={styles.summaryCard}>
 							<View>
-								<Text style={styles.summaryLabel}>Ready to schedule</Text>
+								<Text style={styles.summaryLabel}>{t("common.readyToSchedule")}</Text>
 								<Text style={styles.summaryText}>
 									{patientLabel}
 									{selectedTime
-										? ` • ${formatUtcDateForDisplay(selectedDate)} at ${selectedTime}`
+										? ` • ${formatUtcDateForDisplay(selectedDate)} ${t("common.at")} ${selectedTime}`
 										: ""}
 								</Text>
 							</View>
@@ -791,7 +791,7 @@ export default function ProviderCreateAppointment() {
 								disabled={createAppointment.isPending}
 								style={styles.submitButton}
 							>
-								Schedule
+								{t("common.schedule")}
 							</Button>
 						</View>
 					</>
@@ -990,12 +990,6 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	procedureMetaActive: {
 		color: theme.colors.primaryForeground,
-	},
-	calendar: {
-		borderRadius: theme.radius.lg,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		overflow: "hidden",
 	},
 	summaryCard: {
 		backgroundColor: `${theme.colors.primary}14`,

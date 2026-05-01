@@ -1,0 +1,17 @@
+appId: ${APP_ID}
+name: Provider - Procedures screen
+---
+- launchApp:
+    clearState: false
+- assertVisible: "Consultas de hoje"
+- tapOn:
+    id: "provider-tab-profile"
+- assertVisible: "Perfil"
+- tapOn:
+    id: "provider-profile-menu-procedures"
+- assertVisible:
+    id: "provider-procedures-screen"
+- assertVisible: "Procedimentos"
+- assertVisible: "Adicionar procedimento"
+- tapOn:
+    id: "provider-procedures-back-button"

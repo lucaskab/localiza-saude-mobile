@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import Pdf from "react-native-pdf";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { useUnistyles } from "react-native-unistyles";
 
 export function PdfViewerScreen() {
@@ -21,19 +22,20 @@ export function PdfViewerScreen() {
 	}>();
 	const router = useRouter();
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 	const [isLoading, setIsLoading] = useState(true);
 	const [hasError, setHasError] = useState(false);
 
 	const handleOpenExternally = async () => {
 		if (!uri) {
-			Alert.alert("Error", "PDF URL not available");
+			Alert.alert(t("common.error"), t("common.pDFURLNotAvailable"));
 			return;
 		}
 
 		try {
 			await WebBrowser.openBrowserAsync(uri);
 		} catch {
-			Alert.alert("Error", "Could not open PDF preview");
+			Alert.alert(t("common.error"), t("common.couldNotOpenPDFPreview"));
 		}
 	};
 
@@ -50,7 +52,7 @@ export function PdfViewerScreen() {
 
 				<View style={styles.headerTitle}>
 					<Text style={styles.title} numberOfLines={1}>
-						{name || "PDF document"}
+						{name || t("common.pDFDocument")}
 					</Text>
 				</View>
 
@@ -87,18 +89,18 @@ export function PdfViewerScreen() {
 						{isLoading ? (
 							<View style={styles.overlay}>
 								<ActivityIndicator size="large" color={theme.colors.primary} />
-								<Text style={styles.overlayText}>Loading PDF...</Text>
+								<Text style={styles.overlayText}>{t("common.loadingPDF")}</Text>
 							</View>
 						) : null}
 						{hasError ? (
 							<View style={styles.overlay}>
-								<Text style={styles.errorText}>Unable to render this PDF.</Text>
+								<Text style={styles.errorText}>{t("common.unableToRenderThisPDF")}</Text>
 							</View>
 						) : null}
 					</>
 				) : (
 					<View style={styles.overlay}>
-						<Text style={styles.errorText}>PDF URL not available.</Text>
+						<Text style={styles.errorText}>{t("common.pDFURLNotAvailable2")}</Text>
 					</View>
 				)}
 			</View>

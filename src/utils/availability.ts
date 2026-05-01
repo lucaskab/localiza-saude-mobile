@@ -1,15 +1,4 @@
-const timeFormatter = new Intl.DateTimeFormat("en-US", {
-	hour: "numeric",
-	minute: "2-digit",
-	hour12: true,
-	timeZone: "UTC",
-});
-
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-	month: "short",
-	day: "numeric",
-	timeZone: "UTC",
-});
+import i18n from "@/i18n";
 
 function getUtcDateKey(date: Date): string {
 	const year = date.getUTCFullYear();
@@ -26,27 +15,41 @@ function addUtcDays(date: Date, days: number): Date {
 
 export function formatNextAvailableAt(nextAvailableAt?: string | null): string {
 	if (!nextAvailableAt) {
-		return "No availability";
+		return i18n.t("common.noAvailability");
 	}
 
 	const nextAvailableDate = new Date(nextAvailableAt);
 	if (Number.isNaN(nextAvailableDate.getTime())) {
-		return "No availability";
+		return i18n.t("common.noAvailability");
 	}
 
 	const now = new Date();
 	const nextDateKey = getUtcDateKey(nextAvailableDate);
 	const todayKey = getUtcDateKey(now);
 	const tomorrowKey = getUtcDateKey(addUtcDays(now, 1));
-	const formattedTime = timeFormatter.format(nextAvailableDate);
+	const formattedTime = new Intl.DateTimeFormat(i18n.language, {
+		hour: "numeric",
+		minute: "2-digit",
+		hour12: true,
+		timeZone: "UTC",
+	}).format(nextAvailableDate);
 
 	if (nextDateKey === todayKey) {
-		return `Today, ${formattedTime}`;
+		return i18n.t("common.todayTime", { time: formattedTime });
 	}
 
 	if (nextDateKey === tomorrowKey) {
-		return `Tomorrow, ${formattedTime}`;
+		return i18n.t("common.tomorrowTime", { time: formattedTime });
 	}
 
-	return `${dateFormatter.format(nextAvailableDate)}, ${formattedTime}`;
+	const formattedDate = new Intl.DateTimeFormat(i18n.language, {
+		month: "short",
+		day: "numeric",
+		timeZone: "UTC",
+	}).format(nextAvailableDate);
+
+	return i18n.t("common.dateTime", {
+		date: formattedDate,
+		time: formattedTime,
+	});
 }

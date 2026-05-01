@@ -1,0 +1,22 @@
+appId: ${APP_ID}
+name: Provider - Core navigation
+---
+- launchApp:
+    clearState: false
+- assertVisible: "Consultas de hoje"
+- tapOn:
+    id: "provider-tab-appointments"
+- assertVisible: "Consultas"
+- assertVisible: "Gerencie suas consultas"
+- tapOn:
+    id: "provider-tab-chats"
+- assertVisible: "Conversas"
+- tapOn:
+    id: "provider-tab-profile"
+- assertVisible: "Perfil"
+- assertVisible:
+    id: "provider-profile-menu-professional-profile"
+- assertVisible:
+    id: "provider-profile-menu-reviews"
+- assertVisible:
+    id: "provider-profile-menu-language"

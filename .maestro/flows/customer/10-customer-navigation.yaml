@@ -1,0 +1,18 @@
+appId: ${APP_ID}
+name: Customer - Core navigation
+---
+- launchApp:
+    clearState: false
+- assertVisible: "Encontre seu cuidado"
+- tapOn: "Buscar"
+- assertVisible: "Encontrar profissional"
+- assertVisible: "Buscar médicos, especialistas..."
+- tapOn: "Consultas"
+- assertVisible: "Minhas consultas"
+- tapOn: "Conversas"
+- assertVisible: "Conversas"
+- tapOn: "Perfil"
+- assertVisible: "Perfil"
+- assertVisible: "Ficha médica"
+- assertVisible: "Favoritos"
+- assertVisible: "Idioma"

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Clock, Plus, Trash2, AlertCircle, Save } from "lucide-react-native";
+import { AlertCircle, ArrowLeft, CalendarClock, Clock, Plus, Save, Trash2 } from "lucide-react-native";
 import {
 	View,
 	Text,
@@ -10,9 +10,11 @@ import {
 	Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
+import { useRouter } from "expo-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth";
@@ -22,6 +24,7 @@ import {
 	useUpdateSchedule,
 	useDeleteSchedule,
 } from "@/hooks/use-schedules";
+import { translationKeys, type TranslationKey } from "@/i18n/key-map";
 import type { Schedule } from "@/types/schedule";
 
 // Zod schemas for types only (no runtime validation with zodResolver)
@@ -50,6 +53,8 @@ type DaySchedule = z.infer<typeof dayScheduleSchema>;
 
 export default function ProviderSchedule() {
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
+	const router = useRouter();
 	const { healthcareProvider } = useAuth();
 	const [isSaving, setIsSaving] = useState(false);
 
@@ -69,14 +74,14 @@ export default function ProviderSchedule() {
 	const updateMutation = useUpdateSchedule();
 	const deleteMutation = useDeleteSchedule();
 
-	const daysOfWeek = [
-		{ dayOfWeek: 1, label: "Monday" },
-		{ dayOfWeek: 2, label: "Tuesday" },
-		{ dayOfWeek: 3, label: "Wednesday" },
-		{ dayOfWeek: 4, label: "Thursday" },
-		{ dayOfWeek: 5, label: "Friday" },
-		{ dayOfWeek: 6, label: "Saturday" },
-		{ dayOfWeek: 0, label: "Sunday" },
+	const daysOfWeek: { dayOfWeek: number; label: TranslationKey }[] = [
+		{ dayOfWeek: 1, label: translationKeys.Monday },
+		{ dayOfWeek: 2, label: translationKeys.Tuesday },
+		{ dayOfWeek: 3, label: translationKeys.Wednesday },
+		{ dayOfWeek: 4, label: translationKeys.Thursday },
+		{ dayOfWeek: 5, label: translationKeys.Friday },
+		{ dayOfWeek: 6, label: translationKeys.Saturday },
+		{ dayOfWeek: 0, label: translationKeys.Sunday },
 	];
 
 	// Transform backend data to form data
@@ -146,7 +151,7 @@ export default function ProviderSchedule() {
 			const dayData = data.days[dayIndex];
 			for (const slot of dayData.slots) {
 				if (!validateSlot(slot)) {
-					Alert.alert("Invalid Time", "Please use HH:mm format (e.g., 09:00)");
+					Alert.alert(t("common.invalidTime"), t("common.pleaseUseHHMmFormatEG0900"));
 					return;
 				}
 			}
@@ -223,17 +228,17 @@ export default function ProviderSchedule() {
 
 			// Refetch data and reset form
 			await refetch();
-			Alert.alert("Success", "Schedule saved successfully!");
+			Alert.alert(t("common.success"), t("common.scheduleSavedSuccessfully"));
 		} catch (error) {
 			console.error("Failed to save schedule:", error);
-			Alert.alert("Error", "Failed to save schedule. Please try again.");
+			Alert.alert(t("common.error"), t("common.failedToSaveSchedulePleaseTryAgain"));
 		} finally {
 			setIsSaving(false);
 		}
 	};
 
 	// Render day schedule
-	const renderDaySchedule = (dayOfWeek: number, label: string) => {
+	const renderDaySchedule = (dayOfWeek: number, label: TranslationKey) => {
 		return (
 			<Controller
 				key={dayOfWeek}
@@ -315,7 +320,7 @@ export default function ProviderSchedule() {
 					return (
 						<View style={styles.dayCard}>
 							<View style={styles.dayHeader}>
-								<Text style={styles.dayLabel}>{label}</Text>
+								<Text style={styles.dayLabel}>{t(label)}</Text>
 								<Switch
 									value={value.enabled}
 									onValueChange={toggleDay}
@@ -348,7 +353,7 @@ export default function ProviderSchedule() {
 															keyboardType="numbers-and-punctuation"
 															maxLength={5}
 														/>
-														<Text style={styles.timeSeparator}>to</Text>
+														<Text style={styles.timeSeparator}>{t("common.to")}</Text>
 														<Input
 															containerStyle={styles.timeInput}
 															value={slot.endTime}
@@ -377,7 +382,7 @@ export default function ProviderSchedule() {
 										})
 									) : (
 										<Text style={styles.emptySlots}>
-											No time slots. Add one below.
+											{t("common.noTimeSlotsAddOneBelow")}
 										</Text>
 									)}
 
@@ -393,14 +398,14 @@ export default function ProviderSchedule() {
 												color={theme.colors.foreground}
 												strokeWidth={2}
 											/>
-											<Text style={styles.addSlotText}>Add Time Slot</Text>
+											<Text style={styles.addSlotText}>{t("common.addTimeSlot")}</Text>
 										</View>
 									</Button>
 								</View>
 							)}
 
 							{!value.enabled && (
-								<Text style={styles.unavailableText}>Unavailable</Text>
+								<Text style={styles.unavailableText}>{t("common.unavailable")}</Text>
 							)}
 						</View>
 					);
@@ -410,23 +415,55 @@ export default function ProviderSchedule() {
 	};
 
 	return (
-		<SafeAreaView edges={["top"]} style={styles.container}>
+		<SafeAreaView
+			edges={["top"]}
+			style={styles.container}
+			testID="provider-schedule-screen"
+		>
 			<ScrollView
 				style={styles.scrollView}
 				contentContainerStyle={styles.scrollContent}
 				showsVerticalScrollIndicator={false}
 			>
+				<View style={styles.editHeader}>
+					<Pressable
+						accessibilityRole="button"
+						accessibilityLabel={t("common.goBack")}
+						testID="provider-schedule-back-button"
+						onPress={() => router.back()}
+						style={styles.backButton}
+					>
+						<ArrowLeft
+							size={20}
+							color={theme.colors.foreground}
+							strokeWidth={2}
+						/>
+					</Pressable>
+					<View style={styles.headerIcon}>
+						<CalendarClock
+							size={22}
+							color={theme.colors.primary}
+							strokeWidth={2}
+						/>
+					</View>
+					<View style={styles.editHeaderCopy}>
+						<Text style={styles.editHeaderTitle}>{t("common.schedule")}</Text>
+						<Text style={styles.editHeaderSubtitle}>
+							{t("common.workingScheduleDescription")}
+						</Text>
+					</View>
+				</View>
+
 				<View style={styles.description}>
 					<Text style={styles.descriptionText}>
-						Set your working hours for each day of the week. Patients will only
-						be able to book appointments during these times.
+						{t("common.setYourWorkingHoursForEachDayOfTheWeekPatientsWillOnlyBeAbleToBookAppointmentsDuringTheseTimes")}
 					</Text>
 				</View>
 
 				{isLoading ? (
 					<View style={styles.loadingContainer}>
 						<ActivityIndicator size="large" color={theme.colors.primary} />
-						<Text style={styles.loadingText}>Loading schedule...</Text>
+						<Text style={styles.loadingText}>{t("common.loadingSchedule")}</Text>
 					</View>
 				) : error ? (
 					<View style={styles.errorContainer}>
@@ -435,9 +472,9 @@ export default function ProviderSchedule() {
 							color={theme.colors.destructive}
 							strokeWidth={2}
 						/>
-						<Text style={styles.errorText}>Failed to load schedule</Text>
+						<Text style={styles.errorText}>{t("common.failedToLoadSchedule")}</Text>
 						<Button onPress={() => refetch()} size="sm">
-							Retry
+							{t("common.retry")}
 						</Button>
 					</View>
 				) : (
@@ -460,7 +497,7 @@ export default function ProviderSchedule() {
 					>
 						<View style={styles.saveButtonContent}>
 							<Save size={20} color={theme.colors.primaryForeground} />
-							<Text style={styles.saveButtonText}>Save Changes</Text>
+							<Text style={styles.saveButtonText}>{t("common.saveChanges")}</Text>
 						</View>
 					</Button>
 				</View>
@@ -481,6 +518,46 @@ const styles = StyleSheet.create((theme) => ({
 		paddingHorizontal: theme.gap(3),
 		paddingTop: theme.gap(3),
 		paddingBottom: theme.gap(20), // Extra padding for sticky button
+	},
+	editHeader: {
+		backgroundColor: theme.colors.surfacePrimary,
+		borderRadius: theme.radius.lg,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		padding: theme.gap(2),
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(2),
+		marginBottom: theme.gap(3),
+	},
+	backButton: {
+		width: 40,
+		height: 40,
+		borderRadius: theme.radius.md,
+		backgroundColor: theme.colors.secondary,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	headerIcon: {
+		width: 40,
+		height: 40,
+		borderRadius: theme.radius.md,
+		backgroundColor: theme.colors.secondary,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	editHeaderCopy: {
+		flex: 1,
+	},
+	editHeaderTitle: {
+		fontSize: 18,
+		fontWeight: "600",
+		color: theme.colors.foreground,
+	},
+	editHeaderSubtitle: {
+		fontSize: 13,
+		color: theme.colors.mutedForeground,
+		marginTop: theme.gap(0.5),
 	},
 	description: {
 		marginBottom: theme.gap(3),

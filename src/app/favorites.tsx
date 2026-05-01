@@ -17,6 +17,7 @@ import {
 	MessageCircle,
 	Star,
 } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { useFavorites, useRemoveFavorite } from "@/hooks/use-favorites";
@@ -26,6 +27,7 @@ import { formatAverageRating, formatReviewCount } from "@/utils/ratings";
 export default function FavoritesScreen() {
 	const router = useRouter();
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 	const insets = useSafeAreaInsets();
 	const {
 		data,
@@ -41,7 +43,7 @@ export default function FavoritesScreen() {
 		try {
 			await removeFavoriteMutation.mutateAsync(healthcareProviderId);
 		} catch {
-			Alert.alert("Error", "Failed to remove this provider from favorites.");
+			Alert.alert(t("common.error"), t("common.failedToRemoveThisProviderFromFavorites"));
 		}
 	};
 
@@ -56,8 +58,8 @@ export default function FavoritesScreen() {
 					/>
 				</Pressable>
 				<View style={styles.headerTextContainer}>
-					<Text style={styles.title}>Favorites</Text>
-					<Text style={styles.subtitle}>Your saved healthcare providers</Text>
+					<Text style={styles.title}>{t("common.favorites")}</Text>
+					<Text style={styles.subtitle}>{t("common.yourSavedHealthcareProviders")}</Text>
 				</View>
 			</View>
 
@@ -79,7 +81,7 @@ export default function FavoritesScreen() {
 				{isLoading && (
 					<View style={styles.centerState}>
 						<ActivityIndicator size="large" color={theme.colors.primary} />
-						<Text style={styles.centerText}>Loading favorites...</Text>
+						<Text style={styles.centerText}>{t("common.loadingFavorites")}</Text>
 					</View>
 				)}
 
@@ -92,12 +94,12 @@ export default function FavoritesScreen() {
 								strokeWidth={2.2}
 							/>
 						</View>
-						<Text style={styles.emptyTitle}>Could not load favorites</Text>
+						<Text style={styles.emptyTitle}>{t("common.couldNotLoadFavorites")}</Text>
 						<Text style={styles.centerText}>
-							Refresh the page to try loading your saved providers again.
+							{t("common.refreshThePageToTryLoadingYourSavedProvidersAgain")}
 						</Text>
 						<Button onPress={() => refetch()} style={styles.retryButton}>
-							Retry
+							{t("common.retry")}
 						</Button>
 					</View>
 				)}
@@ -107,15 +109,15 @@ export default function FavoritesScreen() {
 						<View style={styles.emptyIcon}>
 							<Heart size={30} color={theme.colors.primary} strokeWidth={2.2} />
 						</View>
-						<Text style={styles.emptyTitle}>No favorites yet</Text>
+						<Text style={styles.emptyTitle}>{t("common.noFavoritesYet")}</Text>
 						<Text style={styles.centerText}>
-							Tap the heart on a provider card to save them here.
+							{t("common.tapTheHeartOnAProviderCardToSaveThemHere")}
 						</Text>
 						<Button
 							onPress={() => router.push("/(bottom-tabs)/search")}
 							style={styles.retryButton}
 						>
-							Find Providers
+							{t("common.findProviders")}
 						</Button>
 					</View>
 				)}
@@ -123,7 +125,7 @@ export default function FavoritesScreen() {
 				{!isLoading && !error && favorites.length > 0 && (
 					<View style={styles.list}>
 						<Text style={styles.countText}>
-							{favorites.length} favorite{favorites.length === 1 ? "" : "s"}
+							{t("common.favoriteCount", { count: favorites.length })}
 						</Text>
 						{favorites.map((provider) => (
 							<Pressable
@@ -150,7 +152,7 @@ export default function FavoritesScreen() {
 											{provider.user.name}
 										</Text>
 										<Text style={styles.providerSpecialty} numberOfLines={1}>
-											{provider.specialty || "Healthcare Provider"}
+											{provider.specialty || t("common.healthcareProvider")}
 										</Text>
 									</View>
 
@@ -217,7 +219,7 @@ export default function FavoritesScreen() {
 											color={theme.colors.foreground}
 											strokeWidth={2}
 										/>
-										<Text style={styles.secondaryButtonText}>Details</Text>
+										<Text style={styles.secondaryButtonText}>{t("common.details")}</Text>
 									</Pressable>
 									<Pressable
 										onPress={(event) => {
@@ -226,7 +228,7 @@ export default function FavoritesScreen() {
 										}}
 										style={styles.primaryButton}
 									>
-										<Text style={styles.primaryButtonText}>Book Now</Text>
+										<Text style={styles.primaryButtonText}>{t("common.bookNow")}</Text>
 									</Pressable>
 								</View>
 							</Pressable>

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import {
 	ActivityIndicator,
 	Image,
+	Pressable,
 	RefreshControl,
 	ScrollView,
 	Text,
@@ -10,10 +11,13 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import {
 	AlertCircle,
+	ArrowLeft,
 	MessageCircle,
 	Star,
 	TrendingUp,
 } from "lucide-react-native";
+import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
@@ -27,7 +31,9 @@ import {
 
 export default function ProviderRatings() {
 	const { theme } = useUnistyles();
+	const { i18n, t } = useTranslation();
 	const insets = useSafeAreaInsets();
+	const router = useRouter();
 	const { healthcareProvider, isLoading: isAuthLoading } = useAuth();
 	const providerId = healthcareProvider?.id || "";
 
@@ -85,7 +91,7 @@ export default function ProviderRatings() {
 	};
 
 	const formatDate = (isoDate: string) =>
-		new Date(isoDate).toLocaleDateString("en-US", {
+		new Date(isoDate).toLocaleDateString(i18n.language, {
 			month: "short",
 			day: "numeric",
 			year: "numeric",
@@ -99,7 +105,7 @@ export default function ProviderRatings() {
 
 		if (fivePointRating >= 4) {
 			return {
-				label: "Positive",
+				label: t("common.positive"),
 				color: "#166534",
 				backgroundColor: "#dcfce7",
 			};
@@ -107,55 +113,102 @@ export default function ProviderRatings() {
 
 		if (fivePointRating >= 3) {
 			return {
-				label: "Neutral",
+				label: t("common.neutral"),
 				color: "#92400e",
 				backgroundColor: "#fef3c7",
 			};
 		}
 
 		return {
-			label: "Needs attention",
+			label: t("common.needsAttention"),
 			color: "#991b1b",
 			backgroundColor: "#fee2e2",
 		};
 	};
 
+	const renderHeader = () => (
+		<View style={styles.navigationHeader}>
+			<Pressable
+				accessibilityRole="button"
+				accessibilityLabel={t("common.goBack")}
+				testID="provider-ratings-back-button"
+				onPress={() => router.back()}
+				style={styles.backButton}
+			>
+				<ArrowLeft
+					size={20}
+					color={theme.colors.foreground}
+					strokeWidth={2}
+				/>
+			</Pressable>
+			<View style={styles.headerIcon}>
+				<Star
+					size={22}
+					color={theme.colors.amber}
+					fill={theme.colors.amber}
+					strokeWidth={2}
+				/>
+			</View>
+			<View style={styles.headerCopy}>
+				<Text style={styles.headerTitle}>{t("common.reviews")}</Text>
+				<Text style={styles.headerSubtitle}>
+					{t("common.patientFeedbackAboutAppointmentsAndCareExperience")}
+				</Text>
+			</View>
+		</View>
+	);
+
 	if (isInitialLoading) {
 		return (
-			<SafeAreaView style={styles.centerContainer}>
-				<ActivityIndicator size="large" color={theme.colors.primary} />
-				<Text style={styles.loadingText}>Loading reviews...</Text>
+			<SafeAreaView style={styles.container} edges={["top"]}>
+				<View style={styles.stateContent}>
+					{renderHeader()}
+					<View style={styles.centerState}>
+						<ActivityIndicator size="large" color={theme.colors.primary} />
+						<Text style={styles.loadingText}>{t("common.loadingReviews")}</Text>
+					</View>
+				</View>
 			</SafeAreaView>
 		);
 	}
 
 	if (!providerId) {
 		return (
-			<SafeAreaView style={styles.centerContainer}>
-				<View style={styles.errorIcon}>
-					<AlertCircle size={28} color={theme.colors.destructive} />
+			<SafeAreaView style={styles.container} edges={["top"]}>
+				<View style={styles.stateContent}>
+					{renderHeader()}
+					<View style={styles.centerState}>
+						<View style={styles.errorIcon}>
+							<AlertCircle size={28} color={theme.colors.destructive} />
+						</View>
+						<Text style={styles.errorTitle}>{t("common.providerProfileUnavailable")}</Text>
+						<Text style={styles.errorText}>
+							{t("common.weCouldNotFindAProviderProfileForThisAccount")}
+						</Text>
+					</View>
 				</View>
-				<Text style={styles.errorTitle}>Provider profile unavailable</Text>
-				<Text style={styles.errorText}>
-					We could not find a provider profile for this account.
-				</Text>
 			</SafeAreaView>
 		);
 	}
 
 	if (error) {
 		return (
-			<SafeAreaView style={styles.centerContainer}>
-				<View style={styles.errorIcon}>
-					<AlertCircle size={28} color={theme.colors.destructive} />
+			<SafeAreaView style={styles.container} edges={["top"]}>
+				<View style={styles.stateContent}>
+					{renderHeader()}
+					<View style={styles.centerState}>
+						<View style={styles.errorIcon}>
+							<AlertCircle size={28} color={theme.colors.destructive} />
+						</View>
+						<Text style={styles.errorTitle}>{t("common.unableToLoadReviews")}</Text>
+						<Text style={styles.errorText}>
+							{t("common.refreshThePageToTryLoadingPatientFeedbackAgain")}
+						</Text>
+						<Button onPress={() => refetch()} style={styles.retryButton}>
+							{t("common.retry")}
+						</Button>
+					</View>
 				</View>
-				<Text style={styles.errorTitle}>Unable to load reviews</Text>
-				<Text style={styles.errorText}>
-					Refresh the page to try loading patient feedback again.
-				</Text>
-				<Button onPress={() => refetch()} style={styles.retryButton}>
-					Retry
-				</Button>
 			</SafeAreaView>
 		);
 	}
@@ -177,12 +230,7 @@ export default function ProviderRatings() {
 					{ paddingBottom: insets.bottom + theme.gap(14) },
 				]}
 			>
-				<View style={styles.header}>
-					<Text style={styles.title}>Reviews</Text>
-					<Text style={styles.subtitle}>
-						Patient feedback about appointments and care experience.
-					</Text>
-				</View>
+				{renderHeader()}
 
 				<View style={styles.summaryCard}>
 					<View style={styles.averageBlock}>
@@ -233,7 +281,7 @@ export default function ProviderRatings() {
 					<View style={styles.insightCard}>
 						<TrendingUp size={20} color="#16a34a" strokeWidth={2.2} />
 						<Text style={styles.insightValue}>{positiveRatings.length}</Text>
-						<Text style={styles.insightLabel}>Positive ratings</Text>
+						<Text style={styles.insightLabel}>{t("common.positiveRatings")}</Text>
 					</View>
 					<View style={styles.insightCard}>
 						<MessageCircle
@@ -242,20 +290,20 @@ export default function ProviderRatings() {
 							strokeWidth={2.2}
 						/>
 						<Text style={styles.insightValue}>{writtenReviews.length}</Text>
-						<Text style={styles.insightLabel}>Written reviews</Text>
+						<Text style={styles.insightLabel}>{t("common.writtenReviews")}</Text>
 					</View>
 					<View style={styles.insightCard}>
 						<AlertCircle size={20} color="#dc2626" strokeWidth={2.2} />
 						<Text style={styles.insightValue}>
 							{needsAttentionRatings.length}
 						</Text>
-						<Text style={styles.insightLabel}>Needs attention</Text>
+						<Text style={styles.insightLabel}>{t("common.needsAttention")}</Text>
 					</View>
 				</View>
 
 				<View style={styles.reviewsSection}>
 					<View style={styles.sectionHeader}>
-						<Text style={styles.sectionTitle}>Recent feedback</Text>
+						<Text style={styles.sectionTitle}>{t("common.recentFeedback")}</Text>
 						<Text style={styles.sectionCount}>{ratings.length}</Text>
 					</View>
 
@@ -264,9 +312,9 @@ export default function ProviderRatings() {
 							<View style={styles.emptyIcon}>
 								<Star size={30} color={theme.colors.amber} strokeWidth={2} />
 							</View>
-							<Text style={styles.emptyTitle}>No reviews yet</Text>
+							<Text style={styles.emptyTitle}>{t("common.noReviewsYet")}</Text>
 							<Text style={styles.emptyText}>
-								New patient ratings will appear here as soon as they are submitted.
+								{t("common.newPatientRatingsWillAppearHereAsSoonAsTheyAreSubmitted")}
 							</Text>
 						</View>
 					) : (
@@ -330,7 +378,7 @@ export default function ProviderRatings() {
 											]}
 											selectable={!!comment}
 										>
-											{comment || "No written review."}
+											{comment || t("common.noWrittenReview")}
 										</Text>
 									</View>
 								);
@@ -348,12 +396,16 @@ const styles = StyleSheet.create((theme) => ({
 		flex: 1,
 		backgroundColor: theme.colors.background,
 	},
-	centerContainer: {
+	stateContent: {
+		flex: 1,
+		padding: theme.gap(3),
+		gap: theme.gap(3),
+		backgroundColor: theme.colors.background,
+	},
+	centerState: {
 		flex: 1,
 		alignItems: "center",
 		justifyContent: "center",
-		padding: theme.gap(3),
-		backgroundColor: theme.colors.background,
 	},
 	loadingText: {
 		marginTop: theme.gap(2),
@@ -391,18 +443,45 @@ const styles = StyleSheet.create((theme) => ({
 		paddingTop: theme.gap(3),
 		gap: theme.gap(3),
 	},
-	header: {
-		gap: theme.gap(0.75),
+	navigationHeader: {
+		backgroundColor: theme.colors.surfacePrimary,
+		borderRadius: theme.radius.lg,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		padding: theme.gap(2),
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(2),
 	},
-	title: {
-		fontSize: 32,
-		fontWeight: "700",
+	backButton: {
+		width: 40,
+		height: 40,
+		borderRadius: theme.radius.md,
+		backgroundColor: theme.colors.secondary,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	headerIcon: {
+		width: 44,
+		height: 44,
+		borderRadius: theme.radius.md,
+		backgroundColor: `${theme.colors.amber}1F`,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	headerCopy: {
+		flex: 1,
+	},
+	headerTitle: {
+		fontSize: 20,
+		fontWeight: "600",
 		color: theme.colors.foreground,
 	},
-	subtitle: {
-		fontSize: 15,
+	headerSubtitle: {
+		fontSize: 13,
 		color: theme.colors.mutedForeground,
-		lineHeight: 21,
+		lineHeight: 18,
+		marginTop: theme.gap(0.5),
 	},
 	summaryCard: {
 		backgroundColor: theme.colors.surfacePrimary,

@@ -1,0 +1,32 @@
+appId: ${APP_ID}
+name: Customer - Profile feature links
+---
+- launchApp:
+    clearState: false
+- tapOn: "Perfil"
+- assertVisible: "Perfil"
+- scrollUntilVisible:
+    element:
+      text: "Idioma"
+    direction: DOWN
+- tapOn: "Idioma"
+- assertVisible: "Idioma"
+- assertVisible: "Português"
+- assertVisible: "English"
+- assertVisible: "Español"
+- tapOn: "Português"
+- back
+- scrollUntilVisible:
+    element:
+      text: "Ficha médica"
+    direction: UP
+- tapOn: "Ficha médica"
+- assertVisible: "Ficha médica"
+- back
+- scrollUntilVisible:
+    element:
+      text: "Favoritos"
+    direction: DOWN
+- tapOn: "Favoritos"
+- assertVisible: "Favoritos"
+- back

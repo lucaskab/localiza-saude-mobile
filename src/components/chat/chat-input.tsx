@@ -1,5 +1,6 @@
 import { Paperclip, Send } from "lucide-react-native";
 import { Pressable, StyleSheet, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useUnistyles } from "react-native-unistyles";
 import { Input } from "@/components/ui/input";
 
@@ -19,6 +20,7 @@ export function ChatInput({
 	disabled = false,
 }: ChatInputProps) {
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 
 	return (
 		<View style={styles.inputContainer}>
@@ -29,7 +31,7 @@ export function ChatInput({
 			<Input
 				value={messageText}
 				onChangeText={onMessageTextChange}
-				placeholder="Type a message..."
+				placeholder={t("common.typeAMessage")}
 				containerStyle={styles.messageInput}
 				multiline
 				onSubmitEditing={onSendMessage}

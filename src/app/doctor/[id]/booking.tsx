@@ -23,9 +23,10 @@ import {
 	Pressable,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { Calendar } from "react-native-calendars";
 import { Button } from "@/components/ui/button";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useHealthcareProvider } from "@/hooks/use-healthcare-providers";
@@ -148,6 +149,7 @@ export default function Booking() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const router = useRouter();
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 	const insets = useSafeAreaInsets();
 
 	// Setup React Hook Form
@@ -194,6 +196,7 @@ export default function Booking() {
 	const formattedDate = useMemo(() => {
 		return formatUtcDateForApi(selectedDate);
 	}, [selectedDate]);
+	const todayDate = useMemo(() => formatUtcDateForApi(new Date()), []);
 
 	// Create appointment mutation
 	const createAppointment = useCreateAppointment();
@@ -294,7 +297,11 @@ export default function Booking() {
 		const parsed = bookingFormSchema.safeParse(data);
 
 		if (!parsed.success) {
-			Alert.alert("Check the form", parsed.error.issues[0]?.message || "Please review the patient information.");
+			Alert.alert(
+				t("common.checkTheForm"),
+				parsed.error.issues[0]?.message ||
+					t("common.pleaseReviewThePatientInformation"),
+			);
 			return;
 		}
 
@@ -355,14 +362,14 @@ export default function Booking() {
 			});
 
 			// Show success message
-			Alert.alert("Success", "Your appointment has been booked successfully!", [
+			Alert.alert(t("common.success"), t("common.yourAppointmentHasBeenBookedSuccessfully"), [
 				{
 					text: "OK",
 					onPress: () => router.push("/(bottom-tabs)/appointments"),
 				},
 			]);
 		} catch (error) {
-			Alert.alert("Error", getErrorMessage(error), [{ text: "OK" }]);
+			Alert.alert(t("common.error"), getErrorMessage(error), [{ text: "OK" }]);
 		}
 	};
 
@@ -374,7 +381,7 @@ export default function Booking() {
 		return (
 			<View style={styles.loadingContainer}>
 				<ActivityIndicator size="large" color={theme.colors.primary} />
-				<Text style={styles.loadingText}>Loading booking details...</Text>
+				<Text style={styles.loadingText}>{t("common.loadingBookingDetails")}</Text>
 			</View>
 		);
 	}
@@ -404,7 +411,7 @@ export default function Booking() {
 						strokeWidth={2}
 					/>
 				</Pressable>
-				<Text style={styles.headerTitle}>Book Appointment</Text>
+				<Text style={styles.headerTitle}>{t("common.bookAppointment")}</Text>
 				<View style={styles.headerSpacer} />
 			</View>
 
@@ -425,7 +432,7 @@ export default function Booking() {
 					<View style={styles.professionalDetails}>
 						<Text style={styles.professionalName}>{provider.user.name}</Text>
 						<Text style={styles.professionalSpecialty}>
-							{provider.specialty || "Healthcare Provider"}
+							{provider.specialty || t("common.healthcareProvider")}
 						</Text>
 						<View style={styles.professionalStats}>
 							<View style={styles.statItem}>
@@ -444,7 +451,7 @@ export default function Booking() {
 				{/* Selected Procedures */}
 				{selectedProcedures.length > 0 && (
 					<View style={styles.proceduresSection}>
-						<Text style={styles.sectionLabel}>Selected Procedures</Text>
+						<Text style={styles.sectionLabel}>{t("common.selectedProcedures")}</Text>
 						<View style={styles.proceduresList}>
 							{selectedProcedures.map((procedure) => (
 								<View key={procedure.id} style={styles.procedureItem}>
@@ -468,7 +475,7 @@ export default function Booking() {
 							color={theme.colors.primary}
 							strokeWidth={2}
 						/>
-						<Text style={styles.sectionTitle}>Patient</Text>
+						<Text style={styles.sectionTitle}>{t("common.patient")}</Text>
 					</View>
 
 					<View style={styles.modeGrid}>
@@ -494,7 +501,7 @@ export default function Booking() {
 									bookingFor === "self" && styles.modeButtonTextActive,
 								]}
 							>
-								Me
+								{t("common.me")}
 							</Text>
 						</Pressable>
 						<Pressable
@@ -524,7 +531,7 @@ export default function Booking() {
 									bookingFor === "existing" && styles.modeButtonTextActive,
 								]}
 							>
-								Saved
+								{t("common.saved")}
 							</Text>
 						</Pressable>
 						<Pressable
@@ -549,7 +556,7 @@ export default function Booking() {
 									bookingFor === "new" && styles.modeButtonTextActive,
 								]}
 							>
-								New
+								{t("common.new")}
 							</Text>
 						</Pressable>
 					</View>
@@ -558,7 +565,7 @@ export default function Booking() {
 						<View style={styles.patientProfilesList}>
 							{patientProfiles.length === 0 ? (
 								<Text style={styles.emptyPatientText}>
-									No saved patient profiles yet.
+									{t("common.noSavedPatientProfilesYet")}
 								</Text>
 							) : (
 								patientProfiles.map((profile) => {
@@ -590,7 +597,7 @@ export default function Booking() {
 														profile.phone,
 													]
 														.filter(Boolean)
-														.join(" • ") || "Saved patient"}
+														.join(" • ") || t("common.savedPatient")}
 												</Text>
 											</View>
 										</Pressable>
@@ -602,14 +609,14 @@ export default function Booking() {
 
 					{bookingFor === "new" ? (
 						<View style={styles.patientForm}>
-							<Text style={styles.fieldGroupTitle}>Basic information</Text>
+							<Text style={styles.fieldGroupTitle}>{t("common.basicInformation")}</Text>
 							<Controller
 								control={control}
 								name="patientFullName"
 								render={({ field: { value, onChange } }) => (
 									<Input
 										leftIcon={User}
-										placeholder="Full name"
+										placeholder={t("common.fullName")}
 										value={value}
 										onChangeText={onChange}
 									/>
@@ -620,11 +627,14 @@ export default function Booking() {
 									control={control}
 									name="patientDateOfBirth"
 									render={({ field: { value, onChange } }) => (
-										<Input
-											placeholder="Birth date"
+										<DatePickerInput
+											placeholder="common.birthDate"
+											title="common.selectBirthDate"
 											value={value}
-											onChangeText={onChange}
+											onChange={onChange}
 											containerStyle={styles.fieldHalf}
+											maxDate={todayDate}
+											allowClear
 										/>
 									)}
 								/>
@@ -633,7 +643,7 @@ export default function Booking() {
 									name="patientRelationship"
 									render={({ field: { value, onChange } }) => (
 										<Input
-											placeholder="Relationship"
+											placeholder={t("common.relationship")}
 											value={value}
 											onChangeText={onChange}
 											containerStyle={styles.fieldHalf}
@@ -648,7 +658,7 @@ export default function Booking() {
 									render={({ field: { value, onChange } }) => (
 										<Input
 											leftIcon={Phone}
-											placeholder="Phone"
+											placeholder={t("common.phone")}
 											value={value}
 											onChangeText={onChange}
 											keyboardType="phone-pad"
@@ -662,7 +672,7 @@ export default function Booking() {
 									render={({ field: { value, onChange } }) => (
 										<Input
 											leftIcon={Mail}
-											placeholder="Email"
+											placeholder={t("common.email")}
 											value={value}
 											onChangeText={onChange}
 											keyboardType="email-address"
@@ -678,7 +688,7 @@ export default function Booking() {
 									name="patientCpf"
 									render={({ field: { value, onChange } }) => (
 										<Input
-											placeholder="CPF"
+											placeholder={t("common.cPF")}
 											value={value}
 											onChangeText={onChange}
 											containerStyle={styles.fieldHalf}
@@ -690,7 +700,7 @@ export default function Booking() {
 									name="patientGender"
 									render={({ field: { value, onChange } }) => (
 										<Input
-											placeholder="Gender"
+											placeholder={t("common.gender")}
 											value={value}
 											onChangeText={onChange}
 											containerStyle={styles.fieldHalf}
@@ -699,7 +709,7 @@ export default function Booking() {
 								/>
 							</View>
 
-							<Text style={styles.fieldGroupTitle}>Health context</Text>
+							<Text style={styles.fieldGroupTitle}>{t("common.healthContext")}</Text>
 							<View style={styles.fieldRow}>
 								<Controller
 									control={control}
@@ -707,7 +717,7 @@ export default function Booking() {
 									render={({ field: { value, onChange } }) => (
 										<Input
 											leftIcon={ShieldPlus}
-											placeholder="Blood type"
+											placeholder={t("common.bloodType")}
 											value={value}
 											onChangeText={onChange}
 											containerStyle={styles.fieldHalf}
@@ -719,7 +729,7 @@ export default function Booking() {
 									name="patientMedications"
 									render={({ field: { value, onChange } }) => (
 										<Input
-											placeholder="Medications"
+											placeholder={t("common.medications")}
 											value={value}
 											onChangeText={onChange}
 											containerStyle={styles.fieldHalf}
@@ -733,7 +743,7 @@ export default function Booking() {
 								render={({ field: { value, onChange } }) => (
 									<Input
 										leftIcon={HeartPulse}
-										placeholder="Allergies"
+										placeholder={t("common.allergies")}
 										value={value}
 										onChangeText={onChange}
 									/>
@@ -745,7 +755,7 @@ export default function Booking() {
 								render={({ field: { value, onChange } }) => (
 									<Input
 										leftIcon={HeartPulse}
-										placeholder="Chronic pain"
+										placeholder={t("common.chronicPain2")}
 										value={value}
 										onChangeText={onChange}
 									/>
@@ -756,7 +766,7 @@ export default function Booking() {
 								name="patientPreExistingConditions"
 								render={({ field: { value, onChange } }) => (
 									<Textarea
-										placeholder="Pre-existing conditions, chronic pain, surgeries..."
+										placeholder={t("common.preExistingConditionsChronicPainSurgeries")}
 										value={value}
 										onChangeText={onChange}
 									/>
@@ -768,7 +778,7 @@ export default function Booking() {
 									name="patientEmergencyContactName"
 									render={({ field: { value, onChange } }) => (
 										<Input
-											placeholder="Emergency contact"
+											placeholder={t("common.emergencyContact")}
 											value={value}
 											onChangeText={onChange}
 											containerStyle={styles.fieldHalf}
@@ -780,7 +790,7 @@ export default function Booking() {
 									name="patientEmergencyContactPhone"
 									render={({ field: { value, onChange } }) => (
 										<Input
-											placeholder="Emergency phone"
+											placeholder={t("common.emergencyPhone")}
 											value={value}
 											onChangeText={onChange}
 											keyboardType="phone-pad"
@@ -794,7 +804,7 @@ export default function Booking() {
 								name="patientNotes"
 								render={({ field: { value, onChange } }) => (
 									<Textarea
-										placeholder="Anything else the provider should know"
+										placeholder={t("common.anythingElseTheProviderShouldKnow")}
 										value={value}
 										onChangeText={onChange}
 									/>
@@ -812,13 +822,13 @@ export default function Booking() {
 							color={theme.colors.primary}
 							strokeWidth={2}
 						/>
-						<Text style={styles.sectionTitle}>Select Date</Text>
+						<Text style={styles.sectionTitle}>{t("common.selectDate")}</Text>
 					</View>
 
 					<Controller
 						control={control}
 						name="selectedDate"
-						rules={{ required: "Please select a date" }}
+						rules={{ required: t("common.pleaseSelectADate") }}
 						render={({ field: { onChange } }) => (
 							<>
 								{schedulesLoading ? (
@@ -827,40 +837,20 @@ export default function Booking() {
 											size="small"
 											color={theme.colors.primary}
 										/>
-										<Text style={styles.loadingText}>Loading calendar...</Text>
+										<Text style={styles.loadingText}>{t("common.loadingCalendar")}</Text>
 									</View>
 								) : (
-									<Calendar
-										current={formattedDate}
+									<DatePickerInput
+										value={formattedDate}
+										placeholder="common.selectAppointmentDate"
+										title="common.selectAppointmentDate"
 										minDate={minDate}
 										maxDate={maxDate}
-										onDayPress={(day) => {
-											onChange(parseCalendarDateAsUtc(day.dateString));
+										onChange={(dateString) => {
+											onChange(parseCalendarDateAsUtc(dateString));
 											setValue("selectedTime", ""); // Reset time when date changes
 										}}
 										markedDates={markedDates}
-										theme={{
-											backgroundColor: theme.colors.background,
-											calendarBackground: theme.colors.surfacePrimary,
-											textSectionTitleColor: theme.colors.mutedForeground,
-											selectedDayBackgroundColor: theme.colors.primary,
-											selectedDayTextColor: theme.colors.primaryForeground,
-											todayTextColor: theme.colors.primary,
-											dayTextColor: theme.colors.foreground,
-											textDisabledColor: theme.colors.mutedForeground,
-											dotColor: theme.colors.primary,
-											selectedDotColor: theme.colors.primaryForeground,
-											arrowColor: theme.colors.primary,
-											monthTextColor: theme.colors.foreground,
-											indicatorColor: theme.colors.primary,
-											textDayFontWeight: "400",
-											textMonthFontWeight: "600",
-											textDayHeaderFontWeight: "600",
-											textDayFontSize: 14,
-											textMonthFontSize: 16,
-											textDayHeaderFontSize: 12,
-										}}
-										style={styles.calendarComponent}
 									/>
 								)}
 							</>
@@ -878,13 +868,13 @@ export default function Booking() {
 
 				{/* Additional Notes */}
 				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>Additional Notes (Optional)</Text>
+					<Text style={styles.sectionTitle}>{t("common.additionalNotesOptional")}</Text>
 					<Controller
 						control={control}
 						name="notes"
 						render={({ field: { value, onChange } }) => (
 							<Textarea
-								placeholder="Tell us about your symptoms or reason for visit..."
+								placeholder={t("common.tellUsAboutYourSymptomsOrReasonForVisit")}
 								value={value}
 								onChangeText={onChange}
 								style={styles.notesInput}
@@ -905,10 +895,10 @@ export default function Booking() {
 			>
 				{selectedDate && selectedTime && (
 					<View style={styles.appointmentSummary}>
-						<Text style={styles.appointmentLabel}>Your appointment</Text>
+						<Text style={styles.appointmentLabel}>{t("common.yourAppointment")}</Text>
 						<Text style={styles.appointmentDetails}>
 							{appointmentPatientLabel} • {formatUtcDateForDisplay(selectedDate)}{" "}
-							at {selectedTime}
+							{t("common.at")} {selectedTime}
 						</Text>
 					</View>
 				)}
@@ -918,7 +908,7 @@ export default function Booking() {
 					loading={createAppointment.isPending}
 					onPress={handleSubmit(onSubmit)}
 				>
-					{createAppointment.isPending ? "Booking..." : "Confirm Booking"}
+					{createAppointment.isPending ? t("common.booking") : t("common.confirmBooking")}
 				</Button>
 			</View>
 		</View>
@@ -1186,12 +1176,6 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 14,
 		color: theme.colors.mutedForeground,
 		marginBottom: theme.gap(2),
-	},
-	calendarComponent: {
-		borderRadius: theme.radius.lg,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		overflow: "hidden",
 	},
 	loadingSlots: {
 		paddingVertical: theme.gap(4),

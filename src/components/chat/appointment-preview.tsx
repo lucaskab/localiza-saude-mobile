@@ -1,5 +1,6 @@
 import { Calendar, X } from "lucide-react-native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useUnistyles } from "react-native-unistyles";
 
 interface AppointmentPreviewProps {
@@ -8,11 +9,12 @@ interface AppointmentPreviewProps {
 
 export function AppointmentPreview({ onClear }: AppointmentPreviewProps) {
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 
 	return (
 		<View style={styles.selectedAppointmentPreview}>
 			<Calendar size={16} color={theme.colors.primary} strokeWidth={2} />
-			<Text style={styles.selectedAppointmentText}>Linking to appointment</Text>
+			<Text style={styles.selectedAppointmentText}>{t("common.linkingToAppointment")}</Text>
 			<Pressable onPress={onClear}>
 				<X size={16} color={theme.colors.foreground} strokeWidth={2} />
 			</Pressable>

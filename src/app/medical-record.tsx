@@ -10,6 +10,7 @@ import {
 	View,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import {
 	Activity,
@@ -100,6 +101,7 @@ function FieldLabel({
 export default function MedicalRecordScreen() {
 	const router = useRouter();
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 	const insets = useSafeAreaInsets();
 	const { user } = useAuth();
 	const { data, isLoading, error, refetch } = useMyMedicalRecord(!!user?.id);
@@ -157,9 +159,9 @@ export default function MedicalRecordScreen() {
 			const payload: MedicalRecordPayload = medicalRecordFormSchema.parse(values);
 
 			await upsertMutation.mutateAsync(payload);
-			Alert.alert("Saved", "Your medical record was updated successfully.");
+			Alert.alert(t("common.saved"), t("common.yourMedicalRecordWasUpdatedSuccessfully"));
 		} catch (saveError) {
-			Alert.alert("Error", getErrorMessage(saveError));
+			Alert.alert(t("common.error"), getErrorMessage(saveError));
 		}
 	};
 
@@ -170,13 +172,13 @@ export default function MedicalRecordScreen() {
 					<Pressable onPress={() => router.back()} style={styles.backButton}>
 						<ArrowLeft size={22} color={theme.colors.foreground} />
 					</Pressable>
-					<Text style={styles.headerTitle}>Medical Record</Text>
+					<Text style={styles.headerTitle}>{t("common.medicalRecord")}</Text>
 				</View>
 				<View style={styles.centerState}>
 					<ShieldPlus size={34} color={theme.colors.primary} strokeWidth={2.2} />
-					<Text style={styles.emptyTitle}>Sign in required</Text>
+					<Text style={styles.emptyTitle}>{t("common.signInRequired")}</Text>
 					<Text style={styles.emptyText}>
-						Sign in to create and update your medical record.
+						{t("common.signInToCreateAndUpdateYourMedicalRecord")}
 					</Text>
 				</View>
 			</SafeAreaView>
@@ -190,9 +192,9 @@ export default function MedicalRecordScreen() {
 					<ArrowLeft size={22} color={theme.colors.foreground} />
 				</Pressable>
 				<View style={styles.headerText}>
-					<Text style={styles.headerTitle}>Medical Record</Text>
+					<Text style={styles.headerTitle}>{t("common.medicalRecord")}</Text>
 					<Text style={styles.headerSubtitle}>
-						Shared with providers before appointments
+						{t("common.sharedWithProvidersBeforeAppointments")}
 					</Text>
 				</View>
 			</View>
@@ -211,7 +213,7 @@ export default function MedicalRecordScreen() {
 					{isLoading ? (
 						<View style={styles.centerState}>
 							<ActivityIndicator size="large" color={theme.colors.primary} />
-							<Text style={styles.emptyText}>Loading medical record...</Text>
+							<Text style={styles.emptyText}>{t("common.loadingMedicalRecord")}</Text>
 						</View>
 					) : null}
 
@@ -222,10 +224,10 @@ export default function MedicalRecordScreen() {
 								color={theme.colors.destructive}
 								strokeWidth={2.2}
 							/>
-							<Text style={styles.emptyTitle}>Could not load your record</Text>
-							<Text style={styles.emptyText}>Refresh and try again.</Text>
+							<Text style={styles.emptyTitle}>{t("common.couldNotLoadYourRecord")}</Text>
+							<Text style={styles.emptyText}>{t("common.refreshAndTryAgain")}</Text>
 							<Button onPress={() => refetch()} style={styles.retryButton}>
-								Retry
+								{t("common.retry")}
 							</Button>
 						</View>
 					) : null}
@@ -241,17 +243,17 @@ export default function MedicalRecordScreen() {
 									/>
 								</View>
 								<View style={styles.summaryContent}>
-									<Text style={styles.summaryTitle}>Keep this ready</Text>
+									<Text style={styles.summaryTitle}>{t("common.keepThisReady")}</Text>
 									<Text style={styles.summaryText}>
-										{completedSections} key field
-										{completedSections === 1 ? "" : "s"} filled for upcoming
-										appointments.
+										{t("common.medicalRecordCompletedFields", {
+											count: completedSections,
+										})}
 									</Text>
 								</View>
 							</View>
 
 							<View style={styles.section}>
-								<FieldLabel icon={Droplets} label="Blood type" />
+								<FieldLabel icon={Droplets} label={t("common.bloodType")} />
 								<Controller
 									control={control}
 									name="bloodType"
@@ -288,7 +290,7 @@ export default function MedicalRecordScreen() {
 							</View>
 
 							<View style={styles.section}>
-								<FieldLabel icon={Pill} label="Medications" />
+								<FieldLabel icon={Pill} label={t("common.medications")} />
 								<Controller
 									control={control}
 									name="medications"
@@ -297,14 +299,14 @@ export default function MedicalRecordScreen() {
 											value={field.value}
 											onChangeText={field.onChange}
 											onBlur={field.onBlur}
-											placeholder="List medication names, doses, and frequency"
+											placeholder={t("common.listMedicationNamesDosesAndFrequency")}
 										/>
 									)}
 								/>
 							</View>
 
 							<View style={styles.section}>
-								<FieldLabel icon={Activity} label="Chronic pain" />
+								<FieldLabel icon={Activity} label={t("common.chronicPain2")} />
 								<Controller
 									control={control}
 									name="chronicPain"
@@ -313,14 +315,14 @@ export default function MedicalRecordScreen() {
 											value={field.value}
 											onChangeText={field.onChange}
 											onBlur={field.onBlur}
-											placeholder="Describe recurring pain, location, intensity, and duration"
+											placeholder={t("common.describeRecurringPainLocationIntensityAndDuration")}
 										/>
 									)}
 								/>
 							</View>
 
 							<View style={styles.section}>
-								<FieldLabel icon={HeartPulse} label="Pre-existing conditions" />
+								<FieldLabel icon={HeartPulse} label={t("common.preExistingConditions2")} />
 								<Controller
 									control={control}
 									name="preExistingConditions"
@@ -329,14 +331,14 @@ export default function MedicalRecordScreen() {
 											value={field.value}
 											onChangeText={field.onChange}
 											onBlur={field.onBlur}
-											placeholder="Examples: asthma, diabetes, hypertension"
+											placeholder={t("common.examplesAsthmaDiabetesHypertension")}
 										/>
 									)}
 								/>
 							</View>
 
 							<View style={styles.section}>
-								<FieldLabel icon={AlertCircle} label="Allergies" />
+								<FieldLabel icon={AlertCircle} label={t("common.allergies")} />
 								<Controller
 									control={control}
 									name="allergies"
@@ -345,14 +347,14 @@ export default function MedicalRecordScreen() {
 											value={field.value}
 											onChangeText={field.onChange}
 											onBlur={field.onBlur}
-											placeholder="Medication, food, latex, or other allergies"
+											placeholder={t("common.medicationFoodLatexOrOtherAllergies")}
 										/>
 									)}
 								/>
 							</View>
 
 							<View style={styles.section}>
-								<FieldLabel icon={ShieldPlus} label="Surgeries" />
+								<FieldLabel icon={ShieldPlus} label={t("common.surgeries")} />
 								<Controller
 									control={control}
 									name="surgeries"
@@ -361,14 +363,14 @@ export default function MedicalRecordScreen() {
 											value={field.value}
 											onChangeText={field.onChange}
 											onBlur={field.onBlur}
-											placeholder="Previous surgeries and approximate dates"
+											placeholder={t("common.previousSurgeriesAndApproximateDates")}
 										/>
 									)}
 								/>
 							</View>
 
 							<View style={styles.section}>
-								<FieldLabel icon={Users} label="Family history" />
+								<FieldLabel icon={Users} label={t("common.familyHistory2")} />
 								<Controller
 									control={control}
 									name="familyHistory"
@@ -377,14 +379,14 @@ export default function MedicalRecordScreen() {
 											value={field.value}
 											onChangeText={field.onChange}
 											onBlur={field.onBlur}
-											placeholder="Relevant conditions in close relatives"
+											placeholder={t("common.relevantConditionsInCloseRelatives")}
 										/>
 									)}
 								/>
 							</View>
 
 							<View style={styles.section}>
-								<FieldLabel icon={HeartPulse} label="Lifestyle notes" />
+								<FieldLabel icon={HeartPulse} label={t("common.lifestyleNotes2")} />
 								<Controller
 									control={control}
 									name="lifestyleNotes"
@@ -393,14 +395,14 @@ export default function MedicalRecordScreen() {
 											value={field.value}
 											onChangeText={field.onChange}
 											onBlur={field.onBlur}
-											placeholder="Sleep, exercise, smoking, alcohol, diet, or other notes"
+											placeholder={t("common.sleepExerciseSmokingAlcoholDietOrOtherNotes")}
 										/>
 									)}
 								/>
 							</View>
 
 							<View style={styles.section}>
-								<FieldLabel icon={Phone} label="Emergency contact" />
+								<FieldLabel icon={Phone} label={t("common.emergencyContact")} />
 								<View style={styles.contactFields}>
 									<Controller
 										control={control}
@@ -410,7 +412,7 @@ export default function MedicalRecordScreen() {
 												value={field.value}
 												onChangeText={field.onChange}
 												onBlur={field.onBlur}
-												placeholder="Contact name"
+												placeholder={t("common.contactName")}
 											/>
 										)}
 									/>
@@ -422,7 +424,7 @@ export default function MedicalRecordScreen() {
 												value={field.value}
 												onChangeText={field.onChange}
 												onBlur={field.onBlur}
-												placeholder="Contact phone"
+												placeholder={t("common.contactPhone")}
 												keyboardType="phone-pad"
 											/>
 										)}
@@ -442,7 +444,7 @@ export default function MedicalRecordScreen() {
 										color={theme.colors.primaryForeground}
 										strokeWidth={2.2}
 									/>
-									<Text style={styles.saveButtonText}>Save Medical Record</Text>
+									<Text style={styles.saveButtonText}>{t("common.saveMedicalRecord")}</Text>
 								</View>
 							</Button>
 						</>

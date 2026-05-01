@@ -10,6 +10,7 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,6 +26,7 @@ export default function SelectProcedures() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const router = useRouter();
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 	const insets = useSafeAreaInsets();
 
 	// Setup React Hook Form
@@ -61,7 +63,7 @@ export default function SelectProcedures() {
 		return (
 			<View style={styles.loadingContainer}>
 				<ActivityIndicator size="large" color={theme.colors.primary} />
-				<Text style={styles.loadingText}>Loading procedures...</Text>
+				<Text style={styles.loadingText}>{t("common.loadingProcedures")}</Text>
 			</View>
 		);
 	}
@@ -71,10 +73,10 @@ export default function SelectProcedures() {
 		return (
 			<View style={styles.errorContainer}>
 				<Text style={styles.errorText}>
-					Failed to load provider information
+					{t("common.failedToLoadProviderInformation")}
 				</Text>
 				<Button onPress={() => router.back()} style={styles.errorButton}>
-					Go Back
+					{t("common.goBack")}
 				</Button>
 			</View>
 		);
@@ -115,7 +117,7 @@ export default function SelectProcedures() {
 						strokeWidth={2}
 					/>
 				</Pressable>
-				<Text style={styles.headerTitle}>Select Procedures</Text>
+				<Text style={styles.headerTitle}>{t("common.selectProcedures")}</Text>
 				<View style={styles.headerSpacer} />
 			</View>
 
@@ -139,18 +141,18 @@ export default function SelectProcedures() {
 					<View style={styles.professionalDetails}>
 						<Text style={styles.professionalName}>{provider.user.name}</Text>
 						<Text style={styles.professionalSpecialty}>
-							{provider.specialty || "Healthcare Provider"}
+							{provider.specialty || t("common.healthcareProvider")}
 						</Text>
 					</View>
 				</View>
 
 				{/* Procedures List */}
 				<View style={styles.proceduresSection}>
-					<Text style={styles.sectionTitle}>Available Procedures</Text>
+					<Text style={styles.sectionTitle}>{t("common.availableProcedures")}</Text>
 					{procedures.length === 0 ? (
 						<View style={styles.emptyContainer}>
 							<Text style={styles.emptyText}>
-								No procedures available for this provider
+								{t("common.noProceduresAvailableForThisProvider")}
 							</Text>
 						</View>
 					) : (
@@ -201,7 +203,7 @@ export default function SelectProcedures() {
 															numberOfLines={2}
 														>
 															{procedure.description ||
-																"No description available"}
+																t("common.noDescriptionAvailable")}
 														</Text>
 														<View style={styles.procedureDuration}>
 															<Clock
@@ -210,7 +212,9 @@ export default function SelectProcedures() {
 																strokeWidth={2}
 															/>
 															<Text style={styles.procedureDurationText}>
-																{procedure.durationInMinutes} minutes
+																{t("common.minutesCount", {
+																	count: procedure.durationInMinutes,
+																})}
 															</Text>
 														</View>
 													</View>
@@ -243,9 +247,9 @@ export default function SelectProcedures() {
 								strokeWidth={2}
 							/>
 							<Text style={styles.summaryTitle}>
-								{selectedProcedures.length}{" "}
-								{selectedProcedures.length === 1 ? "procedure" : "procedures"}{" "}
-								selected
+								{t("common.selectedProceduresCount", {
+									count: selectedProcedures.length,
+								})}
 							</Text>
 						</View>
 						<View style={styles.summaryDetails}>
@@ -256,7 +260,9 @@ export default function SelectProcedures() {
 									strokeWidth={2}
 								/>
 								<Text style={styles.summaryDurationText}>
-									Total: {totalDuration} minutes
+									{t("common.totalMinutesMinutes", {
+										minutes: String(totalDuration),
+									})}
 								</Text>
 							</View>
 							<Text style={styles.summaryPrice}>${totalPrice.toFixed(2)}</Text>
@@ -266,7 +272,7 @@ export default function SelectProcedures() {
 						style={styles.continueButton}
 						onPress={handleSubmit(onSubmit)}
 					>
-						Continue to Booking
+						{t("common.continueToBooking")}
 					</Button>
 				</View>
 			)}

@@ -57,7 +57,9 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => ({
 		"expo-router",
 		"expo-secure-store",
 		"expo-font",
+		"expo-notifications",
 		"expo-web-browser",
+		"expo-apple-authentication",
 		"@config-plugins/react-native-blob-util",
 		"@config-plugins/react-native-pdf",
 		[

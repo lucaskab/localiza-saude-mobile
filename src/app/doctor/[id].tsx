@@ -24,6 +24,7 @@ import {
 } from "react-native";
 import { useEffect, useMemo, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,6 +37,7 @@ import {
 } from "@/hooks/use-ratings";
 import { getErrorMessage } from "@/services/api";
 import type { Rating } from "@/types/rating";
+import { translationKeys, type TranslationKey } from "@/i18n/key-map";
 import {
 	fivePointRatingToApiRating,
 	formatAverageRating,
@@ -47,6 +49,7 @@ export default function DoctorDetails() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const router = useRouter();
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 	const insets = useSafeAreaInsets();
 	const { customer, isCustomer, user } = useAuth();
 	const [selectedRating, setSelectedRating] = useState(0);
@@ -74,8 +77,15 @@ export default function DoctorDetails() {
 	);
 	const isSavingRating =
 		createRatingMutation.isPending || updateRatingMutation.isPending;
-	const ratingLabels = ["", "Poor", "Fair", "Good", "Great", "Excellent"];
-	const ratingLabel = selectedRating > 0 ? ratingLabels[selectedRating] : "Rate";
+	const ratingLabels: Record<number, TranslationKey> = {
+		1: translationKeys.Poor,
+		2: translationKeys.Fair,
+		3: translationKeys.Good,
+		4: translationKeys.Great,
+		5: translationKeys.Excellent,
+	};
+	const ratingLabel =
+		selectedRating > 0 ? t(ratingLabels[selectedRating]) : t("common.rate");
 
 	const openRatingModal = () => {
 		if (existingRating) {
@@ -105,7 +115,7 @@ export default function DoctorDetails() {
 		return (
 			<View style={styles.loadingContainer}>
 				<ActivityIndicator size="large" color={theme.colors.primary} />
-				<Text style={styles.loadingText}>Loading provider details...</Text>
+				<Text style={styles.loadingText}>{t("common.loadingProviderDetails")}</Text>
 			</View>
 		);
 	}
@@ -114,12 +124,12 @@ export default function DoctorDetails() {
 	if (error || !provider) {
 		return (
 			<View style={styles.errorContainer}>
-				<Text style={styles.errorTitle}>Provider not found</Text>
+				<Text style={styles.errorTitle}>{t("common.providerNotFound")}</Text>
 				<Text style={styles.errorText}>
-					{error ? "Failed to load provider details" : "Provider not found"}
+					{error ? t("common.failedToLoadProviderDetails") : t("common.providerNotFound")}
 				</Text>
 				<Button onPress={() => router.back()} style={styles.errorButton}>
-					Go Back
+					{t("common.goBack")}
 				</Button>
 				{error && (
 					<Button
@@ -127,7 +137,7 @@ export default function DoctorDetails() {
 						onPress={() => refetch()}
 						style={styles.retryButton}
 					>
-						Retry
+						{t("common.retry")}
 					</Button>
 				)}
 			</View>
@@ -140,13 +150,13 @@ export default function DoctorDetails() {
 
 	const handleSubmitRating = async () => {
 		if (!provider || selectedRating === 0) {
-			Alert.alert("Rating required", "Choose a star rating before submitting.");
+			Alert.alert(t("common.ratingRequired"), t("common.chooseAStarRatingBeforeSubmitting"));
 			return;
 		}
 		if (!customer?.id) {
 			Alert.alert(
-				"Customer profile required",
-				"We could not find your customer profile. Please sign in again and try once more.",
+				t("common.customerProfileRequired"),
+				t("common.weCouldNotFindYourCustomerProfilePleaseSignInAgainAndTryOnceMore"),
 			);
 			return;
 		}
@@ -178,9 +188,9 @@ export default function DoctorDetails() {
 			}
 
 			setIsRatingModalVisible(false);
-			Alert.alert("Thank you", "Your rating was saved.");
+			Alert.alert(t("common.thankYou"), t("common.yourRatingWasSaved"));
 		} catch (error) {
-			Alert.alert("Error", getErrorMessage(error));
+			Alert.alert(t("common.error"), getErrorMessage(error));
 		}
 	};
 
@@ -199,10 +209,10 @@ export default function DoctorDetails() {
 			: 0;
 
 	// Working hours (mock data - could come from API in future)
-	const workingHours = [
-		{ day: "Monday - Friday", hours: "9:00 AM - 6:00 PM" },
-		{ day: "Saturday", hours: "10:00 AM - 2:00 PM" },
-		{ day: "Sunday", hours: "Closed" },
+	const workingHours: { day: TranslationKey; hours: string | TranslationKey }[] = [
+		{ day: translationKeys["Monday - Friday"], hours: "9:00 AM - 6:00 PM" },
+		{ day: translationKeys.Saturday, hours: "10:00 AM - 2:00 PM" },
+		{ day: translationKeys.Sunday, hours: translationKeys.Closed },
 	];
 
 	return (
@@ -261,11 +271,13 @@ export default function DoctorDetails() {
 								)}
 							</View>
 							<Text style={styles.specialty}>
-								{provider.specialty || "Healthcare Provider"}
+								{provider.specialty || t("common.healthcareProvider")}
 							</Text>
 							{provider.professionalId && (
 								<Text style={styles.professionalId}>
-									License: {provider.professionalId}
+									{t("common.licenseProfessionalId", {
+										professionalId: provider.professionalId,
+									})}
 								</Text>
 							)}
 						</View>
@@ -293,7 +305,7 @@ export default function DoctorDetails() {
 								strokeWidth={2}
 							/>
 							<Text style={styles.statLabel}>
-								{totalProcedures} procedure{totalProcedures !== 1 ? "s" : ""}
+								{t("common.procedureCount", { count: totalProcedures })}
 							</Text>
 						</View>
 					</View>
@@ -303,9 +315,9 @@ export default function DoctorDetails() {
 				<View style={styles.statsGrid}>
 					<View style={styles.statsCard}>
 						<Award size={24} color={theme.colors.primary} strokeWidth={2} />
-						<Text style={styles.statsCardLabel}>Verified</Text>
+						<Text style={styles.statsCardLabel}>{t("common.verified")}</Text>
 						<Text style={styles.statsCardValue}>
-							{providerUser.emailVerified ? "Yes" : "No"}
+							{providerUser.emailVerified ? t("common.yes") : t("common.no")}
 						</Text>
 					</View>
 					<View style={styles.statsCard}>
@@ -314,16 +326,16 @@ export default function DoctorDetails() {
 							color={theme.colors.primary}
 							strokeWidth={2}
 						/>
-						<Text style={styles.statsCardLabel}>From</Text>
+						<Text style={styles.statsCardLabel}>{t("common.from")}</Text>
 						<Text style={styles.statsCardValue}>
-							{lowestPrice > 0 ? `$${lowestPrice}` : "N/A"}
+							{lowestPrice > 0 ? `$${lowestPrice}` : t("common.nA")}
 						</Text>
 					</View>
 					<View style={styles.statsCard}>
 						<Clock size={24} color={theme.colors.primary} strokeWidth={2} />
-						<Text style={styles.statsCardLabel}>Avg Time</Text>
+						<Text style={styles.statsCardLabel}>{t("common.avgTime")}</Text>
 						<Text style={styles.statsCardValue}>
-							{avgDuration > 0 ? `${avgDuration} min` : "N/A"}
+							{avgDuration > 0 ? `${avgDuration} min` : t("common.nA")}
 						</Text>
 					</View>
 				</View>
@@ -331,7 +343,7 @@ export default function DoctorDetails() {
 				{/* About */}
 				{provider.bio && (
 					<View style={styles.section}>
-						<Text style={styles.sectionTitle}>About</Text>
+						<Text style={styles.sectionTitle}>{t("common.about")}</Text>
 						<Text style={styles.aboutText}>{provider.bio}</Text>
 					</View>
 				)}
@@ -348,10 +360,10 @@ export default function DoctorDetails() {
 						</View>
 						<View style={styles.ratingPromptContent}>
 							<Text style={styles.ratingPromptTitle}>
-								{existingRating ? "Update your rating" : "Rate this provider"}
+								{existingRating ? t("common.updateYourRating") : t("common.rateThisProvider")}
 							</Text>
 							<Text style={styles.ratingPromptSubtitle}>
-								Your feedback helps other patients choose with confidence.
+								{t("common.yourFeedbackHelpsOtherPatientsChooseWithConfidence")}
 							</Text>
 						</View>
 						<View style={styles.ratingPromptStars}>
@@ -372,7 +384,7 @@ export default function DoctorDetails() {
 				{provider.procedures.length > 0 && (
 					<View style={styles.section}>
 						<Text style={styles.sectionTitle}>
-							Available Procedures ({provider.procedures.length})
+							{t("common.availableProcedures")} ({provider.procedures.length})
 						</Text>
 						<View style={styles.proceduresContainer}>
 							{provider.procedures.map((procedure) => (
@@ -409,17 +421,17 @@ export default function DoctorDetails() {
 				{/* Contact Info */}
 				{(providerUser.email || providerUser.phone) && (
 					<View style={styles.section}>
-						<Text style={styles.sectionTitle}>Contact Information</Text>
+						<Text style={styles.sectionTitle}>{t("common.contactInformation")}</Text>
 						<View style={styles.contactContainer}>
 							{providerUser.email && (
 								<View style={styles.contactRow}>
-									<Text style={styles.contactLabel}>Email:</Text>
+									<Text style={styles.contactLabel}>{t("common.email")}:</Text>
 									<Text style={styles.contactValue}>{providerUser.email}</Text>
 								</View>
 							)}
 							{providerUser.phone && (
 								<View style={styles.contactRow}>
-									<Text style={styles.contactLabel}>Phone:</Text>
+									<Text style={styles.contactLabel}>{t("common.phone")}:</Text>
 									<Text style={styles.contactValue}>{providerUser.phone}</Text>
 								</View>
 							)}
@@ -429,7 +441,7 @@ export default function DoctorDetails() {
 
 				{/* Working Hours */}
 				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>Working Hours</Text>
+					<Text style={styles.sectionTitle}>{t("common.workingHours")}</Text>
 					<View style={styles.workingHoursContainer}>
 						{workingHours.map((schedule) => (
 							<View key={schedule.day} style={styles.workingHourRow}>
@@ -439,9 +451,13 @@ export default function DoctorDetails() {
 										color={theme.colors.mutedForeground}
 										strokeWidth={2}
 									/>
-									<Text style={styles.workingHourDayText}>{schedule.day}</Text>
+									<Text style={styles.workingHourDayText}>{t(schedule.day)}</Text>
 								</View>
-								<Text style={styles.workingHourTime}>{schedule.hours}</Text>
+								<Text style={styles.workingHourTime}>
+									{schedule.hours.startsWith("common.")
+										? t(schedule.hours as TranslationKey)
+										: schedule.hours}
+								</Text>
 							</View>
 						))}
 					</View>
@@ -460,7 +476,7 @@ export default function DoctorDetails() {
 				<View style={styles.bottomBarContent}>
 					<View style={styles.nextAvailableContainer}>
 						<Text style={styles.nextAvailableLabel}>
-							{totalProcedures > 0 ? "Book" : "Next available"}
+							{totalProcedures > 0 ? t("common.book") : t("common.nextAvailable")}
 						</Text>
 						<View style={styles.nextAvailableRow}>
 							<Calendar
@@ -470,8 +486,8 @@ export default function DoctorDetails() {
 							/>
 							<Text style={styles.nextAvailableTime}>
 								{totalProcedures > 0
-									? `${totalProcedures} options`
-									: "Coming soon"}
+									? t("common.optionCount", { count: totalProcedures })
+									: t("common.comingSoon")}
 							</Text>
 						</View>
 					</View>
@@ -482,7 +498,7 @@ export default function DoctorDetails() {
 							router.push(`/doctor/${provider.id}/procedures`);
 						}}
 					>
-						Book Appointment
+						{t("common.bookAppointment")}
 					</Button>
 				</View>
 			</View>
@@ -520,10 +536,12 @@ export default function DoctorDetails() {
 								<Sparkles size={28} color="#ffffff" strokeWidth={2.5} />
 							</View>
 							<Text style={styles.ratingModalTitle}>
-								{existingRating ? "Update your rating" : "How was your visit?"}
+								{existingRating ? t("common.updateYourRating") : t("common.howWasYourVisit")}
 							</Text>
 							<Text style={styles.ratingModalSubtitle}>
-								{providerUser.name} will receive your feedback after you submit.
+								{t("common.providerNameWillReceiveYourFeedbackAfterYouSubmit", {
+									providerName: providerUser.name,
+								})}
 							</Text>
 						</View>
 
@@ -554,7 +572,7 @@ export default function DoctorDetails() {
 						<Text style={styles.ratingModalSelectedLabel}>{ratingLabel}</Text>
 
 						<Textarea
-							placeholder="Optional review"
+							placeholder={t("common.optionalReview")}
 							value={ratingComment}
 							onChangeText={setRatingComment}
 							disabled={isSavingRating}
@@ -568,7 +586,7 @@ export default function DoctorDetails() {
 								onPress={() => setIsRatingModalVisible(false)}
 								disabled={isSavingRating}
 							>
-								Cancel
+								{t("common.cancel")}
 							</Button>
 							<Button
 								style={styles.ratingModalActionButton}
@@ -576,7 +594,7 @@ export default function DoctorDetails() {
 								loading={isSavingRating}
 								onPress={handleSubmitRating}
 							>
-								{existingRating ? "Update" : "Submit"}
+								{existingRating ? t("common.update") : t("common.submit")}
 							</Button>
 						</View>
 					</View>

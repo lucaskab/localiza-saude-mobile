@@ -2,6 +2,7 @@ import { Image } from "expo-image";
 import { Image as ImageIcon } from "lucide-react-native";
 import { useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useUnistyles } from "react-native-unistyles";
 
 interface MessageImageProps {
@@ -12,6 +13,7 @@ interface MessageImageProps {
 
 export function MessageImage({ uri, fileName, isMine }: MessageImageProps) {
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 	const [imageLoading, setImageLoading] = useState(true);
 	const [imageError, setImageError] = useState(false);
 
@@ -45,7 +47,7 @@ export function MessageImage({ uri, fileName, isMine }: MessageImageProps) {
 						color={theme.colors.mutedForeground}
 						strokeWidth={1.5}
 					/>
-					<Text style={styles.imageErrorText}>Failed to load image</Text>
+					<Text style={styles.imageErrorText}>{t("common.failedToLoadImage")}</Text>
 				</View>
 			)}
 			{fileName && (

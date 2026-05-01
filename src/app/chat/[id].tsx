@@ -12,6 +12,7 @@ import {
 	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import {
 	AppointmentPreview,
@@ -37,6 +38,7 @@ export default function ChatScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const router = useRouter();
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 	const { user, isCustomer } = useAuth();
 	const flashListRef = useRef<LegendListRef>(null);
 
@@ -111,14 +113,14 @@ export default function ChatScreen() {
 
 	const handleSendMessage = async () => {
 		if (!messageText.trim() || !id) {
-			Alert.alert("Error", "Please enter a message");
+			Alert.alert(t("common.error"), t("common.pleaseEnterAMessage"));
 			return;
 		}
 
 		if (!recipientId) {
 			Alert.alert(
-				"Error",
-				"Recipient not found. Please try reloading this chat.",
+				t("common.error"),
+				t("common.recipientNotFoundPleaseTryReloadingThisChat"),
 			);
 			console.error("❌ recipientId not found!");
 			return;
@@ -142,7 +144,7 @@ export default function ChatScreen() {
 			}, 100);
 		} catch (error) {
 			console.error("Failed to send message:", error);
-			Alert.alert("Error", "Failed to send message. Please try again.");
+			Alert.alert(t("common.error"), t("common.failedToSendMessagePleaseTryAgain"));
 		}
 	};
 
@@ -155,14 +157,14 @@ export default function ChatScreen() {
 
 	const handleSendFile = async () => {
 		if (!selectedFile || !id) {
-			Alert.alert("Error", "Please select a file");
+			Alert.alert(t("common.error"), t("common.pleaseSelectAFile"));
 			return;
 		}
 
 		if (!recipientId) {
 			Alert.alert(
-				"Error",
-				"Recipient not found. Please try reloading this chat.",
+				t("common.error"),
+				t("common.recipientNotFoundPleaseTryReloadingThisChat"),
 			);
 			return;
 		}
@@ -185,7 +187,7 @@ export default function ChatScreen() {
 			}, 100);
 		} catch (error) {
 			console.error("Failed to send file:", error);
-			Alert.alert("Error", "Failed to send file. Please try again.");
+			Alert.alert(t("common.error"), t("common.failedToSendFilePleaseTryAgain"));
 		}
 	};
 
@@ -199,7 +201,7 @@ export default function ChatScreen() {
 		mimeType: string | null,
 	) => {
 		if (!fileUrl) {
-			Alert.alert("Error", "File URL not available");
+			Alert.alert(t("common.error"), t("common.fileURLNotAvailable"));
 			return;
 		}
 
@@ -221,8 +223,8 @@ export default function ChatScreen() {
 		} catch (error) {
 			console.error("Error opening file:", error);
 			Alert.alert(
-				"Error",
-				"Could not open file. Try downloading it from your browser.",
+				t("common.error"),
+				t("common.couldNotOpenFileTryDownloadingItFromYourBrowser"),
 			);
 		}
 	};
@@ -263,7 +265,7 @@ export default function ChatScreen() {
 			<SafeAreaView edges={["top"]} style={styles.container}>
 				<View style={styles.loadingContainer}>
 					<ActivityIndicator size="large" color={theme.colors.primary} />
-					<Text style={styles.loadingText}>Loading conversation...</Text>
+					<Text style={styles.loadingText}>{t("common.loadingConversation")}</Text>
 				</View>
 			</SafeAreaView>
 		);
@@ -273,8 +275,8 @@ export default function ChatScreen() {
 		return (
 			<SafeAreaView edges={["top"]} style={styles.container}>
 				<View style={styles.errorContainer}>
-					<Text style={styles.errorTitle}>Conversation not found</Text>
-					<Button onPress={() => router.back()}>Back to Chats</Button>
+					<Text style={styles.errorTitle}>{t("common.conversationNotFound")}</Text>
+					<Button onPress={() => router.back()}>{t("common.backToChats")}</Button>
 				</View>
 			</SafeAreaView>
 		);

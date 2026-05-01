@@ -11,6 +11,7 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { useCategories, getProvidersByCategory } from "@/hooks/use-categories";
@@ -19,6 +20,7 @@ import { formatAverageRating, formatRatingCount } from "@/utils/ratings";
 
 export default function Home() {
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 	const insets = useSafeAreaInsets();
 	const router = useRouter();
 	const [selectedCategory, setSelectedCategory] = useState("all");
@@ -56,8 +58,8 @@ export default function Home() {
 				>
 					<View style={styles.headerTop}>
 						<View>
-							<Text style={styles.welcomeText}>Welcome back,</Text>
-							<Text style={styles.headerTitle}>Find Your Care</Text>
+							<Text style={styles.welcomeText}>{t("common.welcomeBack")}</Text>
+							<Text style={styles.headerTitle}>{t("common.findYourCare")}</Text>
 						</View>
 						<View style={styles.locationButton}>
 							<MapPin
@@ -80,14 +82,14 @@ export default function Home() {
 							style={styles.searchIcon}
 						/>
 						<Text style={styles.searchPlaceholder}>
-							Search doctors, specialists...
+							{t("common.searchDoctorsSpecialists")}
 						</Text>
 					</Pressable>
 				</View>
 
 				{/* Categories */}
 				<View style={styles.categoriesSection}>
-					<Text style={styles.sectionTitle}>Categories</Text>
+					<Text style={styles.sectionTitle}>{t("common.categories")}</Text>
 
 					{isLoading && (
 						<View style={styles.categoriesLoading}>
@@ -110,7 +112,7 @@ export default function Home() {
 								]}
 							>
 								<Text style={styles.categoryIcon}>🏥</Text>
-								<Text style={styles.categoryName}>All</Text>
+								<Text style={styles.categoryName}>{t("common.all")}</Text>
 							</Pressable>
 
 							{/* API Categories */}
@@ -137,9 +139,9 @@ export default function Home() {
 				{/* Featured Professionals */}
 				<View style={styles.professionalsSection}>
 					<View style={styles.sectionHeader}>
-						<Text style={styles.sectionTitle}>Top Rated</Text>
+						<Text style={styles.sectionTitle}>{t("common.topRated")}</Text>
 						<Pressable onPress={() => router.push("/(bottom-tabs)/search")}>
-							<Text style={styles.seeAllButton}>See All</Text>
+							<Text style={styles.seeAllButton}>{t("common.seeAll")}</Text>
 						</Pressable>
 					</View>
 
@@ -147,7 +149,7 @@ export default function Home() {
 					{isLoading && (
 						<View style={styles.loadingContainer}>
 							<ActivityIndicator size="large" color={theme.colors.primary} />
-							<Text style={styles.loadingText}>Loading providers...</Text>
+							<Text style={styles.loadingText}>{t("common.loadingProviders")}</Text>
 						</View>
 					)}
 
@@ -155,10 +157,10 @@ export default function Home() {
 					{error && !isLoading && (
 						<View style={styles.errorContainer}>
 							<Text style={styles.errorText}>
-								Failed to load healthcare providers
+								{t("common.failedToLoadHealthcareProviders")}
 							</Text>
 							<Button onPress={() => refetch()} size="sm">
-								Retry
+								{t("common.retry")}
 							</Button>
 						</View>
 					)}
@@ -167,8 +169,9 @@ export default function Home() {
 					{!isLoading && !error && providers.length === 0 && (
 						<View style={styles.emptyContainer}>
 							<Text style={styles.emptyText}>
-								No providers found
-								{selectedCategory !== "all" ? " for this category" : ""}
+								{selectedCategory !== "all"
+									? t("common.noProvidersFoundForThisCategory")
+									: t("common.noProvidersFound")}
 							</Text>
 						</View>
 					)}
@@ -210,7 +213,7 @@ export default function Home() {
 													</Text>
 												</View>
 												<Text style={styles.professionalSpecialty}>
-													{provider.specialty || "Healthcare Provider"}
+													{provider.specialty || t("common.healthcareProvider")}
 												</Text>
 												<View style={styles.professionalStats}>
 													<View style={styles.ratingContainer}>
@@ -233,7 +236,7 @@ export default function Home() {
 										<View style={styles.professionalFooter}>
 											<View>
 												<Text style={styles.nextAvailableLabel}>
-													Next available
+													{t("common.nextAvailable")}
 												</Text>
 												<Text style={styles.nextAvailableTime}>
 													{formatNextAvailableAt(provider.nextAvailableAt)}
@@ -247,7 +250,7 @@ export default function Home() {
 													router.push(`/doctor/${provider.id}/procedures`);
 												}}
 											>
-												Book Now
+												{t("common.bookNow")}
 											</Button>
 										</View>
 									</View>

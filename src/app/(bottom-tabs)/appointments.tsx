@@ -19,6 +19,7 @@ import {
 	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ import { getAppointmentPatientName } from "@/utils/appointments";
 export default function Appointments() {
 	const router = useRouter();
 	const { theme } = useUnistyles();
+	const { i18n, t } = useTranslation();
 	const { customer, isCustomer } = useAuth();
 
 	const createConversationMutation = useGetOrCreateConversation();
@@ -71,12 +73,12 @@ export default function Appointments() {
 	// Format date and time
 	const formatDateTime = (dateString: string) => {
 		const date = new Date(dateString);
-		const formattedDate = date.toLocaleDateString("en-US", {
+		const formattedDate = date.toLocaleDateString(i18n.language, {
 			month: "long",
 			day: "numeric",
 			year: "numeric",
 		});
-		const formattedTime = date.toLocaleTimeString("en-US", {
+		const formattedTime = date.toLocaleTimeString(i18n.language, {
 			hour: "numeric",
 			minute: "2-digit",
 			hour12: true,
@@ -96,7 +98,7 @@ export default function Appointments() {
 			});
 			router.push(`/chat/${result.conversation.id}`);
 		} catch (error) {
-			Alert.alert("Error", "Failed to open chat");
+			Alert.alert(t("common.error"), t("common.failedToOpenChat"));
 		}
 	};
 
@@ -106,19 +108,19 @@ export default function Appointments() {
 			case "SCHEDULED":
 				return (
 					<Badge variant="accent" style={styles.badge}>
-						Scheduled
+						{t("common.scheduled")}
 					</Badge>
 				);
 			case "CONFIRMED":
 				return (
 					<Badge variant="default" style={styles.badge}>
-						Confirmed
+						{t("common.confirmed")}
 					</Badge>
 				);
 			case "IN_PROGRESS":
 				return (
 					<Badge variant="default" style={styles.badge}>
-						In Progress
+						{t("common.inProgress")}
 					</Badge>
 				);
 			default:
@@ -137,9 +139,9 @@ export default function Appointments() {
 						strokeWidth={1.5}
 						style={styles.emptyIcon}
 					/>
-					<Text style={styles.emptyTitle}>Not Available</Text>
+					<Text style={styles.emptyTitle}>{t("common.notAvailable")}</Text>
 					<Text style={styles.emptyText}>
-						Appointments are only available for customer accounts.
+						{t("common.appointmentsAreOnlyAvailableForCustomerAccounts")}
 					</Text>
 				</View>
 			</View>
@@ -150,7 +152,7 @@ export default function Appointments() {
 		<SafeAreaView edges={["top"]} style={styles.container}>
 			{/* Header */}
 			<View style={styles.header}>
-				<Text style={styles.headerTitle}>My Appointments</Text>
+				<Text style={styles.headerTitle}>{t("common.myAppointments")}</Text>
 
 				{/* Tabs */}
 				<View style={styles.tabsContainer}>
@@ -169,7 +171,7 @@ export default function Appointments() {
 									: styles.tabTextInactive,
 							]}
 						>
-							Upcoming
+							{t("common.upcoming")}
 						</Text>
 					</Pressable>
 					<Pressable
@@ -187,7 +189,7 @@ export default function Appointments() {
 									: styles.tabTextInactive,
 							]}
 						>
-							Completed
+							{t("common.completed")}
 						</Text>
 					</Pressable>
 				</View>
@@ -216,7 +218,7 @@ export default function Appointments() {
 				{isLoadingAppointments ? (
 					<View style={styles.centerContainer}>
 						<ActivityIndicator size="large" color={theme.colors.primary} />
-						<Text style={styles.loadingText}>Loading appointments...</Text>
+						<Text style={styles.loadingText}>{t("common.loadingAppointments")}</Text>
 					</View>
 				) : appointmentsError ? (
 					<View style={styles.centerContainer}>
@@ -226,9 +228,9 @@ export default function Appointments() {
 							strokeWidth={1.5}
 							style={styles.emptyIcon}
 						/>
-						<Text style={styles.errorTitle}>Error loading appointments</Text>
+						<Text style={styles.errorTitle}>{t("common.errorLoadingAppointments")}</Text>
 						<Text style={styles.errorText}>
-							Please try again later or pull to refresh
+							{t("common.pleaseTryAgainLaterOrPullToRefresh")}
 						</Text>
 						<Button
 							variant="outline"
@@ -236,7 +238,7 @@ export default function Appointments() {
 							onPress={handleRefresh}
 							style={{ marginTop: theme.gap(2) }}
 						>
-							Retry
+							{t("common.retry")}
 						</Button>
 					</View>
 				) : filteredAppointments.length === 0 ? (
@@ -249,13 +251,13 @@ export default function Appointments() {
 						/>
 						<Text style={styles.emptyTitle}>
 							{activeTab === "upcoming"
-								? "No Upcoming Appointments"
-								: "No Completed Appointments"}
+								? t("common.noUpcomingAppointments")
+								: t("common.noCompletedAppointments")}
 						</Text>
 						<Text style={styles.emptyText}>
 							{activeTab === "upcoming"
-								? "You don't have any scheduled appointments.\nFind a healthcare provider to get started."
-								: "You haven't completed any appointments yet.\nYour appointment history will appear here."}
+								? t("common.youDontHaveAnyScheduledAppointmentsFindAHealthcareProviderToGetStarted")
+								: t("common.youHaventCompletedAnyAppointmentsYetYourAppointmentHistoryWillAppearHere")}
 						</Text>
 					</View>
 				) : (
@@ -315,11 +317,11 @@ export default function Appointments() {
 													? appointment.appointmentProcedures
 															.map((ap) => ap.procedure.name)
 															.join(", ")
-													: "Consultation"}
+													: t("common.consultation")}
 											</Text>
 											{appointment.patientProfile ? (
 												<Text style={styles.patientForText}>
-													For {patientName}
+													{t("common.forPatientName", { patientName })}
 												</Text>
 											) : null}
 										</View>
@@ -360,7 +362,7 @@ export default function Appointments() {
 									{/* Notes */}
 									{appointment.notes && (
 										<View style={styles.notesContainer}>
-											<Text style={styles.notesLabel}>Notes:</Text>
+											<Text style={styles.notesLabel}>{t("common.notes2")}</Text>
 											<Text style={styles.notesText}>{appointment.notes}</Text>
 										</View>
 									)}
@@ -383,7 +385,7 @@ export default function Appointments() {
 														color={theme.colors.foreground}
 														strokeWidth={2}
 													/>
-													<Text style={styles.detailText}>Chat</Text>
+													<Text style={styles.detailText}>{t("common.chat")}</Text>
 												</View>
 											</Button>
 											{providerUser.phone && (
@@ -398,7 +400,7 @@ export default function Appointments() {
 															color={theme.colors.foreground}
 															strokeWidth={2}
 														/>
-														<Text style={styles.detailText}>Call</Text>
+														<Text style={styles.detailText}>{t("common.call")}</Text>
 													</View>
 												</Button>
 											)}
@@ -421,7 +423,7 @@ export default function Appointments() {
 															{ color: theme.colors.primaryForeground },
 														]}
 													>
-														Details
+														{t("common.details")}
 													</Text>
 												</View>
 											</Button>
@@ -445,7 +447,7 @@ export default function Appointments() {
 														color={theme.colors.foreground}
 														strokeWidth={2}
 													/>
-													<Text style={styles.detailText}>Chat</Text>
+													<Text style={styles.detailText}>{t("common.chat")}</Text>
 												</View>
 											</Button>
 											<Button
@@ -453,7 +455,7 @@ export default function Appointments() {
 												size="sm"
 												style={styles.actionButton}
 											>
-												Book Again
+												{t("common.bookAgain")}
 											</Button>
 										</View>
 									)}

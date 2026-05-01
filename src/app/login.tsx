@@ -1,17 +1,24 @@
-import { useRouter } from "expo-router";
-import { Heart, Mail } from "lucide-react-native";
-import { useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import * as AppleAuthentication from "expo-apple-authentication";
+import { Heart } from "lucide-react-native";
+import { useEffect, useState } from "react";
+import { Alert, ScrollView, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
-import { env } from "@/constants/env";
 import { useAuth } from "@/contexts/auth";
 
 export default function Login() {
 	const { theme } = useUnistyles();
-	const { signInWithGoogle } = useAuth();
-	const router = useRouter();
-	const [isTesting, setIsTesting] = useState(false);
+	const { t } = useTranslation();
+	const { signInWithApple, signInWithGoogle } = useAuth();
+	const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
+	const [isAppleSignInPending, setIsAppleSignInPending] = useState(false);
+
+	useEffect(() => {
+		AppleAuthentication.isAvailableAsync()
+			.then(setIsAppleAuthAvailable)
+			.catch(() => setIsAppleAuthAvailable(false));
+	}, []);
 
 	const handleGoogleLogin = async () => {
 		try {
@@ -19,17 +26,26 @@ export default function Login() {
 			// Navigation is handled in signInWithGoogle
 		} catch (error) {
 			Alert.alert(
-				"Login Error",
-				error instanceof Error ? error.message : "Failed to login",
+				t("common.loginError"),
+				error instanceof Error ? error.message : t("common.failedToLogin"),
 			);
 		}
 	};
 
-	const handleLogin = async (provider: "apple" | "email") => {
-		Alert.alert(
-			"Coming Soon",
-			`${provider === "apple" ? "Apple" : "Email"} authentication will be available soon.`,
-		);
+	const handleAppleLogin = async () => {
+		try {
+			setIsAppleSignInPending(true);
+			await signInWithApple();
+		} catch (error) {
+			Alert.alert(
+				t("common.loginError"),
+				error instanceof Error
+					? error.message
+					: t("common.failedToLoginWithApple"),
+			);
+		} finally {
+			setIsAppleSignInPending(false);
+		}
 	};
 
 	return (
@@ -50,9 +66,9 @@ export default function Login() {
 					</View>
 
 					{/* Title */}
-					<Text style={styles.title}>Welcome to HealthCare</Text>
+					<Text style={styles.title}>{t("common.welcomeToHealthCare")}</Text>
 					<Text style={styles.subtitle}>
-						Find and book appointments with healthcare professionals
+						{t("common.findAndBookAppointmentsWithHealthcareProfessionals")}
 					</Text>
 				</View>
 
@@ -69,23 +85,31 @@ export default function Login() {
 							<View style={styles.googleIcon}>
 								<Text style={styles.googleText}>G</Text>
 							</View>
-							<Text style={styles.buttonText}>Continue with Google</Text>
+							<Text style={styles.buttonText}>{t("common.continueWithGoogle")}</Text>
 						</View>
 					</Button>
 
-					{/* Apple Login */}
-					<Pressable
-						onPress={() => handleLogin("apple")}
-						style={({ pressed }) => [
-							styles.appleButton,
-							pressed && styles.appleButtonPressed,
-						]}
-					>
-						<View style={styles.buttonContent}>
-							<Text style={styles.appleIcon}></Text>
-							<Text style={styles.appleButtonText}>Continue with Apple</Text>
+					{isAppleAuthAvailable ? (
+						<View
+							style={[
+								styles.appleButtonWrapper,
+								isAppleSignInPending && styles.appleButtonWrapperDisabled,
+							]}
+							pointerEvents={isAppleSignInPending ? "none" : "auto"}
+						>
+							<AppleAuthentication.AppleAuthenticationButton
+								buttonType={
+									AppleAuthentication.AppleAuthenticationButtonType.CONTINUE
+								}
+								buttonStyle={
+									AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+								}
+								cornerRadius={12}
+								style={styles.appleButton}
+								onPress={handleAppleLogin}
+							/>
 						</View>
-					</Pressable>
+					) : null}
 
 					{/* Email Login Option */}
 					{/*<Button
@@ -107,9 +131,10 @@ export default function Login() {
 					{/* Terms */}
 					<View style={styles.termsContainer}>
 						<Text style={styles.termsText}>
-							By continuing, you agree to our{" "}
-							<Text style={styles.termsLink}>Terms of Service</Text> and{" "}
-							<Text style={styles.termsLink}>Privacy Policy</Text>
+							{t("common.byContinuingYouAgreeToOur")}{" "}
+							<Text style={styles.termsLink}>{t("common.termsOfService")}</Text>{" "}
+							{t("common.and")}{" "}
+							<Text style={styles.termsLink}>{t("common.privacyPolicy")}</Text>
 						</Text>
 					</View>
 				</View>
@@ -199,26 +224,16 @@ const styles = StyleSheet.create((theme) => ({
 		fontWeight: "700",
 		color: "#ffffff",
 	},
-	appleIcon: {
-		fontSize: 20,
-	},
 	appleButton: {
 		width: "100%",
 		height: 56,
-		backgroundColor: "#000000",
-		borderRadius: theme.radius.lg,
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-		paddingHorizontal: theme.gap(3),
 	},
-	appleButtonPressed: {
-		opacity: 0.9,
+	appleButtonWrapper: {
+		width: "100%",
+		height: 56,
 	},
-	appleButtonText: {
-		fontSize: 16,
-		fontWeight: "500",
-		color: "#ffffff",
+	appleButtonWrapperDisabled: {
+		opacity: 0.7,
 	},
 	termsContainer: {
 		paddingTop: theme.gap(3),

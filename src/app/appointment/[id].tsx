@@ -19,6 +19,7 @@ import {
 } from "lucide-react-native";
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
@@ -27,6 +28,7 @@ import { useGetOrCreateConversation } from "@/hooks/use-conversations";
 import { useAppointmentMedicalRecord } from "@/hooks/use-medical-record";
 import type { Appointment, AppointmentStatus } from "@/types/appointment";
 import type { MedicalRecord } from "@/types/medical-record";
+import { translationKeys, type TranslationKey } from "@/i18n/key-map";
 import {
 	getAppointmentCustomerUserId,
 	getAppointmentPatientEmail,
@@ -37,7 +39,7 @@ import {
 } from "@/utils/appointments";
 
 interface StatusAction {
-	label: string;
+	label: TranslationKey;
 	status: AppointmentStatus;
 	variant?: "default" | "outline" | "destructive" | "secondary";
 }
@@ -69,19 +71,19 @@ const formatPrice = (priceInCents: number) => `$${(priceInCents / 100).toFixed(2
 const getStatusConfig = (status: AppointmentStatus) => {
 	switch (status) {
 		case "SCHEDULED":
-			return { label: "Scheduled", color: "#3b82f6", bgColor: "#dbeafe" };
+			return { label: translationKeys.Scheduled, color: "#3b82f6", bgColor: "#dbeafe" };
 		case "CONFIRMED":
-			return { label: "Confirmed", color: "#16a34a", bgColor: "#dcfce7" };
+			return { label: translationKeys.Confirmed, color: "#16a34a", bgColor: "#dcfce7" };
 		case "IN_PROGRESS":
-			return { label: "In Progress", color: "#d97706", bgColor: "#fef3c7" };
+			return { label: translationKeys["In Progress"], color: "#d97706", bgColor: "#fef3c7" };
 		case "COMPLETED":
-			return { label: "Completed", color: "#6b7280", bgColor: "#f3f4f6" };
+			return { label: translationKeys.Completed, color: "#6b7280", bgColor: "#f3f4f6" };
 		case "CANCELLED":
-			return { label: "Cancelled", color: "#dc2626", bgColor: "#fee2e2" };
+			return { label: translationKeys.Cancelled, color: "#dc2626", bgColor: "#fee2e2" };
 		case "NO_SHOW":
-			return { label: "No Show", color: "#dc2626", bgColor: "#fee2e2" };
+			return { label: translationKeys["No Show"], color: "#dc2626", bgColor: "#fee2e2" };
 		default:
-			return { label: status, color: "#6b7280", bgColor: "#f3f4f6" };
+			return { label: translationKeys.Status, color: "#6b7280", bgColor: "#f3f4f6" };
 	}
 };
 
@@ -91,21 +93,21 @@ const getProviderStatusActions = (
 	switch (status) {
 		case "SCHEDULED":
 			return [
-				{ label: "Confirm", status: "CONFIRMED", variant: "default" },
-				{ label: "Start Visit", status: "IN_PROGRESS", variant: "outline" },
-				{ label: "Mark No Show", status: "NO_SHOW", variant: "outline" },
-				{ label: "Cancel", status: "CANCELLED", variant: "destructive" },
+				{ label: translationKeys.Confirm, status: "CONFIRMED", variant: "default" },
+				{ label: translationKeys["Start Visit"], status: "IN_PROGRESS", variant: "outline" },
+				{ label: translationKeys["Mark No Show"], status: "NO_SHOW", variant: "outline" },
+				{ label: translationKeys.Cancel, status: "CANCELLED", variant: "destructive" },
 			];
 		case "CONFIRMED":
 			return [
-				{ label: "Start Visit", status: "IN_PROGRESS", variant: "default" },
-				{ label: "Mark No Show", status: "NO_SHOW", variant: "outline" },
-				{ label: "Cancel", status: "CANCELLED", variant: "destructive" },
+				{ label: translationKeys["Start Visit"], status: "IN_PROGRESS", variant: "default" },
+				{ label: translationKeys["Mark No Show"], status: "NO_SHOW", variant: "outline" },
+				{ label: translationKeys.Cancel, status: "CANCELLED", variant: "destructive" },
 			];
 		case "IN_PROGRESS":
 			return [
-				{ label: "Complete Visit", status: "COMPLETED", variant: "default" },
-				{ label: "Cancel", status: "CANCELLED", variant: "destructive" },
+				{ label: translationKeys["Complete Visit"], status: "COMPLETED", variant: "default" },
+				{ label: translationKeys.Cancel, status: "CANCELLED", variant: "destructive" },
 			];
 		default:
 			return [];
@@ -141,14 +143,16 @@ function MedicalRecordItem({
 	label,
 	value,
 }: {
-	label: string;
+	label: TranslationKey;
 	value?: string | null;
 }) {
+	const { t } = useTranslation();
+
 	return (
 		<View style={styles.medicalRecordItem}>
-			<Text style={styles.medicalRecordLabel}>{label}</Text>
+			<Text style={styles.medicalRecordLabel}>{t(label)}</Text>
 			<Text style={styles.medicalRecordValue}>
-				{value?.trim() || "Not informed"}
+				{value?.trim() || t("common.notInformed")}
 			</Text>
 		</View>
 	);
@@ -156,17 +160,17 @@ function MedicalRecordItem({
 
 function getMedicalRecordFields(record: MedicalRecord | null | undefined) {
 	return [
-		{ label: "Blood Type", value: record?.bloodType },
-		{ label: "Medications", value: record?.medications },
-		{ label: "Chronic Pain", value: record?.chronicPain },
+		{ label: translationKeys["Blood type"], value: record?.bloodType },
+		{ label: translationKeys.Medications, value: record?.medications },
+		{ label: translationKeys["Chronic Pain"], value: record?.chronicPain },
 		{
-			label: "Pre-existing Conditions",
+			label: translationKeys["Pre-existing Conditions"],
 			value: record?.preExistingConditions,
 		},
-		{ label: "Allergies", value: record?.allergies },
-		{ label: "Surgeries", value: record?.surgeries },
-		{ label: "Family History", value: record?.familyHistory },
-		{ label: "Lifestyle Notes", value: record?.lifestyleNotes },
+		{ label: translationKeys.Allergies, value: record?.allergies },
+		{ label: translationKeys.Surgeries, value: record?.surgeries },
+		{ label: translationKeys["Family History"], value: record?.familyHistory },
+		{ label: translationKeys["Lifestyle Notes"], value: record?.lifestyleNotes },
 	].filter((field) => field.value?.trim());
 }
 
@@ -186,6 +190,7 @@ export default function AppointmentDetails() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const router = useRouter();
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 	const { isHealthcareProvider, isCustomer } = useAuth();
 
 	const { data: appointmentData, isLoading, error } = useAppointment(id || "", !!id);
@@ -210,10 +215,15 @@ export default function AppointmentDetails() {
 				appointmentId,
 				data: { status: nextStatus },
 			});
-			Alert.alert("Success", `Appointment updated to ${getStatusConfig(nextStatus).label}.`);
+			Alert.alert(
+				t("common.success"),
+				t("common.appointmentUpdatedToStatus", {
+					status: t(getStatusConfig(nextStatus).label),
+				}),
+			);
 		} catch (updateError) {
 			console.error("Failed to update appointment:", updateError);
-			Alert.alert("Error", "Failed to update appointment status. Please try again.");
+			Alert.alert(t("common.error"), t("common.failedToUpdateAppointmentStatusPleaseTryAgain"));
 		}
 	};
 
@@ -225,8 +235,8 @@ export default function AppointmentDetails() {
 
 			if (!participantId) {
 				Alert.alert(
-					"Chat unavailable",
-					"This patient does not have a customer account yet.",
+					t("common.chatUnavailable"),
+					t("common.thisPatientDoesNotHaveACustomerAccountYet"),
 				);
 				return;
 			}
@@ -238,7 +248,7 @@ export default function AppointmentDetails() {
 			router.push(`/chat/${result.conversation.id}`);
 		} catch (chatError) {
 			console.error("Failed to open chat:", chatError);
-			Alert.alert("Error", "Failed to open chat.");
+			Alert.alert(t("common.error"), t("common.failedToOpenChat"));
 		}
 	};
 
@@ -247,7 +257,7 @@ export default function AppointmentDetails() {
 			<SafeAreaView edges={["top"]} style={styles.container}>
 				<View style={styles.centerState}>
 					<ActivityIndicator size="large" color={theme.colors.primary} />
-					<Text style={styles.stateText}>Loading appointment...</Text>
+					<Text style={styles.stateText}>{t("common.loadingAppointment")}</Text>
 				</View>
 			</SafeAreaView>
 		);
@@ -257,8 +267,8 @@ export default function AppointmentDetails() {
 		return (
 			<SafeAreaView edges={["top"]} style={styles.container}>
 				<View style={styles.centerState}>
-					<Text style={styles.errorTitle}>Appointment not found</Text>
-					<Button onPress={() => router.back()}>Back to Appointments</Button>
+					<Text style={styles.errorTitle}>{t("common.appointmentNotFound")}</Text>
+					<Button onPress={() => router.back()}>{t("common.backToAppointments")}</Button>
 				</View>
 			</SafeAreaView>
 		);
@@ -276,18 +286,18 @@ export default function AppointmentDetails() {
 			hasMedicalRecordContent(medicalRecord));
 	const counterpart = isHealthcareProvider
 		? {
-				title: "Patient",
+				title: t("common.patient"),
 				name: patientName,
 				subtitle: getAppointmentPatientSubtitle(appointment),
 				image: getAppointmentPatientImage(appointment),
-				email: getAppointmentPatientEmail(appointment) || "Not informed",
+				email: getAppointmentPatientEmail(appointment) || t("common.notInformed"),
 				phone: getAppointmentPatientPhone(appointment),
 		  }
 		: {
-				title: "Provider",
+				title: t("common.provider"),
 				name: appointment.healthcareProvider.user.name,
 				subtitle:
-					appointment.healthcareProvider.specialty || "Healthcare provider",
+					appointment.healthcareProvider.specialty || t("common.healthcareProvider2"),
 				image: appointment.healthcareProvider.user.image,
 				email: appointment.healthcareProvider.user.email,
 				phone: appointment.healthcareProvider.user.phone,
@@ -306,7 +316,7 @@ export default function AppointmentDetails() {
 					<ArrowLeft size={22} color={theme.colors.foreground} strokeWidth={2} />
 				</Pressable>
 				<View style={styles.headerContent}>
-					<Text style={styles.headerTitle}>Appointment Details</Text>
+					<Text style={styles.headerTitle}>{t("common.appointmentDetails")}</Text>
 					<Text style={styles.headerSubtitle}>ID: {appointment.id}</Text>
 				</View>
 			</View>
@@ -341,7 +351,7 @@ export default function AppointmentDetails() {
 							]}
 						>
 							<Text style={[styles.statusBadgeText, { color: statusConfig.color }]}>
-								{statusConfig.label}
+								{t(statusConfig.label)}
 							</Text>
 						</View>
 					</View>
@@ -349,33 +359,33 @@ export default function AppointmentDetails() {
 					<View style={styles.detailGrid}>
 						<DetailRow
 							icon={Calendar}
-							label="Date"
+							label={t("common.date")}
 							value={formatDate(appointment.scheduledAt)}
 						/>
 						<DetailRow
 							icon={Clock}
-							label="Time"
+							label={t("common.time")}
 							value={`${formatTime(appointment.scheduledAt)} • ${appointment.totalDurationMinutes} min`}
 						/>
 						<DetailRow
 							icon={DollarSign}
-							label="Total Price"
+							label={t("common.totalPrice")}
 							value={formatPrice(appointment.totalPriceCents)}
 						/>
 						<DetailRow
 							icon={Stethoscope}
-							label="Procedures"
-							value={procedures.map((procedure) => procedure.name).join(", ") || "Appointment"}
+							label={t("common.procedures")}
+							value={procedures.map((procedure) => procedure.name).join(", ") || t("common.appointment")}
 						/>
 					</View>
 				</View>
 
 				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>Contact</Text>
+					<Text style={styles.sectionTitle}>{t("common.contact")}</Text>
 					<View style={styles.infoCard}>
-						<DetailRow icon={Mail} label="Email" value={counterpart.email} />
+						<DetailRow icon={Mail} label={t("common.email")} value={counterpart.email} />
 						{counterpart.phone ? (
-							<DetailRow icon={Phone} label="Phone" value={counterpart.phone} />
+							<DetailRow icon={Phone} label={t("common.phone")} value={counterpart.phone} />
 						) : null}
 					</View>
 					{canOpenChat ? (
@@ -393,7 +403,7 @@ export default function AppointmentDetails() {
 										color={theme.colors.foreground}
 										strokeWidth={2}
 									/>
-									<Text style={styles.inlineButtonLabel}>Open Chat</Text>
+									<Text style={styles.inlineButtonLabel}>{t("common.openChat")}</Text>
 								</View>
 							</Button>
 						</View>
@@ -402,19 +412,19 @@ export default function AppointmentDetails() {
 
 				{appointment.patientProfile ? (
 					<View style={styles.section}>
-						<Text style={styles.sectionTitle}>Patient Profile</Text>
+						<Text style={styles.sectionTitle}>{t("common.patientProfile")}</Text>
 						<View style={styles.infoCard}>
 							{appointment.patientProfile.dateOfBirth ? (
 								<DetailRow
 									icon={Calendar}
-									label="Date of Birth"
+									label={t("common.dateOfBirth")}
 									value={formatShortDate(appointment.patientProfile.dateOfBirth)}
 								/>
 							) : null}
 							{appointment.patientProfile.gender ? (
 								<DetailRow
 									icon={UserRound}
-									label="Gender"
+									label={t("common.gender")}
 									value={appointment.patientProfile.gender}
 								/>
 							) : null}
@@ -428,14 +438,14 @@ export default function AppointmentDetails() {
 							{appointment.patientProfile.relationshipToCustomer ? (
 								<DetailRow
 									icon={Users}
-									label="Relationship"
+									label={t("common.relationship")}
 									value={appointment.patientProfile.relationshipToCustomer}
 								/>
 							) : null}
 							{appointment.patientProfile.notes ? (
 								<DetailRow
 									icon={FileText}
-									label="Profile Notes"
+									label={t("common.profileNotes")}
 									value={appointment.patientProfile.notes}
 								/>
 							) : null}
@@ -445,7 +455,7 @@ export default function AppointmentDetails() {
 
 				{canShowMedicalRecord ? (
 					<View style={styles.section}>
-						<Text style={styles.sectionTitle}>Medical Record</Text>
+						<Text style={styles.sectionTitle}>{t("common.medicalRecord")}</Text>
 						<View style={styles.infoCard}>
 							<View style={styles.medicalRecordHeader}>
 								<View style={styles.medicalRecordIcon}>
@@ -457,10 +467,10 @@ export default function AppointmentDetails() {
 								</View>
 								<View style={styles.medicalRecordHeaderText}>
 									<Text style={styles.medicalRecordTitle}>
-										Patient health summary
+										{t("common.patientHealthSummary")}
 									</Text>
 									<Text style={styles.medicalRecordSubtitle}>
-										Information shared by {patientName}
+										{t("common.informationSharedByPatientName", { patientName })}
 									</Text>
 								</View>
 							</View>
@@ -472,7 +482,7 @@ export default function AppointmentDetails() {
 										color={theme.colors.primary}
 									/>
 									<Text style={styles.medicalRecordStateText}>
-										Loading medical record...
+										{t("common.loadingMedicalRecord")}
 									</Text>
 								</View>
 							) : null}
@@ -485,7 +495,7 @@ export default function AppointmentDetails() {
 										strokeWidth={2.2}
 									/>
 									<Text style={styles.medicalRecordStateText}>
-										Could not load this medical record.
+										{t("common.couldNotLoadThisMedicalRecord")}
 									</Text>
 								</View>
 							) : null}
@@ -502,7 +512,7 @@ export default function AppointmentDetails() {
 												strokeWidth={2.2}
 											/>
 											<Text style={styles.medicalQuickFactText}>
-												{medicalRecord.bloodType || "Blood type not informed"}
+												{medicalRecord.bloodType || t("common.bloodTypeNotInformed")}
 											</Text>
 										</View>
 										<View style={styles.medicalQuickFact}>
@@ -513,8 +523,8 @@ export default function AppointmentDetails() {
 											/>
 											<Text style={styles.medicalQuickFactText}>
 												{medicalRecord.medications
-													? "Uses medication"
-													: "No medications informed"}
+													? t("common.usesMedication")
+													: t("common.noMedicationsInformed")}
 											</Text>
 										</View>
 										<View style={styles.medicalQuickFact}>
@@ -525,8 +535,8 @@ export default function AppointmentDetails() {
 											/>
 											<Text style={styles.medicalQuickFactText}>
 												{medicalRecord.preExistingConditions
-													? "Has health history"
-													: "No conditions informed"}
+													? t("common.hasHealthHistory")
+													: t("common.noConditionsInformed")}
 											</Text>
 										</View>
 									</View>
@@ -553,7 +563,7 @@ export default function AppointmentDetails() {
 											/>
 											<View style={styles.emergencyContactText}>
 												<Text style={styles.emergencyContactLabel}>
-													Emergency contact
+													{t("common.emergencyContact")}
 												</Text>
 												<Text style={styles.emergencyContactValue}>
 													{[
@@ -573,7 +583,7 @@ export default function AppointmentDetails() {
 				) : null}
 
 				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>Procedures</Text>
+					<Text style={styles.sectionTitle}>{t("common.procedures")}</Text>
 					<View style={styles.infoCard}>
 						{procedures.map((procedure) => (
 							<View key={procedure.id} style={styles.procedureItem}>
@@ -597,7 +607,7 @@ export default function AppointmentDetails() {
 				</View>
 
 				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>Notes</Text>
+					<Text style={styles.sectionTitle}>{t("common.notes")}</Text>
 					<View style={styles.infoCard}>
 						<View style={styles.notesHeader}>
 							<FileText
@@ -606,21 +616,21 @@ export default function AppointmentDetails() {
 								strokeWidth={2}
 							/>
 							<Text style={styles.notesTitle}>
-								{isHealthcareProvider ? "Appointment Notes" : "Provider Notes"}
+								{isHealthcareProvider ? t("common.appointmentNotes") : t("common.providerNotes")}
 							</Text>
 						</View>
 						<Text style={styles.notesText}>
 							{appointment.notes?.trim() ||
 								(isCustomer
-									? "No notes were added to this appointment."
-									: "No notes added yet for this appointment.")}
+									? t("common.noNotesWereAddedToThisAppointment")
+									: t("common.noNotesAddedYetForThisAppointment"))}
 						</Text>
 					</View>
 				</View>
 
 				{isHealthcareProvider && providerActions.length > 0 ? (
 					<View style={styles.section}>
-						<Text style={styles.sectionTitle}>Update Status</Text>
+						<Text style={styles.sectionTitle}>{t("common.updateStatus")}</Text>
 						<View style={styles.statusActions}>
 							{providerActions.map((action) => (
 								<Button
@@ -639,7 +649,7 @@ export default function AppointmentDetails() {
 											action.status
 									}
 								>
-									{action.label}
+									{t(action.label)}
 								</Button>
 							))}
 						</View>
@@ -647,33 +657,33 @@ export default function AppointmentDetails() {
 				) : null}
 
 				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>Appointment Meta</Text>
+					<Text style={styles.sectionTitle}>{t("common.appointmentMeta")}</Text>
 					<View style={styles.infoCard}>
 						<DetailRow
 							icon={UserRound}
-							label="Customer ID"
-							value={appointment.customerId || "No customer account"}
+							label={t("common.customerID")}
+							value={appointment.customerId || t("common.noCustomerAccount")}
 						/>
 						{appointment.patientProfileId ? (
 							<DetailRow
 								icon={UserRound}
-								label="Patient Profile ID"
+								label={t("common.patientProfileID")}
 								value={appointment.patientProfileId}
 							/>
 						) : null}
 						<DetailRow
 							icon={UserRound}
-							label="Provider ID"
+							label={t("common.providerID")}
 							value={appointment.healthcareProviderId}
 						/>
 						<DetailRow
 							icon={Calendar}
-							label="Created"
+							label={t("common.created")}
 							value={formatDate(appointment.createdAt)}
 						/>
 						<DetailRow
 							icon={Calendar}
-							label="Last Updated"
+							label={t("common.lastUpdated")}
 							value={formatDate(appointment.updatedAt)}
 						/>
 					</View>

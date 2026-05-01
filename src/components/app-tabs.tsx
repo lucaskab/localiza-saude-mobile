@@ -6,10 +6,12 @@ import {
 	Search,
 	User,
 } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 import { useUnistyles } from "react-native-unistyles";
 
 export default function AppTabs() {
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 
 	return (
 		<Tabs
@@ -26,7 +28,7 @@ export default function AppTabs() {
 			<Tabs.Screen
 				name="home"
 				options={{
-					title: "Home",
+					title: t("common.home"),
 					tabBarIcon: ({ color, size, focused }) => (
 						<Home size={size} color={color} strokeWidth={focused ? 2.5 : 2} />
 					),
@@ -35,7 +37,7 @@ export default function AppTabs() {
 			<Tabs.Screen
 				name="search"
 				options={{
-					title: "Search",
+					title: t("common.search"),
 					tabBarIcon: ({ color, size, focused }) => (
 						<Search size={size} color={color} strokeWidth={focused ? 2.5 : 2} />
 					),
@@ -44,7 +46,7 @@ export default function AppTabs() {
 			<Tabs.Screen
 				name="appointments"
 				options={{
-					title: "Appointments",
+					title: t("common.appointments"),
 					tabBarIcon: ({ color, size, focused }) => (
 						<Calendar
 							size={size}
@@ -57,7 +59,7 @@ export default function AppTabs() {
 			<Tabs.Screen
 				name="chats"
 				options={{
-					title: "Chats",
+					title: t("common.chats"),
 					tabBarIcon: ({ color, size, focused }) => (
 						<MessageCircle
 							size={size}
@@ -70,7 +72,7 @@ export default function AppTabs() {
 			<Tabs.Screen
 				name="profile"
 				options={{
-					title: "Profile",
+					title: t("common.profile"),
 					tabBarIcon: ({ color, size, focused }) => (
 						<User size={size} color={color} strokeWidth={focused ? 2.5 : 2} />
 					),

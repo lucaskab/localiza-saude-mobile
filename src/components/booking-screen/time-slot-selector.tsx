@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { Clock } from "lucide-react-native";
 import { Controller } from "react-hook-form";
 import type { Control, FieldValues, Path } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { useTimeSlots } from "@/hooks/use-appointments";
 
@@ -28,6 +29,7 @@ export function TimeSlotSelector<TFieldValues extends FieldValues>({
 	name = "selectedTime" as Path<TFieldValues>,
 }: TimeSlotSelectorProps<TFieldValues>) {
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 
 	// Format date to YYYY-MM-DD
 	const formattedDate = useMemo(() => {
@@ -64,11 +66,11 @@ export function TimeSlotSelector<TFieldValues extends FieldValues>({
 			<View style={styles.section}>
 				<View style={styles.sectionHeader}>
 					<Clock size={20} color={theme.colors.primary} strokeWidth={2} />
-					<Text style={styles.sectionTitle}>Select Time</Text>
+					<Text style={styles.sectionTitle}>{t("common.selectTime")}</Text>
 				</View>
 				<View style={styles.emptySlots}>
 					<Text style={styles.emptyText}>
-						Please select at least one procedure to see available time slots
+						{t("common.pleaseSelectAtLeastOneProcedureToSeeAvailableTimeSlots")}
 					</Text>
 				</View>
 			</View>
@@ -79,26 +81,28 @@ export function TimeSlotSelector<TFieldValues extends FieldValues>({
 		<View style={styles.section}>
 			<View style={styles.sectionHeader}>
 				<Clock size={20} color={theme.colors.primary} strokeWidth={2} />
-				<Text style={styles.sectionTitle}>Select Time</Text>
+				<Text style={styles.sectionTitle}>{t("common.selectTime")}</Text>
 			</View>
 			{timeSlotsData && (
 				<Text style={styles.sectionSubtitle}>
-					Available slots for {timeSlotsData.totalDurationMinutes}-minute
-					appointment ({timeSlotsData.slotIntervalMinutes} min intervals)
+					{t("common.availableSlotsForDurationMinuteAppointmentIntervalMinIntervals", {
+						duration: String(timeSlotsData.totalDurationMinutes),
+						interval: String(timeSlotsData.slotIntervalMinutes),
+					})}
 				</Text>
 			)}
 
 			{isLoading && (
 				<View style={styles.loadingSlots}>
 					<ActivityIndicator size="small" color={theme.colors.primary} />
-					<Text style={styles.loadingText}>Loading available slots...</Text>
+					<Text style={styles.loadingText}>{t("common.loadingAvailableSlots")}</Text>
 				</View>
 			)}
 
 			{error && (
 				<View style={styles.errorSlots}>
 					<Text style={styles.errorText}>
-						Failed to load available time slots
+						{t("common.failedToLoadAvailableTimeSlots")}
 					</Text>
 				</View>
 			)}
@@ -106,14 +110,14 @@ export function TimeSlotSelector<TFieldValues extends FieldValues>({
 			<Controller
 				control={control}
 				name={name}
-				rules={{ required: "Please select a time" }}
+				rules={{ required: t("common.pleaseSelectATime") }}
 				render={({ field: { value, onChange } }) => (
 					<>
 						{!isLoading && !error && (
 							<>
 								{allSlots.length === 0 ? (
 									<View style={styles.emptySlots}>
-										<Text style={styles.emptyText}>No slots for this date</Text>
+										<Text style={styles.emptyText}>{t("common.noSlotsForThisDate")}</Text>
 									</View>
 								) : (
 									<View style={styles.timeSlots}>

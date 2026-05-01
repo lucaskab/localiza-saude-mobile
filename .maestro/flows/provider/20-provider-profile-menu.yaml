@@ -1,0 +1,56 @@
+appId: ${APP_ID}
+name: Provider - Profile menu links
+---
+- launchApp:
+    clearState: false
+- assertVisible: "Consultas de hoje"
+- tapOn:
+    id: "provider-tab-profile"
+- assertVisible: "Perfil"
+- scrollUntilVisible:
+    element:
+      id: "provider-profile-menu-reviews"
+    direction: DOWN
+    optional: true
+- tapOn:
+    id: "provider-profile-menu-reviews"
+- assertVisible: "Avaliações"
+- assertVisible: "Feedback de pacientes sobre consultas e experiência de cuidado."
+- tapOn:
+    id: "provider-tab-profile"
+- assertVisible:
+    id: "provider-profile-menu-language"
+- scrollUntilVisible:
+    element:
+      id: "provider-profile-menu-language"
+    direction: DOWN
+    optional: true
+- tapOn:
+    id: "provider-profile-menu-language"
+- assertVisible: "Idioma"
+- assertVisible:
+    id: "language-option-pt-BR"
+- tapOn:
+    id: "language-option-pt-BR"
+- tapOn:
+    id: "language-settings-back-button"
+- assertVisible:
+    id: "provider-profile-menu-professional-profile"
+- scrollUntilVisible:
+    element:
+      id: "provider-profile-menu-professional-profile"
+    direction: UP
+    optional: true
+- tapOn:
+    id: "provider-profile-menu-professional-profile"
+- assertVisible: "Perfil profissional"
+- assertVisible: "Informações do perfil"
+- tapOn:
+    id: "provider-profile-edit-back-button"
+- tapOn:
+    id: "provider-profile-menu-schedule"
+- assertVisible:
+    id: "provider-schedule-screen"
+- assertVisible: "Segunda-feira"
+- tapOn:
+    id: "provider-schedule-back-button"

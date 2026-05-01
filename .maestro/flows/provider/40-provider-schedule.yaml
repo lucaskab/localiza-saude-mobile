@@ -1,0 +1,19 @@
+appId: ${APP_ID}
+name: Provider - Schedule screen
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    id: "provider-tab-profile"
+- assertVisible: "Perfil"
+- tapOn:
+    id: "provider-profile-menu-schedule"
+- assertVisible:
+    id: "provider-schedule-screen"
+- assertVisible: "Segunda-feira"
+- assertVisible: "Terça-feira"
+- scrollUntilVisible:
+    element:
+      text: "Salvar alterações"
+    direction: DOWN
+    optional: true

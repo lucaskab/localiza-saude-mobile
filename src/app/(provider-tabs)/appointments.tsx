@@ -1,17 +1,12 @@
 import { useRouter } from "expo-router";
-import {
-	Calendar,
-	Clock,
-	MessageCircle,
-	Plus,
-	Search,
-	SlidersHorizontal,
-} from "lucide-react-native";
+import { Calendar, Plus, SlidersHorizontal, X } from "lucide-react-native";
 import { useMemo, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import {
 	ActivityIndicator,
 	Alert,
-	Image,
+	KeyboardAvoidingView,
+	Modal,
 	Pressable,
 	RefreshControl,
 	ScrollView,
@@ -19,150 +14,53 @@ import {
 	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { AppointmentFiltersPanel } from "@/components/provider-appointments/appointment-filters-panel";
+import { AppointmentTabs } from "@/components/provider-appointments/appointment-tabs";
+import { ProviderAppointmentCard } from "@/components/provider-appointments/provider-appointment-card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth";
 import {
 	useAppointments,
 	useUpdateAppointment,
 } from "@/hooks/use-appointments";
 import { useGetOrCreateConversation } from "@/hooks/use-conversations";
+import { translationKeys, type TranslationKey } from "@/i18n/key-map";
 import type { Appointment, AppointmentStatus } from "@/types/appointment";
+import { getAppointmentPatientName } from "@/utils/appointments";
 import {
-	getAppointmentCustomerUserId,
-	getAppointmentPatientImage,
-	getAppointmentPatientName,
-	getAppointmentPatientSubtitle,
-} from "@/utils/appointments";
+	defaultProviderAppointmentFilters,
+	filterAppointmentsByTab,
+	getActiveProviderAppointmentFilterCount,
+	getFilteredProviderAppointments,
+	getProviderAppointmentProcedureOptions,
+	getProviderAppointmentStatusActions,
+	getProviderAppointmentStatusConfig,
+	type ProviderAppointmentFiltersForm,
+	type ProviderAppointmentTab,
+} from "@/utils/provider-appointment-filters";
 
-type TabType = "upcoming" | "completed" | "cancelled";
-type DateFilter = "all" | "today" | "tomorrow" | "next7" | "past" | "custom";
-type PatientFilter = "all" | "account" | "third-party" | "unregistered";
-type SortOrder = "soonest" | "latest";
-type StatusFilter = "ALL" | AppointmentStatus;
-
-const tabStatuses: Record<TabType, AppointmentStatus[]> = {
-	upcoming: ["SCHEDULED", "CONFIRMED", "IN_PROGRESS"],
-	completed: ["COMPLETED"],
-	cancelled: ["CANCELLED", "NO_SHOW"],
-};
-
-const dateFilters: { label: string; value: DateFilter }[] = [
-	{ label: "All dates", value: "all" },
-	{ label: "Today", value: "today" },
-	{ label: "Tomorrow", value: "tomorrow" },
-	{ label: "Next 7 days", value: "next7" },
-	{ label: "Past", value: "past" },
-	{ label: "Custom", value: "custom" },
-];
-
-const patientFilters: { label: string; value: PatientFilter }[] = [
-	{ label: "All patients", value: "all" },
-	{ label: "Account holders", value: "account" },
-	{ label: "Third-party", value: "third-party" },
-	{ label: "No account", value: "unregistered" },
-];
-
-const sortOptions: { label: string; value: SortOrder }[] = [
-	{ label: "Soonest", value: "soonest" },
-	{ label: "Latest", value: "latest" },
-];
-
-const parseDateInput = (date: string, endOfDay = false) => {
-	if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-		return null;
-	}
-
-	const [year, month, day] = date.split("-").map(Number);
-	const parsed = new Date(year, (month || 1) - 1, day || 1);
-
-	if (Number.isNaN(parsed.getTime())) {
-		return null;
-	}
-
-	if (endOfDay) {
-		parsed.setHours(23, 59, 59, 999);
-	} else {
-		parsed.setHours(0, 0, 0, 0);
-	}
-
-	return parsed;
-};
-
-const getDateRangeForFilter = (
-	filter: DateFilter,
-	customStartDate: string,
-	customEndDate: string,
-) => {
-	const today = new Date();
-	today.setHours(0, 0, 0, 0);
-	const tomorrow = new Date(today);
-	tomorrow.setDate(tomorrow.getDate() + 1);
-	const sevenDaysFromNow = new Date(today);
-	sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-	sevenDaysFromNow.setHours(23, 59, 59, 999);
-
-	switch (filter) {
-		case "today": {
-			const end = new Date(today);
-			end.setHours(23, 59, 59, 999);
-			return { start: today, end };
-		}
-		case "tomorrow": {
-			const end = new Date(tomorrow);
-			end.setHours(23, 59, 59, 999);
-			return { start: tomorrow, end };
-		}
-		case "next7":
-			return { start: today, end: sevenDaysFromNow };
-		case "past": {
-			const end = new Date(today);
-			end.setMilliseconds(end.getMilliseconds() - 1);
-			return { start: null, end };
-		}
-		case "custom":
-			return {
-				start: customStartDate ? parseDateInput(customStartDate) : null,
-				end: customEndDate ? parseDateInput(customEndDate, true) : null,
-			};
-		default:
-			return { start: null, end: null };
-	}
-};
-
-const getPatientFilterMatch = (
-	appointment: Appointment,
-	filter: PatientFilter,
-) => {
-	switch (filter) {
-		case "account":
-			return Boolean(appointment.customer) && !appointment.patientProfile;
-		case "third-party":
-			return Boolean(appointment.customer) && Boolean(appointment.patientProfile);
-		case "unregistered":
-			return !appointment.customer && Boolean(appointment.patientProfile);
-		default:
-			return true;
-	}
-};
+const providerAppointmentTabLabels: Record<ProviderAppointmentTab, TranslationKey> =
+	{
+		upcoming: translationKeys.Upcoming,
+		completed: translationKeys.Completed,
+		cancelled: translationKeys.Cancelled,
+	};
 
 export default function ProviderAppointments() {
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 	const { healthcareProvider } = useAuth();
 	const router = useRouter();
+	const [activeTab, setActiveTab] =
+		useState<ProviderAppointmentTab>("upcoming");
+	const [isFiltersSheetVisible, setIsFiltersSheetVisible] = useState(false);
+	const filtersForm = useForm<ProviderAppointmentFiltersForm>({
+		defaultValues: defaultProviderAppointmentFilters,
+	});
+	const filters = useWatch({ control: filtersForm.control });
 
-	const [activeTab, setActiveTab] = useState<TabType>("upcoming");
-	const [searchQuery, setSearchQuery] = useState("");
-	const [dateFilter, setDateFilter] = useState<DateFilter>("all");
-	const [customStartDate, setCustomStartDate] = useState("");
-	const [customEndDate, setCustomEndDate] = useState("");
-	const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
-	const [patientFilter, setPatientFilter] = useState<PatientFilter>("all");
-	const [procedureFilter, setProcedureFilter] = useState("all");
-	const [sortOrder, setSortOrder] = useState<SortOrder>("soonest");
-
-	// Fetch all appointments for this provider
 	const {
 		data: appointmentsData,
 		isLoading,
@@ -176,154 +74,45 @@ export default function ProviderAppointments() {
 
 	const updateAppointmentMutation = useUpdateAppointment();
 	const createConversationMutation = useGetOrCreateConversation();
-
 	const appointments = appointmentsData?.appointments || [];
-	const procedureOptions = useMemo(() => {
-		const procedureMap = new Map<string, string>();
 
-		for (const appointment of appointments) {
-			for (const appointmentProcedure of appointment.appointmentProcedures) {
-				procedureMap.set(
-					appointmentProcedure.procedure.id,
-					appointmentProcedure.procedure.name,
-				);
-			}
-		}
-
-		return Array.from(procedureMap.entries())
-			.map(([id, name]) => ({ id, name }))
-			.sort((a, b) => a.name.localeCompare(b.name));
-	}, [appointments]);
-
-	// Format time from ISO string
-	const formatTime = (isoString: string) => {
-		const date = new Date(isoString);
-		return date.toLocaleTimeString("en-US", {
-			hour: "numeric",
-			minute: "2-digit",
-			hour12: true,
-		});
+	const normalizedFilters = {
+		...defaultProviderAppointmentFilters,
+		...filters,
 	};
 
-	// Format date
-	const formatDate = (isoString: string) => {
-		const date = new Date(isoString);
-		return date.toLocaleDateString("en-US", {
-			weekday: "short",
-			month: "short",
-			day: "numeric",
-			year: "numeric",
-		});
-	};
+	const procedureOptions = useMemo(
+		() => getProviderAppointmentProcedureOptions(appointments),
+		[appointments],
+	);
 
-	const getFilteredAppointmentsByTab = (tab: TabType): Appointment[] =>
-		appointments.filter((apt) => tabStatuses[tab].includes(apt.status));
+	const tabCounts = useMemo(
+		() => ({
+			upcoming: filterAppointmentsByTab(appointments, "upcoming").length,
+			completed: filterAppointmentsByTab(appointments, "completed").length,
+			cancelled: filterAppointmentsByTab(appointments, "cancelled").length,
+		}),
+		[appointments],
+	);
 
-	const filteredAppointments = useMemo(() => {
-		const query = searchQuery.toLowerCase().trim();
-		const { start, end } = getDateRangeForFilter(
-			dateFilter,
-			customStartDate,
-			customEndDate,
-		);
+	const filteredAppointments = useMemo(
+		() =>
+			getFilteredProviderAppointments({
+				appointments,
+				activeTab,
+				filters: normalizedFilters,
+			}),
+		[activeTab, appointments, normalizedFilters],
+	);
 
-		return getFilteredAppointmentsByTab(activeTab)
-			.filter((appointment) => {
-				if (!query) {
-					return true;
-				}
+	const activeFilterCount =
+		getActiveProviderAppointmentFilterCount(normalizedFilters);
 
-				const patientName = getAppointmentPatientName(appointment).toLowerCase();
-				const patientPhone =
-					appointment.patientProfile?.phone ||
-					appointment.customer?.user.phone ||
-					"";
-				const patientEmail =
-					appointment.patientProfile?.email ||
-					appointment.customer?.user.email ||
-					"";
-				const procedures = appointment.appointmentProcedures
-					.map((ap) => ap.procedure.name.toLowerCase())
-					.join(" ");
-
-				return (
-					patientName.includes(query) ||
-					patientPhone.toLowerCase().includes(query) ||
-					patientEmail.toLowerCase().includes(query) ||
-					procedures.includes(query)
-				);
-			})
-			.filter((appointment) =>
-				statusFilter === "ALL" ? true : appointment.status === statusFilter,
-			)
-			.filter((appointment) => {
-				if (!start && !end) {
-					return true;
-				}
-
-				const scheduledAt = new Date(appointment.scheduledAt);
-				if (start && scheduledAt < start) {
-					return false;
-				}
-				if (end && scheduledAt > end) {
-					return false;
-				}
-				return true;
-			})
-			.filter((appointment) =>
-				getPatientFilterMatch(appointment, patientFilter),
-			)
-			.filter((appointment) =>
-				procedureFilter === "all"
-					? true
-					: appointment.appointmentProcedures.some(
-							(ap) => ap.procedure.id === procedureFilter,
-						),
-			)
-			.sort((a, b) => {
-				const dateA = new Date(a.scheduledAt).getTime();
-				const dateB = new Date(b.scheduledAt).getTime();
-				return sortOrder === "soonest" ? dateA - dateB : dateB - dateA;
-			});
-	}, [
-		activeTab,
-		appointments,
-		customEndDate,
-		customStartDate,
-		dateFilter,
-		patientFilter,
-		procedureFilter,
-		searchQuery,
-		sortOrder,
-		statusFilter,
-	]);
-
-	const activeFilterCount = [
-		searchQuery.trim(),
-		dateFilter !== "all",
-		statusFilter !== "ALL",
-		patientFilter !== "all",
-		procedureFilter !== "all",
-		sortOrder !== "soonest",
-	].filter(Boolean).length;
-
-	const resetFilters = () => {
-		setSearchQuery("");
-		setDateFilter("all");
-		setCustomStartDate("");
-		setCustomEndDate("");
-		setStatusFilter("ALL");
-		setPatientFilter("all");
-		setProcedureFilter("all");
-		setSortOrder("soonest");
-	};
-
-	const handleTabChange = (tab: TabType) => {
+	const handleTabChange = (tab: ProviderAppointmentTab) => {
 		setActiveTab(tab);
-		setStatusFilter("ALL");
+		filtersForm.setValue("statusFilter", "ALL");
 	};
 
-	// Handle complete visit
 	const handleStatusUpdate = async (
 		appointmentId: string,
 		nextStatus: AppointmentStatus,
@@ -336,205 +125,52 @@ export default function ProviderAppointments() {
 				},
 			});
 			Alert.alert(
-				"Success",
-				`Appointment updated to ${getStatusConfig(nextStatus).label}.`,
+				t("common.success"),
+				t("common.appointmentUpdatedToStatus", {
+					status: t(getProviderAppointmentStatusConfig(nextStatus).label),
+				}),
 			);
-		} catch (error) {
-			console.error("Failed to update appointment:", error);
-			Alert.alert("Error", "Failed to update appointment. Please try again.");
+		} catch (updateError) {
+			console.error("Failed to update appointment:", updateError);
+			Alert.alert(t("common.error"), t("common.failedToUpdateAppointmentPleaseTryAgain"));
 		}
 	};
 
-	// Handle open chat
 	const handleOpenChat = async (customerUserId: string) => {
 		try {
 			const result = await createConversationMutation.mutateAsync({
 				participantId: customerUserId,
 			});
 			router.push(`/chat/${result.conversation.id}`);
-		} catch (error) {
-			Alert.alert("Error", "Failed to open chat");
-		}
-	};
-
-	// Get status badge config
-	const getStatusConfig = (
-		status: string,
-	): {
-		label: string;
-		color: string;
-		bgColor: string;
-	} => {
-		switch (status) {
-			case "SCHEDULED":
-				return {
-					label: "Scheduled",
-					color: "#3b82f6",
-					bgColor: "#dbeafe",
-				};
-			case "CONFIRMED":
-				return {
-					label: "Confirmed",
-					color: "#16a34a",
-					bgColor: "#dcfce7",
-				};
-			case "IN_PROGRESS":
-				return {
-					label: "In Progress",
-					color: "#d97706",
-					bgColor: "#fef3c7",
-				};
-			case "COMPLETED":
-				return {
-					label: "Completed",
-					color: "#6b7280",
-					bgColor: "#f3f4f6",
-				};
-			case "CANCELLED":
-				return {
-					label: "Cancelled",
-					color: "#dc2626",
-					bgColor: "#fee2e2",
-				};
-			case "NO_SHOW":
-				return {
-					label: "No Show",
-					color: "#dc2626",
-					bgColor: "#fee2e2",
-				};
-			default:
-				return {
-					label: status,
-					color: "#6b7280",
-					bgColor: "#f3f4f6",
-				};
-		}
-	};
-
-	// Get action buttons based on status
-	const getStatusActions = (appointment: Appointment) => {
-		switch (appointment.status) {
-			case "SCHEDULED":
-				return [
-					{ text: "Confirm", status: "CONFIRMED" as const },
-					{ text: "Start Visit", status: "IN_PROGRESS" as const },
-					{ text: "Mark No Show", status: "NO_SHOW" as const },
-					{ text: "Cancel", status: "CANCELLED" as const, style: "destructive" as const },
-				];
-			case "CONFIRMED":
-				return [
-					{ text: "Start Visit", status: "IN_PROGRESS" as const },
-					{ text: "Mark No Show", status: "NO_SHOW" as const },
-					{ text: "Cancel", status: "CANCELLED" as const, style: "destructive" as const },
-				];
-			case "IN_PROGRESS":
-				return [
-					{ text: "Complete Visit", status: "COMPLETED" as const },
-					{ text: "Cancel", status: "CANCELLED" as const, style: "destructive" as const },
-				];
-			default:
-				return [];
+		} catch (chatError) {
+			console.error("Failed to open chat:", chatError);
+			Alert.alert(t("common.error"), t("common.failedToOpenChat"));
 		}
 	};
 
 	const openStatusMenu = (appointment: Appointment) => {
-		const actions = getStatusActions(appointment);
+		const actions = getProviderAppointmentStatusActions(appointment);
 
 		if (actions.length === 0) {
-			Alert.alert("Status Locked", "This appointment can no longer be updated.");
+			Alert.alert(t("common.statusLocked"), t("common.thisAppointmentCanNoLongerBeUpdated"));
 			return;
 		}
 
 		Alert.alert(
-			"Update Status",
-			`Choose the next status for ${getAppointmentPatientName(appointment)}.`,
+			t("common.updateStatus"),
+			t("common.chooseTheNextStatusForPatientName", {
+				patientName: getAppointmentPatientName(appointment),
+			}),
 			[
 				...actions.map((action) => ({
-					text: action.text,
+					text: t(action.text),
 					style: action.style,
 					onPress: () => handleStatusUpdate(appointment.id, action.status),
 				})),
-				{ text: "Cancel", style: "cancel" as const },
+				{ text: t("common.cancel"), style: "cancel" as const },
 			],
 		);
 	};
-
-	const getActionButtons = (appointment: Appointment) => {
-		const customerUserId = getAppointmentCustomerUserId(appointment);
-
-		return (
-			<>
-				{customerUserId ? (
-					<Button
-						variant="outline"
-						size="sm"
-						style={styles.actionButton}
-						onPress={() => handleOpenChat(customerUserId)}
-						disabled={createConversationMutation.isPending}
-					>
-						<MessageCircle
-							size={16}
-							color={theme.colors.foreground}
-							strokeWidth={2}
-						/>
-						<Text style={{ marginLeft: theme.gap(1), fontSize: 14 }}>Chat</Text>
-					</Button>
-				) : null}
-				<Button
-					variant="outline"
-					size="sm"
-					style={styles.actionButton}
-					onPress={() => router.push(`/appointment/${appointment.id}`)}
-				>
-					View Details
-				</Button>
-				{getStatusActions(appointment).length > 0 ? (
-					<Button
-						size="sm"
-						style={styles.actionButton}
-						onPress={() => openStatusMenu(appointment)}
-						loading={updateAppointmentMutation.isPending}
-						disabled={updateAppointmentMutation.isPending}
-					>
-						Update Status
-					</Button>
-				) : null}
-			</>
-		);
-	};
-
-	// Get count for each tab
-	const getTabCount = (tab: TabType): number => {
-		return getFilteredAppointmentsByTab(tab).length;
-	};
-
-	const renderFilterChip = ({
-		label,
-		selected,
-		onPress,
-		chipKey,
-	}: {
-		label: string;
-		selected: boolean;
-		onPress: () => void;
-		chipKey?: string;
-	}) => (
-		<Pressable
-			key={chipKey}
-			onPress={onPress}
-			style={[styles.filterChip, selected && styles.filterChipActive]}
-		>
-			<Text
-				style={[
-					styles.filterChipText,
-					selected && styles.filterChipTextActive,
-				]}
-				numberOfLines={1}
-			>
-				{label}
-			</Text>
-		</Pressable>
-	);
 
 	return (
 		<SafeAreaView edges={["top"]} style={styles.container}>
@@ -549,447 +185,190 @@ export default function ProviderAppointments() {
 					/>
 				}
 			>
-				{/* Header */}
 				<View style={styles.header}>
 					<View style={styles.headerRow}>
 						<View style={styles.headerCopy}>
-							<Text style={styles.headerTitle}>Appointments</Text>
+							<Text style={styles.headerTitle}>{t("common.appointments")}</Text>
 							<Text style={styles.headerSubtitle}>
-								Manage your appointments
+								{t("common.manageYourAppointments")}
 							</Text>
 						</View>
-						<Button
-							size="sm"
-							style={styles.newAppointmentButton}
-							onPress={() => router.push("/provider-create-appointment")}
-						>
-							<Plus
-								size={16}
-								color={theme.colors.primaryForeground}
-								strokeWidth={2}
-							/>
-							<Text style={styles.newAppointmentText}>New</Text>
-						</Button>
+						<View style={styles.headerActions}>
+							<Button
+								variant="outline"
+								size="sm"
+								style={styles.filterButton}
+								testID="provider-appointments-filter-button"
+								accessibilityLabel={t("common.openAppointmentFilters")}
+								onPress={() => setIsFiltersSheetVisible(true)}
+							>
+								<SlidersHorizontal
+									size={16}
+									color={
+										activeFilterCount > 0
+											? theme.colors.primary
+											: theme.colors.foreground
+									}
+									strokeWidth={2}
+								/>
+								{activeFilterCount > 0 ? (
+									<View style={styles.filterButtonBadge}>
+										<Text style={styles.filterButtonBadgeText}>
+											{activeFilterCount}
+										</Text>
+									</View>
+								) : null}
+							</Button>
+							<Button
+								size="sm"
+								style={styles.newAppointmentButton}
+								testID="provider-appointments-new-button"
+								onPress={() => router.push("/provider-create-appointment")}
+							>
+								<Plus
+									size={16}
+									color={theme.colors.primaryForeground}
+									strokeWidth={2}
+								/>
+								<Text style={styles.newAppointmentText}>{t("common.new")}</Text>
+							</Button>
+						</View>
 					</View>
 				</View>
 
-				{/* Search Bar */}
-				<Input
-					leftIcon={Search}
-					placeholder="Search by patient name or procedure..."
-					value={searchQuery}
-					onChangeText={setSearchQuery}
-					containerStyle={styles.searchContainer}
+				<AppointmentTabs
+					activeTab={activeTab}
+					counts={tabCounts}
+					onChange={handleTabChange}
 				/>
 
-				{/* Tabs */}
-				<View style={styles.tabsContainer}>
-					<Pressable
-						style={[styles.tab, activeTab === "upcoming" && styles.tabActive]}
-						onPress={() => handleTabChange("upcoming")}
-					>
-						<Text
-							style={[
-								styles.tabText,
-								activeTab === "upcoming" && styles.tabTextActive,
-							]}
-						>
-							Upcoming
-						</Text>
-						{appointments.length > 0 && (
-							<View
-								style={[
-									styles.tabBadge,
-									activeTab === "upcoming" && styles.tabBadgeActive,
-								]}
-							>
-								<Text
-									style={[
-										styles.tabBadgeText,
-										activeTab === "upcoming" && styles.tabBadgeTextActive,
-									]}
-								>
-									{getTabCount("upcoming")}
-								</Text>
-							</View>
-						)}
-					</Pressable>
-
-					<Pressable
-						style={[styles.tab, activeTab === "completed" && styles.tabActive]}
-						onPress={() => handleTabChange("completed")}
-					>
-						<Text
-							style={[
-								styles.tabText,
-								activeTab === "completed" && styles.tabTextActive,
-							]}
-						>
-							Completed
-						</Text>
-						{appointments.length > 0 && (
-							<View
-								style={[
-									styles.tabBadge,
-									activeTab === "completed" && styles.tabBadgeActive,
-								]}
-							>
-								<Text
-									style={[
-										styles.tabBadgeText,
-										activeTab === "completed" && styles.tabBadgeTextActive,
-									]}
-								>
-									{getTabCount("completed")}
-								</Text>
-							</View>
-						)}
-					</Pressable>
-
-					<Pressable
-						style={[styles.tab, activeTab === "cancelled" && styles.tabActive]}
-						onPress={() => handleTabChange("cancelled")}
-					>
-						<Text
-							style={[
-								styles.tabText,
-								activeTab === "cancelled" && styles.tabTextActive,
-							]}
-						>
-							Cancelled
-						</Text>
-						{appointments.length > 0 && (
-							<View
-								style={[
-									styles.tabBadge,
-									activeTab === "cancelled" && styles.tabBadgeActive,
-								]}
-							>
-								<Text
-									style={[
-										styles.tabBadgeText,
-										activeTab === "cancelled" && styles.tabBadgeTextActive,
-									]}
-								>
-									{getTabCount("cancelled")}
-								</Text>
-							</View>
-						)}
-					</Pressable>
-				</View>
-
-				{/* Filters */}
-				<View style={styles.filtersPanel}>
-					<View style={styles.filtersHeader}>
-						<View style={styles.filtersTitleRow}>
-							<SlidersHorizontal
-								size={18}
-								color={theme.colors.primary}
-								strokeWidth={2}
-							/>
-							<Text style={styles.filtersTitle}>Filters</Text>
-							{activeFilterCount > 0 ? (
-								<View style={styles.activeFilterBadge}>
-									<Text style={styles.activeFilterBadgeText}>
-										{activeFilterCount}
-									</Text>
-								</View>
-							) : null}
-						</View>
-						<View style={styles.resultsPill}>
-							<Text style={styles.resultsPillText}>
-								{filteredAppointments.length} of{" "}
-								{getFilteredAppointmentsByTab(activeTab).length}
-							</Text>
-						</View>
-					</View>
-
-					<View style={styles.filterGroup}>
-						<Text style={styles.filterLabel}>Date</Text>
-						<ScrollView
-							horizontal
-							showsHorizontalScrollIndicator={false}
-							contentContainerStyle={styles.filterChipsRow}
-						>
-							{dateFilters.map((filter) =>
-								renderFilterChip({
-									label: filter.label,
-									selected: dateFilter === filter.value,
-									onPress: () => setDateFilter(filter.value),
-									chipKey: filter.value,
-								}),
-							)}
-						</ScrollView>
-						{dateFilter === "custom" ? (
-							<View style={styles.customDateRow}>
-								<Input
-									placeholder="From YYYY-MM-DD"
-									value={customStartDate}
-									onChangeText={setCustomStartDate}
-									containerStyle={styles.customDateInput}
-									keyboardType="numbers-and-punctuation"
-								/>
-								<Input
-									placeholder="To YYYY-MM-DD"
-									value={customEndDate}
-									onChangeText={setCustomEndDate}
-									containerStyle={styles.customDateInput}
-									keyboardType="numbers-and-punctuation"
-								/>
-							</View>
-						) : null}
-					</View>
-
-					<View style={styles.filterGroup}>
-						<Text style={styles.filterLabel}>Status</Text>
-						<ScrollView
-							horizontal
-							showsHorizontalScrollIndicator={false}
-							contentContainerStyle={styles.filterChipsRow}
-						>
-							{renderFilterChip({
-								label: "All statuses",
-								selected: statusFilter === "ALL",
-								onPress: () => setStatusFilter("ALL"),
-							})}
-							{tabStatuses[activeTab].map((status) =>
-								renderFilterChip({
-									label: getStatusConfig(status).label,
-									selected: statusFilter === status,
-									onPress: () => setStatusFilter(status),
-									chipKey: status,
-								}),
-							)}
-						</ScrollView>
-					</View>
-
-					<View style={styles.filterGroup}>
-						<Text style={styles.filterLabel}>Patient</Text>
-						<ScrollView
-							horizontal
-							showsHorizontalScrollIndicator={false}
-							contentContainerStyle={styles.filterChipsRow}
-						>
-							{patientFilters.map((filter) =>
-								renderFilterChip({
-									label: filter.label,
-									selected: patientFilter === filter.value,
-									onPress: () => setPatientFilter(filter.value),
-									chipKey: filter.value,
-								}),
-							)}
-						</ScrollView>
-					</View>
-
-					{procedureOptions.length > 0 ? (
-						<View style={styles.filterGroup}>
-							<Text style={styles.filterLabel}>Procedure</Text>
-							<ScrollView
-								horizontal
-								showsHorizontalScrollIndicator={false}
-								contentContainerStyle={styles.filterChipsRow}
-							>
-								{renderFilterChip({
-									label: "All procedures",
-									selected: procedureFilter === "all",
-									onPress: () => setProcedureFilter("all"),
-								})}
-								{procedureOptions.map((procedure) =>
-									renderFilterChip({
-										label: procedure.name,
-										selected: procedureFilter === procedure.id,
-										onPress: () => setProcedureFilter(procedure.id),
-										chipKey: procedure.id,
-									}),
-								)}
-							</ScrollView>
-						</View>
-					) : null}
-
-					<View style={styles.filterFooter}>
-						<View style={styles.sortGroup}>
-							<Text style={styles.filterLabel}>Sort</Text>
-							<View style={styles.sortChips}>
-								{sortOptions.map((option) =>
-									renderFilterChip({
-										label: option.label,
-										selected: sortOrder === option.value,
-										onPress: () => setSortOrder(option.value),
-										chipKey: option.value,
-									}),
-								)}
-							</View>
-						</View>
-						{activeFilterCount > 0 ? (
-							<Pressable
-								style={styles.clearFiltersButton}
-								onPress={resetFilters}
-							>
-								<Text style={styles.clearFiltersText}>Clear</Text>
-							</Pressable>
-						) : null}
-					</View>
-				</View>
-
-				{/* Appointments List */}
 				<View style={styles.appointmentsSection}>
 					{isLoading ? (
 						<View style={styles.loadingContainer}>
 							<ActivityIndicator size="large" color={theme.colors.primary} />
-							<Text style={styles.loadingText}>Loading appointments...</Text>
+							<Text style={styles.loadingText}>{t("common.loadingAppointments")}</Text>
 						</View>
 					) : error ? (
 						<View style={styles.errorContainer}>
-							<Text style={styles.errorText}>Failed to load appointments</Text>
+							<Text style={styles.errorText}>{t("common.failedToLoadAppointments")}</Text>
 							<Button onPress={() => refetch()} size="sm">
-								Retry
+								{t("common.retry")}
 							</Button>
 						</View>
 					) : filteredAppointments.length > 0 ? (
 						<View style={styles.appointmentsList}>
-							{filteredAppointments.map((appointment) => {
-								const statusConfig = getStatusConfig(appointment.status);
-								const isCancelledOrNoShow =
-									appointment.status === "CANCELLED" ||
-									appointment.status === "NO_SHOW";
-								const patientName = getAppointmentPatientName(appointment);
-								const patientSubtitle =
-									getAppointmentPatientSubtitle(appointment);
-								const patientImage = getAppointmentPatientImage(appointment);
-
-								return (
-									<View
-										key={appointment.id}
-										style={[
-											styles.appointmentCard,
-											isCancelledOrNoShow && styles.appointmentCardDisabled,
-										]}
-									>
-										<View style={styles.appointmentContent}>
-											{/* Avatar */}
-											{patientImage ? (
-												<Image
-													source={{ uri: patientImage }}
-													style={styles.appointmentAvatar}
-												/>
-											) : (
-												<View
-													style={[
-														styles.appointmentAvatar,
-														styles.appointmentAvatarPlaceholder,
-													]}
-												>
-													<Text style={styles.appointmentAvatarText}>
-														{patientName.charAt(0).toUpperCase()}
-													</Text>
-												</View>
-											)}
-
-											{/* Appointment Info */}
-											<View style={styles.appointmentInfo}>
-												<View style={styles.appointmentHeader}>
-													<Text style={styles.appointmentPatientName}>
-														{patientName}
-													</Text>
-												</View>
-												<Text style={styles.appointmentPatientSubtitle}>
-													{patientSubtitle}
-												</Text>
-
-												{/* Status Badge */}
-												<View style={styles.statusBadgeContainer}>
-													<View
-														style={[
-															styles.statusBadge,
-															{ backgroundColor: statusConfig.bgColor },
-														]}
-													>
-														<Text
-															style={[
-																styles.statusBadgeText,
-																{ color: statusConfig.color },
-															]}
-														>
-															{statusConfig.label}
-														</Text>
-													</View>
-												</View>
-
-												{/* Procedure */}
-												<Text style={styles.appointmentProcedure}>
-													{appointment.appointmentProcedures
-														.map((ap) => ap.procedure.name)
-														.join(", ") || "Appointment"}
-												</Text>
-
-												{/* Meta Info */}
-												<View style={styles.appointmentMeta}>
-													<View style={styles.appointmentMetaRow}>
-														<Calendar
-															size={12}
-															color={theme.colors.mutedForeground}
-															strokeWidth={2}
-														/>
-														<Text style={styles.appointmentMetaText}>
-															{formatDate(appointment.scheduledAt)}
-														</Text>
-													</View>
-													<Text style={styles.appointmentDot}>•</Text>
-													<View style={styles.appointmentMetaRow}>
-														<Clock
-															size={12}
-															color={theme.colors.mutedForeground}
-															strokeWidth={2}
-														/>
-														<Text style={styles.appointmentMetaText}>
-															{formatTime(appointment.scheduledAt)}
-														</Text>
-													</View>
-													<Text style={styles.appointmentDot}>•</Text>
-													<Text style={styles.appointmentDuration}>
-														{appointment.totalDurationMinutes} min
-													</Text>
-												</View>
-											</View>
-										</View>
-
-										{/* Action Buttons */}
-										{getActionButtons(appointment) && (
-											<View style={styles.appointmentActions}>
-												{getActionButtons(appointment)}
-											</View>
-										)}
-									</View>
-								);
-							})}
+							{filteredAppointments.map((appointment) => (
+								<ProviderAppointmentCard
+									key={appointment.id}
+									appointment={appointment}
+									onOpenChat={handleOpenChat}
+									onViewDetails={(appointmentId) =>
+										router.push(`/appointment/${appointmentId}`)
+									}
+									onUpdateStatus={openStatusMenu}
+									isConversationPending={createConversationMutation.isPending}
+									isStatusPending={updateAppointmentMutation.isPending}
+								/>
+							))}
 						</View>
 					) : (
 						<View style={styles.emptyState}>
 							<Calendar
 								size={48}
 								color={theme.colors.mutedForeground}
-								style={{ opacity: 0.5 }}
+								style={styles.emptyIcon}
 								strokeWidth={2}
 							/>
 							<Text style={styles.emptyStateText}>
 								{activeFilterCount > 0
-									? "No appointments found with these filters"
-									: `No ${activeTab} appointments`}
+									? t("common.noAppointmentsFoundWithTheseFilters")
+									: t("common.noTabAppointments", {
+											tab: t(providerAppointmentTabLabels[activeTab]),
+										})}
 							</Text>
 							{activeFilterCount > 0 ? (
 								<Button
 									variant="outline"
 									size="sm"
 									style={styles.emptyClearButton}
-									onPress={resetFilters}
+									onPress={() =>
+										filtersForm.reset(defaultProviderAppointmentFilters)
+									}
 								>
-									Clear Filters
+									{t("common.clearFilters")}
 								</Button>
 							) : null}
 						</View>
 					)}
 				</View>
 			</ScrollView>
+
+			<Modal
+				animationType="slide"
+				transparent
+				visible={isFiltersSheetVisible}
+				onRequestClose={() => setIsFiltersSheetVisible(false)}
+			>
+				<KeyboardAvoidingView
+					behavior={process.env.EXPO_OS === "ios" ? "padding" : undefined}
+					style={styles.filtersSheetOverlay}
+				>
+					<Pressable
+						style={styles.filtersSheetBackdrop}
+						onPress={() => setIsFiltersSheetVisible(false)}
+					/>
+					<View style={styles.filtersSheet}>
+						<View style={styles.filtersSheetHandle} />
+						<View style={styles.filtersSheetHeader}>
+							<View style={styles.filtersSheetTitleGroup}>
+								<View style={styles.filtersSheetTitleRow}>
+									<Text style={styles.filtersSheetTitle}>{t("common.filters")}</Text>
+									{activeFilterCount > 0 ? (
+										<View style={styles.filtersSheetBadge}>
+											<Text style={styles.filtersSheetBadgeText}>
+												{activeFilterCount}
+											</Text>
+										</View>
+									) : null}
+								</View>
+								<Text style={styles.filtersSheetSubtitle}>
+									{t("common.showingFilteredCountOfTabCountAppointments", {
+										filteredCount: String(filteredAppointments.length),
+										tabCount: String(tabCounts[activeTab]),
+									})}
+								</Text>
+							</View>
+							<Pressable
+								style={styles.filtersSheetCloseButton}
+								onPress={() => setIsFiltersSheetVisible(false)}
+							>
+								<X
+									size={20}
+									color={theme.colors.mutedForeground}
+									strokeWidth={2}
+								/>
+							</Pressable>
+						</View>
+						<ScrollView
+							showsVerticalScrollIndicator={false}
+							keyboardShouldPersistTaps="handled"
+							contentContainerStyle={styles.filtersSheetContent}
+						>
+							<AppointmentFiltersPanel
+								control={filtersForm.control}
+								reset={filtersForm.reset}
+								activeTab={activeTab}
+								activeFilterCount={activeFilterCount}
+								filteredCount={filteredAppointments.length}
+								tabCount={tabCounts[activeTab]}
+								procedureOptions={procedureOptions}
+								showHeader={false}
+								variant="sheet"
+							/>
+						</ScrollView>
+					</View>
+				</KeyboardAvoidingView>
+			</Modal>
 		</SafeAreaView>
 	);
 }
@@ -1013,6 +392,33 @@ const styles = StyleSheet.create((theme) => ({
 	headerCopy: {
 		flex: 1,
 	},
+	headerActions: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(1),
+	},
+	filterButton: {
+		width: 40,
+		borderRadius: theme.radius.full,
+		paddingHorizontal: 0,
+		borderWidth: 1,
+	},
+	filterButtonBadge: {
+		position: "absolute",
+		top: -6,
+		right: -6,
+		minWidth: 20,
+		height: 20,
+		borderRadius: 10,
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: theme.colors.primary,
+	},
+	filterButtonBadgeText: {
+		fontSize: 11,
+		fontWeight: "700",
+		color: theme.colors.primaryForeground,
+	},
 	headerTitle: {
 		fontSize: 28,
 		fontWeight: "700",
@@ -1033,284 +439,11 @@ const styles = StyleSheet.create((theme) => ({
 		fontWeight: "700",
 		color: theme.colors.primaryForeground,
 	},
-	searchContainer: {
-		marginBottom: theme.gap(3),
-	},
-	tabsContainer: {
-		flexDirection: "row",
-		gap: theme.gap(1),
-		marginBottom: theme.gap(3),
-	},
-	tab: {
-		flex: 1,
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-		paddingVertical: theme.gap(1),
-		paddingHorizontal: theme.gap(2),
-		borderRadius: 50,
-		backgroundColor: theme.colors.surfacePrimary,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		gap: theme.gap(0.5),
-	},
-	tabActive: {
-		backgroundColor: theme.colors.primary,
-		borderColor: theme.colors.primary,
-	},
-	tabText: {
-		fontSize: 12,
-		fontWeight: "600",
-		color: theme.colors.mutedForeground,
-	},
-	tabTextActive: {
-		color: theme.colors.primaryForeground,
-	},
-	tabBadge: {
-		backgroundColor: theme.colors.background,
-		paddingHorizontal: theme.gap(1.5),
-		paddingVertical: theme.gap(0.5),
-		borderRadius: 10,
-		minWidth: 22,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	tabBadgeActive: {
-		backgroundColor: "rgba(255, 255, 255, 0.2)",
-	},
-	tabBadgeText: {
-		fontSize: 11,
-		fontWeight: "700",
-		color: theme.colors.foreground,
-	},
-	tabBadgeTextActive: {
-		color: theme.colors.primaryForeground,
-	},
-	filtersPanel: {
-		backgroundColor: theme.colors.surfacePrimary,
-		borderRadius: 12,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		padding: theme.gap(2),
-		marginBottom: theme.gap(3),
-		gap: theme.gap(2),
-	},
-	filtersHeader: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		gap: theme.gap(2),
-	},
-	filtersTitleRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.gap(1),
-	},
-	filtersTitle: {
-		fontSize: 16,
-		fontWeight: "700",
-		color: theme.colors.foreground,
-	},
-	activeFilterBadge: {
-		minWidth: 22,
-		height: 22,
-		borderRadius: 11,
-		alignItems: "center",
-		justifyContent: "center",
-		backgroundColor: theme.colors.primary,
-	},
-	activeFilterBadgeText: {
-		fontSize: 11,
-		fontWeight: "700",
-		color: theme.colors.primaryForeground,
-	},
-	resultsPill: {
-		paddingHorizontal: theme.gap(1.5),
-		paddingVertical: theme.gap(0.75),
-		borderRadius: theme.radius.full,
-		backgroundColor: theme.colors.secondary,
-	},
-	resultsPillText: {
-		fontSize: 12,
-		fontWeight: "600",
-		color: theme.colors.secondaryForeground,
-	},
-	filterGroup: {
-		gap: theme.gap(1),
-	},
-	filterLabel: {
-		fontSize: 12,
-		fontWeight: "700",
-		textTransform: "uppercase",
-		color: theme.colors.mutedForeground,
-	},
-	filterChipsRow: {
-		gap: theme.gap(1),
-		paddingRight: theme.gap(2),
-	},
-	filterChip: {
-		height: 36,
-		alignItems: "center",
-		justifyContent: "center",
-		paddingHorizontal: theme.gap(1.75),
-		borderRadius: theme.radius.full,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		backgroundColor: theme.colors.background,
-	},
-	filterChipActive: {
-		backgroundColor: theme.colors.primary,
-		borderColor: theme.colors.primary,
-	},
-	filterChipText: {
-		fontSize: 12,
-		fontWeight: "600",
-		color: theme.colors.foreground,
-	},
-	filterChipTextActive: {
-		color: theme.colors.primaryForeground,
-	},
-	customDateRow: {
-		flexDirection: "row",
-		gap: theme.gap(1),
-	},
-	customDateInput: {
-		flex: 1,
-	},
-	filterFooter: {
-		flexDirection: "row",
-		alignItems: "flex-end",
-		justifyContent: "space-between",
-		gap: theme.gap(2),
-	},
-	sortGroup: {
-		flex: 1,
-		gap: theme.gap(1),
-	},
-	sortChips: {
-		flexDirection: "row",
-		gap: theme.gap(1),
-	},
-	clearFiltersButton: {
-		height: 36,
-		alignItems: "center",
-		justifyContent: "center",
-		paddingHorizontal: theme.gap(2),
-		borderRadius: theme.radius.full,
-		backgroundColor: theme.colors.secondary,
-	},
-	clearFiltersText: {
-		fontSize: 12,
-		fontWeight: "700",
-		color: theme.colors.secondaryForeground,
-	},
 	appointmentsSection: {
 		paddingBottom: theme.gap(4),
 	},
 	appointmentsList: {
 		gap: theme.gap(3),
-	},
-	appointmentCard: {
-		backgroundColor: theme.colors.surfacePrimary,
-		borderRadius: 12,
-		padding: theme.gap(3),
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-	},
-	appointmentCardDisabled: {
-		opacity: 0.6,
-		backgroundColor: theme.colors.surfaceSecondary,
-	},
-	appointmentContent: {
-		flexDirection: "row",
-		gap: theme.gap(3),
-	},
-	appointmentAvatar: {
-		width: 48,
-		height: 48,
-		borderRadius: 24,
-	},
-	appointmentAvatarPlaceholder: {
-		backgroundColor: theme.colors.primary,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	appointmentAvatarText: {
-		fontSize: 18,
-		fontWeight: "600",
-		color: theme.colors.primaryForeground,
-	},
-	appointmentInfo: {
-		flex: 1,
-	},
-	appointmentHeader: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		marginBottom: theme.gap(1.5),
-	},
-	appointmentPatientName: {
-		fontSize: 16,
-		fontWeight: "600",
-		color: theme.colors.foreground,
-	},
-	appointmentPatientSubtitle: {
-		fontSize: 12,
-		color: theme.colors.mutedForeground,
-		marginBottom: theme.gap(1),
-	},
-	statusBadgeContainer: {
-		marginBottom: theme.gap(1.5),
-	},
-	statusBadge: {
-		paddingHorizontal: theme.gap(2),
-		paddingVertical: theme.gap(1),
-		borderRadius: 6,
-		alignSelf: "flex-start",
-	},
-	statusBadgeText: {
-		fontSize: 11,
-		fontWeight: "600",
-		textTransform: "uppercase",
-	},
-	appointmentProcedure: {
-		fontSize: 14,
-		color: theme.colors.mutedForeground,
-		marginBottom: theme.gap(2),
-	},
-	appointmentMeta: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.gap(2),
-		flexWrap: "wrap",
-	},
-	appointmentMetaRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.gap(1),
-	},
-	appointmentMetaText: {
-		fontSize: 12,
-		color: theme.colors.mutedForeground,
-	},
-	appointmentDot: {
-		fontSize: 12,
-		color: theme.colors.mutedForeground,
-	},
-	appointmentDuration: {
-		fontSize: 12,
-		color: theme.colors.mutedForeground,
-	},
-	appointmentActions: {
-		flexDirection: "row",
-		gap: theme.gap(2),
-		marginTop: theme.gap(3),
-		paddingTop: theme.gap(3),
-		borderTopWidth: 1,
-		borderTopColor: theme.colors.border,
-	},
-	actionButton: {
-		flex: 1,
 	},
 	loadingContainer: {
 		paddingVertical: theme.gap(8),
@@ -1340,6 +473,9 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 		paddingVertical: theme.gap(8),
 	},
+	emptyIcon: {
+		opacity: 0.5,
+	},
 	emptyStateText: {
 		fontSize: 14,
 		color: theme.colors.mutedForeground,
@@ -1349,5 +485,87 @@ const styles = StyleSheet.create((theme) => ({
 	emptyClearButton: {
 		marginTop: theme.gap(3),
 		borderRadius: theme.radius.full,
+	},
+	filtersSheetOverlay: {
+		flex: 1,
+		justifyContent: "flex-end",
+	},
+	filtersSheetBackdrop: {
+		...StyleSheet.absoluteFillObject,
+		backgroundColor: "rgba(15, 23, 42, 0.42)",
+	},
+	filtersSheet: {
+		maxHeight: "86%",
+		backgroundColor: theme.colors.background,
+		borderTopLeftRadius: 24,
+		borderTopRightRadius: 24,
+		paddingTop: theme.gap(1.5),
+		paddingHorizontal: theme.gap(4),
+		paddingBottom: theme.gap(4),
+		shadowColor: "#000",
+		shadowOffset: { width: 0, height: -8 },
+		shadowOpacity: 0.12,
+		shadowRadius: 20,
+		elevation: 12,
+	},
+	filtersSheetHandle: {
+		width: 44,
+		height: 4,
+		borderRadius: 2,
+		backgroundColor: theme.colors.border,
+		alignSelf: "center",
+		marginBottom: theme.gap(2),
+	},
+	filtersSheetHeader: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		gap: theme.gap(2),
+		paddingBottom: theme.gap(2),
+		borderBottomWidth: 1,
+		borderBottomColor: theme.colors.border,
+	},
+	filtersSheetTitleGroup: {
+		flex: 1,
+		gap: theme.gap(0.5),
+	},
+	filtersSheetTitleRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(1),
+	},
+	filtersSheetTitle: {
+		fontSize: 20,
+		fontWeight: "700",
+		color: theme.colors.foreground,
+	},
+	filtersSheetSubtitle: {
+		fontSize: 13,
+		color: theme.colors.mutedForeground,
+	},
+	filtersSheetBadge: {
+		minWidth: 22,
+		height: 22,
+		borderRadius: 11,
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: theme.colors.primary,
+	},
+	filtersSheetBadgeText: {
+		fontSize: 11,
+		fontWeight: "700",
+		color: theme.colors.primaryForeground,
+	},
+	filtersSheetCloseButton: {
+		width: 38,
+		height: 38,
+		borderRadius: 19,
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: theme.colors.surfaceSecondary,
+	},
+	filtersSheetContent: {
+		paddingTop: theme.gap(2),
+		paddingBottom: theme.gap(3),
 	},
 }));

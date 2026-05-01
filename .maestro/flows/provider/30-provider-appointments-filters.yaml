@@ -1,0 +1,13 @@
+appId: ${APP_ID}
+name: Provider - Appointment filters
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    id: "provider-tab-appointments"
+- assertVisible: "Consultas"
+- tapOn:
+    id: "provider-appointments-filter-button"
+- assertVisible: "Filtros"
+- assertVisible: "Data"
+- assertVisible: "Paciente"

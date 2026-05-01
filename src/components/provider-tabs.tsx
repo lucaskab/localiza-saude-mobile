@@ -1,16 +1,16 @@
 import { Tabs } from "expo-router";
 import {
-	Calendar,
 	ClipboardList,
 	LayoutDashboard,
 	MessageCircle,
-	Star,
 	User,
 } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 import { useUnistyles } from "react-native-unistyles";
 
 export default function ProviderTabs() {
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 
 	return (
 		<Tabs
@@ -27,7 +27,8 @@ export default function ProviderTabs() {
 			<Tabs.Screen
 				name="dashboard"
 				options={{
-					title: "Dashboard",
+					title: t("common.dashboard"),
+					tabBarButtonTestID: "provider-tab-dashboard",
 					tabBarIcon: ({ color, size, focused }) => (
 						<LayoutDashboard
 							size={size}
@@ -40,20 +41,14 @@ export default function ProviderTabs() {
 			<Tabs.Screen
 				name="schedule"
 				options={{
-					title: "Schedule",
-					tabBarIcon: ({ color, size, focused }) => (
-						<Calendar
-							size={size}
-							color={color}
-							strokeWidth={focused ? 2.5 : 2}
-						/>
-					),
+					href: null,
 				}}
 			/>
 			<Tabs.Screen
 				name="appointments"
 				options={{
-					title: "Appointments",
+					title: t("common.appointments"),
+					tabBarButtonTestID: "provider-tab-appointments",
 					tabBarIcon: ({ color, size, focused }) => (
 						<ClipboardList
 							size={size}
@@ -66,7 +61,8 @@ export default function ProviderTabs() {
 			<Tabs.Screen
 				name="chats"
 				options={{
-					title: "Chats",
+					title: t("common.chats"),
+					tabBarButtonTestID: "provider-tab-chats",
 					tabBarIcon: ({ color, size, focused }) => (
 						<MessageCircle
 							size={size}
@@ -79,20 +75,14 @@ export default function ProviderTabs() {
 			<Tabs.Screen
 				name="ratings"
 				options={{
-					title: "Reviews",
-					tabBarIcon: ({ color, size, focused }) => (
-						<Star
-							size={size}
-							color={color}
-							strokeWidth={focused ? 2.5 : 2}
-						/>
-					),
+					href: null,
 				}}
 			/>
 			<Tabs.Screen
 				name="profile"
 				options={{
-					title: "Profile",
+					title: t("common.profile"),
+					tabBarButtonTestID: "provider-tab-profile",
 					tabBarIcon: ({ color, size, focused }) => (
 						<User size={size} color={color} strokeWidth={focused ? 2.5 : 2} />
 					),

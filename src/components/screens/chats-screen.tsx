@@ -12,6 +12,7 @@ import {
 	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth";
@@ -21,6 +22,7 @@ import type { Conversation } from "@/types/conversation";
 export default function ChatsScreen() {
 	const router = useRouter();
 	const { theme } = useUnistyles();
+	const { i18n, t } = useTranslation();
 	const { user, isCustomer } = useAuth();
 	const [searchQuery, setSearchQuery] = useState("");
 
@@ -51,10 +53,10 @@ export default function ChatsScreen() {
 	});
 
 	const formatMessagePreview = (conversation: Conversation) => {
-		if (!conversation.lastMessage) return "No messages yet";
+		if (!conversation.lastMessage) return t("common.noMessagesYet");
 
 		if (conversation.lastMessage.messageType === "FILE") {
-			return `📎 ${conversation.lastMessage.fileName || "File"}`;
+			return `📎 ${conversation.lastMessage.fileName || t("common.file")}`;
 		}
 
 		return conversation.lastMessage.content || "";
@@ -70,13 +72,13 @@ export default function ChatsScreen() {
 		const diffInHours = Math.floor(diffInMs / 3600000);
 		const diffInDays = Math.floor(diffInMs / 86400000);
 
-		if (diffInMinutes < 1) return "Just now";
-		if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-		if (diffInHours < 24) return `${diffInHours}h ago`;
-		if (diffInDays === 1) return "Yesterday";
-		if (diffInDays < 7) return `${diffInDays}d ago`;
+		if (diffInMinutes < 1) return t("common.justNow");
+		if (diffInMinutes < 60) return t("common.minutesAgo", { count: diffInMinutes });
+		if (diffInHours < 24) return t("common.hoursAgo", { count: diffInHours });
+		if (diffInDays === 1) return t("common.yesterday");
+		if (diffInDays < 7) return t("common.daysAgo", { count: diffInDays });
 
-		return date.toLocaleDateString("en-US", {
+		return date.toLocaleDateString(i18n.language, {
 			month: "short",
 			day: "numeric",
 		});
@@ -152,11 +154,11 @@ export default function ChatsScreen() {
 					color={theme.colors.mutedForeground}
 					strokeWidth={1.5}
 				/>
-				<Text style={styles.emptyTitle}>No Conversations</Text>
+				<Text style={styles.emptyTitle}>{t("common.noConversations")}</Text>
 				<Text style={styles.emptyText}>
 					{searchQuery
-						? "No conversations match your search"
-						: "Start a conversation with a healthcare provider"}
+						? t("common.noConversationsMatchYourSearch")
+						: t("common.startAConversationWithAHealthcareProvider")}
 				</Text>
 			</View>
 		);
@@ -171,9 +173,9 @@ export default function ChatsScreen() {
 						color={theme.colors.mutedForeground}
 						strokeWidth={1.5}
 					/>
-					<Text style={styles.errorTitle}>Chats Unavailable</Text>
+					<Text style={styles.errorTitle}>{t("common.chatsUnavailable")}</Text>
 					<Text style={styles.errorText}>
-						Chats are only available for customers and healthcare providers
+						{t("common.chatsAreOnlyAvailableForCustomersAndHealthcareProviders")}
 					</Text>
 				</View>
 			</SafeAreaView>
@@ -184,12 +186,12 @@ export default function ChatsScreen() {
 		<SafeAreaView edges={["top"]} style={styles.container}>
 			{/* Header */}
 			<View style={styles.header}>
-				<Text style={styles.headerTitle}>Chats</Text>
+				<Text style={styles.headerTitle}>{t("common.chats")}</Text>
 
 				{/* Search */}
 				<Input
 					leftIcon={Search}
-					placeholder="Search conversations..."
+					placeholder={t("common.searchConversations")}
 					value={searchQuery}
 					onChangeText={setSearchQuery}
 				/>
@@ -199,7 +201,7 @@ export default function ChatsScreen() {
 			{isLoading && !isRefetching ? (
 				<View style={styles.loadingContainer}>
 					<ActivityIndicator size="large" color={theme.colors.primary} />
-					<Text style={styles.loadingText}>Loading conversations...</Text>
+					<Text style={styles.loadingText}>{t("common.loadingConversations")}</Text>
 				</View>
 			) : error ? (
 				<View style={styles.errorContainer}>
@@ -208,9 +210,9 @@ export default function ChatsScreen() {
 						color={theme.colors.destructive}
 						strokeWidth={1.5}
 					/>
-					<Text style={styles.errorTitle}>Failed to load conversations</Text>
+					<Text style={styles.errorTitle}>{t("common.failedToLoadConversations")}</Text>
 					<Text style={styles.errorText}>
-						Please try again or pull to refresh
+						{t("common.pleaseTryAgainOrPullToRefresh")}
 					</Text>
 				</View>
 			) : (
@@ -244,17 +246,17 @@ export default function ChatsScreen() {
 				style={styles.fab}
 				onPress={() => {
 					Alert.alert(
-						"Start Conversation",
+						t("common.startConversation"),
 						isCustomer
-							? "Search for a healthcare provider to start a conversation"
-							: "Search for a customer to start a conversation",
+							? t("common.searchForAHealthcareProviderToStartAConversation")
+							: t("common.searchForACustomerToStartAConversation"),
 						[
 							{
-								text: "Cancel",
+								text: t("common.cancel"),
 								style: "cancel",
 							},
 							{
-								text: "Go to Search",
+								text: t("common.goToSearch"),
 								onPress: () =>
 									router.push(
 										isCustomer

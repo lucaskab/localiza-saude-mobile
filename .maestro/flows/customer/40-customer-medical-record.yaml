@@ -1,0 +1,21 @@
+appId: ${APP_ID}
+name: Customer - Medical record screen
+---
+- launchApp:
+    clearState: false
+- tapOn: "Perfil"
+- scrollUntilVisible:
+    element:
+      text: "Ficha médica"
+    direction: DOWN
+- tapOn: "Ficha médica"
+- assertVisible: "Ficha médica"
+- assertVisible: "Compartilhada com profissionais antes das consultas"
+- assertVisible: "Tipo sanguíneo"
+- assertVisible: "Medicamentos"
+- scrollUntilVisible:
+    element:
+      text: "Salvar ficha médica"
+    direction: DOWN
+    optional: true
+- back

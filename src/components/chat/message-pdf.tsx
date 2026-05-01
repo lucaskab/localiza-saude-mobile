@@ -7,6 +7,7 @@ import {
 	Text,
 	View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useUnistyles } from "react-native-unistyles";
 import Pdf from "react-native-pdf";
 
@@ -24,6 +25,7 @@ export function MessagePdf({
 	onPress,
 }: MessagePdfProps) {
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 	const [isLoading, setIsLoading] = useState(true);
 	const [hasError, setHasError] = useState(false);
 
@@ -54,7 +56,7 @@ export function MessagePdf({
 						{isLoading ? (
 							<View style={styles.overlay}>
 								<ActivityIndicator size="small" color={theme.colors.primary} />
-								<Text style={styles.overlayText}>Loading PDF...</Text>
+								<Text style={styles.overlayText}>{t("common.loadingPDF")}</Text>
 							</View>
 						) : null}
 					</>
@@ -65,7 +67,7 @@ export function MessagePdf({
 							color={theme.colors.mutedForeground}
 							strokeWidth={1.75}
 						/>
-						<Text style={styles.errorText}>PDF preview unavailable</Text>
+						<Text style={styles.errorText}>{t("common.pDFPreviewUnavailable")}</Text>
 					</View>
 				)}
 			</View>
@@ -73,7 +75,7 @@ export function MessagePdf({
 			<View style={[styles.caption, isMine && styles.captionMine]}>
 				<FileText size={14} color="#fff" strokeWidth={2} />
 				<Text style={styles.captionText} numberOfLines={1}>
-					{fileName || "PDF document"}
+					{fileName || t("common.pDFDocument")}
 				</Text>
 			</View>
 		</Pressable>

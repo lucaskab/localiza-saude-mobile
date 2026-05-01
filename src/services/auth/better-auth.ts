@@ -12,7 +12,6 @@ export const authClient = createAuthClient({
 			scheme: env.EXPO_PUBLIC_SCHEME,
 			storagePrefix: LOCAL_STORAGE_KEY_PREFIX,
 			storage: SecureStore,
-			redirectPathOnCallback: "/(bottom-tabs)/home",
 		}),
 	],
 });

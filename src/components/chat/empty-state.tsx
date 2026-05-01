@@ -1,10 +1,13 @@
 import { StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 export function EmptyState() {
+	const { t } = useTranslation();
+
 	return (
 		<View style={styles.emptyContainer}>
-			<Text style={styles.emptyText}>No messages yet</Text>
-			<Text style={styles.emptySubtext}>Start the conversation!</Text>
+			<Text style={styles.emptyText}>{t("common.noMessagesYet")}</Text>
+			<Text style={styles.emptySubtext}>{t("common.startTheConversation")}</Text>
 		</View>
 	);
 }

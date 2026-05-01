@@ -1,3 +1,5 @@
+import i18n from "@/i18n";
+
 export function ratingToFivePointScale(rating?: number | null): number {
 	return (rating ?? 0) / 2;
 }
@@ -17,5 +19,5 @@ export function formatRatingCount(totalRatings?: number | null): string {
 
 export function formatReviewCount(totalRatings?: number | null): string {
 	const count = totalRatings ?? 0;
-	return `${count} review${count === 1 ? "" : "s"}`;
+	return i18n.t("common.reviewCount", { count });
 }

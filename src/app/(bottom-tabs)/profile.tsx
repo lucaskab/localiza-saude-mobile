@@ -4,6 +4,7 @@ import {
 	ChevronRight,
 	ClipboardPlus,
 	CreditCard,
+	Globe2,
 	Heart,
 	HelpCircle,
 	LogOut,
@@ -11,47 +12,64 @@ import {
 } from "lucide-react-native";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/auth";
 import { useFavorites } from "@/hooks/use-favorites";
+import type { TranslationKey } from "@/i18n";
 
-const menuItems = [
+const menuItems: {
+	icon: typeof Bell;
+	label: TranslationKey;
+	description: TranslationKey;
+	route?: "/medical-record" | "/favorites" | "/language-settings" | "/notification-settings";
+}[] = [
 	{
 		icon: Bell,
-		label: "Notifications",
-		description: "Manage your notifications",
+		label: "common.notifications",
+		description: "common.manageYourNotifications",
+		route: "/notification-settings",
 	},
 	{
 		icon: ClipboardPlus,
-		label: "Medical Record",
-		description: "Blood type, medications, and health history",
+		label: "common.medicalRecord",
+		description: "common.bloodTypeMedicationsAndHealthHistory",
+		route: "/medical-record",
 	},
 	{
 		icon: Heart,
-		label: "Favorites",
-		description: "Your favorite professionals",
+		label: "common.favorites",
+		description: "common.yourFavoriteProfessionals",
+		route: "/favorites",
 	},
 	{
 		icon: CreditCard,
-		label: "Payment Methods",
-		description: "Manage payment options",
+		label: "common.paymentMethods",
+		description: "common.managePaymentOptions",
+	},
+	{
+		icon: Globe2,
+		label: "common.language",
+		description: "common.choosePreferredLanguage",
+		route: "/language-settings",
 	},
 	{
 		icon: Settings,
-		label: "Settings",
-		description: "App preferences",
+		label: "common.settings",
+		description: "common.appPreferences",
 	},
 	{
 		icon: HelpCircle,
-		label: "Help & Support",
-		description: "Get help with the app",
+		label: "common.helpSupport",
+		description: "common.getHelpWithTheApp",
 	},
 ];
 
 export default function Profile() {
 	const { theme } = useUnistyles();
+	const { t } = useTranslation();
 	const { signOut, user } = useAuth();
 	const insets = useSafeAreaInsets();
 	const router = useRouter();
@@ -65,7 +83,7 @@ export default function Profile() {
 				<View
 					style={[styles.header, { paddingTop: insets.top + theme.gap(3) }]}
 				>
-					<Text style={styles.headerTitle}>Profile</Text>
+					<Text style={styles.headerTitle}>{t("common.profile")}</Text>
 
 					{/* User Info */}
 					<View style={styles.userInfo}>
@@ -80,7 +98,7 @@ export default function Profile() {
 					</View>
 
 					<Button variant="secondary" size="sm" style={styles.editButton}>
-						Edit Profile
+						{t("common.editProfile")}
 					</Button>
 				</View>
 
@@ -88,15 +106,15 @@ export default function Profile() {
 				<View style={styles.statsContainer}>
 					<View style={styles.statCard}>
 						<Text style={styles.statValue}>12</Text>
-						<Text style={styles.statLabel}>Appointments</Text>
+						<Text style={styles.statLabel}>{t("common.appointments")}</Text>
 					</View>
 					<View style={styles.statCard}>
 						<Text style={styles.statValue}>5</Text>
-						<Text style={styles.statLabel}>Reviews</Text>
+						<Text style={styles.statLabel}>{t("common.reviews")}</Text>
 					</View>
 					<View style={styles.statCard}>
 						<Text style={styles.statValue}>{favoritesCount}</Text>
-						<Text style={styles.statLabel}>Favorites</Text>
+						<Text style={styles.statLabel}>{t("common.favorites")}</Text>
 					</View>
 				</View>
 
@@ -109,11 +127,8 @@ export default function Profile() {
 								<Pressable
 									key={item.label}
 									onPress={() => {
-										if (item.label === "Favorites") {
-											router.push("/favorites");
-										}
-										if (item.label === "Medical Record") {
-											router.push("/medical-record");
+										if (item.route) {
+											router.push(item.route as never);
 										}
 									}}
 									style={({ pressed }) => [
@@ -129,9 +144,9 @@ export default function Profile() {
 										/>
 									</View>
 									<View style={styles.menuContent}>
-										<Text style={styles.menuLabel}>{item.label}</Text>
+										<Text style={styles.menuLabel}>{t(item.label)}</Text>
 										<Text style={styles.menuDescription}>
-											{item.description}
+											{t(item.description)}
 										</Text>
 									</View>
 									<ChevronRight
@@ -160,9 +175,9 @@ export default function Profile() {
 							/>
 						</View>
 						<View style={styles.menuContent}>
-							<Text style={styles.logoutLabel}>Logout</Text>
+							<Text style={styles.logoutLabel}>{t("common.logout")}</Text>
 							<Text style={styles.menuDescription}>
-								Sign out of your account
+								{t("common.signOutOfYourAccount")}
 							</Text>
 						</View>
 					</Pressable>

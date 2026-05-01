@@ -19,6 +19,7 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
@@ -32,9 +33,11 @@ import {
 	getAppointmentPatientName,
 } from "@/utils/appointments";
 import { formatAverageRating } from "@/utils/ratings";
+import { translationKeys, type TranslationKey } from "@/i18n/key-map";
 
 export default function ProviderDashboard() {
 	const { theme } = useUnistyles();
+	const { i18n, t } = useTranslation();
 	const insets = useSafeAreaInsets();
 	const router = useRouter();
 	const { user, healthcareProvider } = useAuth();
@@ -66,7 +69,7 @@ export default function ProviderDashboard() {
 	// Format time from ISO string to readable format
 	const formatTime = (isoString: string) => {
 		const date = new Date(isoString);
-		return date.toLocaleTimeString("en-US", {
+		return date.toLocaleTimeString(i18n.language, {
 			hour: "numeric",
 			minute: "2-digit",
 			hour12: true,
@@ -82,7 +85,7 @@ export default function ProviderDashboard() {
 		procedure:
 			appointment.appointmentProcedures
 				.map((ap) => ap.procedure.name)
-				.join(", ") || "Appointment",
+				.join(", ") || t("common.appointment"),
 		status: appointment.status.toLowerCase(),
 		avatar: getAppointmentPatientImage(appointment) || undefined,
 	}));
@@ -90,37 +93,37 @@ export default function ProviderDashboard() {
 	// Use dashboard data for stats
 	const stats = [
 		{
-			label: "Today's Appointments",
+			label: translationKeys["Today's Appointments"],
 			value: dashboardData?.todayAppointments.total.toString() || "0",
 			icon: Calendar,
 			color: theme.colors.primary,
 		},
 		{
-			label: "This Month",
+			label: translationKeys["This Month"],
 			value: dashboardData?.appointments.thisMonthTotal.toString() || "0",
 			icon: CheckCircle,
 			color: "#16a34a",
 		},
 		{
-			label: "Monthly Revenue",
+			label: translationKeys["Monthly Revenue"],
 			value: `$${((dashboardData?.monthlyRevenue.currentMonth || 0) / 100).toFixed(0)}`,
 			icon: DollarSign,
 			color: "#2563eb",
 		},
 		{
-			label: "Avg. Rating",
+			label: translationKeys["Avg. Rating"],
 			value: formatAverageRating(dashboardData?.ratings.averageRating),
 			icon: TrendingUp,
 			color: "#d97706",
 		},
 		{
-			label: "Total Patients",
+			label: translationKeys["Total Patients"],
 			value: dashboardData?.patients.totalUnique.toString() || "0",
 			icon: Users,
 			color: "#8b5cf6",
 		},
 		{
-			label: "Upcoming",
+			label: translationKeys.Upcoming,
 			value: dashboardData?.appointments.upcomingCount.toString() || "0",
 			icon: CalendarClock,
 			color: "#06b6d4",
@@ -128,31 +131,13 @@ export default function ProviderDashboard() {
 	];
 
 	const formatDate = () => {
-		const days = [
-			"Sunday",
-			"Monday",
-			"Tuesday",
-			"Wednesday",
-			"Thursday",
-			"Friday",
-			"Saturday",
-		];
-		const months = [
-			"January",
-			"February",
-			"March",
-			"April",
-			"May",
-			"June",
-			"July",
-			"August",
-			"September",
-			"October",
-			"November",
-			"December",
-		];
 		const today = new Date();
-		return `${days[today.getDay()]}, ${months[today.getMonth()]} ${today.getDate()}, ${today.getFullYear()}`;
+		return today.toLocaleDateString(i18n.language, {
+			weekday: "long",
+			month: "long",
+			day: "numeric",
+			year: "numeric",
+		});
 	};
 
 	// Handle starting a visit
@@ -164,10 +149,10 @@ export default function ProviderDashboard() {
 					status: "IN_PROGRESS",
 				},
 			});
-			Alert.alert("Success", "Visit started successfully!");
+			Alert.alert(t("common.success"), t("common.visitStartedSuccessfully"));
 		} catch (error) {
 			console.error("Failed to start visit:", error);
-			Alert.alert("Error", "Failed to start visit. Please try again.", [
+			Alert.alert(t("common.error"), t("common.failedToStartVisitPleaseTryAgain"), [
 				{ text: "OK" },
 			]);
 		}
@@ -182,10 +167,10 @@ export default function ProviderDashboard() {
 					status: "COMPLETED",
 				},
 			});
-			Alert.alert("Success", "Visit completed successfully!");
+			Alert.alert(t("common.success"), t("common.visitCompletedSuccessfully"));
 		} catch (error) {
 			console.error("Failed to complete visit:", error);
-			Alert.alert("Error", "Failed to complete visit. Please try again.", [
+			Alert.alert(t("common.error"), t("common.failedToCompleteVisitPleaseTryAgain"), [
 				{ text: "OK" },
 			]);
 		}
@@ -195,7 +180,7 @@ export default function ProviderDashboard() {
 	const getActionButtonConfig = (
 		status: string,
 	): {
-		text: string;
+		text: TranslationKey;
 		disabled: boolean;
 		variant?: "default" | "outline" | "ghost" | "destructive" | "secondary";
 	} | null => {
@@ -205,19 +190,19 @@ export default function ProviderDashboard() {
 			case "SCHEDULED":
 			case "CONFIRMED":
 				return {
-					text: "Start Visit",
+					text: translationKeys["Start Visit"],
 					disabled: false,
 					variant: "default",
 				};
 			case "IN_PROGRESS":
 				return {
-					text: "Complete Visit",
+					text: translationKeys["Complete Visit"],
 					disabled: false,
 					variant: "default",
 				};
 			case "COMPLETED":
 				return {
-					text: "Completed",
+					text: translationKeys.Completed,
 					disabled: true,
 					variant: "secondary",
 				};
@@ -226,7 +211,7 @@ export default function ProviderDashboard() {
 				return null; // Don't show action button
 			default:
 				return {
-					text: "Start Visit",
+					text: translationKeys["Start Visit"],
 					disabled: false,
 					variant: "default",
 				};
@@ -237,7 +222,7 @@ export default function ProviderDashboard() {
 	const getStatusConfig = (
 		status: string,
 	): {
-		label: string;
+		label: TranslationKey;
 		color: string;
 		bgColor: string;
 	} => {
@@ -246,43 +231,43 @@ export default function ProviderDashboard() {
 		switch (upperStatus) {
 			case "SCHEDULED":
 				return {
-					label: "Scheduled",
+					label: translationKeys.Scheduled,
 					color: "#3b82f6",
 					bgColor: "#dbeafe",
 				};
 			case "CONFIRMED":
 				return {
-					label: "Confirmed",
+					label: translationKeys.Confirmed,
 					color: "#16a34a",
 					bgColor: "#dcfce7",
 				};
 			case "IN_PROGRESS":
 				return {
-					label: "In Progress",
+					label: translationKeys["In Progress"],
 					color: "#d97706",
 					bgColor: "#fef3c7",
 				};
 			case "COMPLETED":
 				return {
-					label: "Completed",
+					label: translationKeys.Completed,
 					color: "#6b7280",
 					bgColor: "#f3f4f6",
 				};
 			case "CANCELLED":
 				return {
-					label: "Cancelled",
+					label: translationKeys.Cancelled,
 					color: "#dc2626",
 					bgColor: "#fee2e2",
 				};
 			case "NO_SHOW":
 				return {
-					label: "No Show",
+					label: translationKeys["No Show"],
 					color: "#dc2626",
 					bgColor: "#fee2e2",
 				};
 			default:
 				return {
-					label: status,
+					label: translationKeys.Status,
 					color: "#6b7280",
 					bgColor: "#f3f4f6",
 				};
@@ -311,7 +296,7 @@ export default function ProviderDashboard() {
 				>
 					<View style={styles.headerTop}>
 						<View>
-							<Text style={styles.welcomeText}>Welcome back,</Text>
+							<Text style={styles.welcomeText}>{t("common.welcomeBack")}</Text>
 							<Text style={styles.headerTitle}>{user?.name || "Doctor"}</Text>
 						</View>
 					</View>
@@ -322,7 +307,7 @@ export default function ProviderDashboard() {
 							color={theme.colors.primaryForeground}
 							strokeWidth={2}
 						/>
-						<Text style={styles.dateText}>Today: {formatDate()}</Text>
+						<Text style={styles.dateText}>{t("common.today")}: {formatDate()}</Text>
 					</View>
 				</View>
 
@@ -339,7 +324,7 @@ export default function ProviderDashboard() {
 								return (
 									<View key={stat.label} style={styles.statCard}>
 										<Icon size={20} color={stat.color} strokeWidth={2} />
-										<Text style={styles.statLabel}>{stat.label}</Text>
+										<Text style={styles.statLabel}>{t(stat.label)}</Text>
 										<Text style={styles.statValue}>{stat.value}</Text>
 									</View>
 								);
@@ -351,24 +336,24 @@ export default function ProviderDashboard() {
 				{/* Today's Appointments */}
 				<View style={styles.appointmentsSection}>
 					<View style={styles.sectionHeader}>
-						<Text style={styles.sectionTitle}>Today's Appointments</Text>
+						<Text style={styles.sectionTitle}>{t("common.todaySAppointments")}</Text>
 						<Pressable
 							onPress={() => router.push("/(provider-tabs)/appointments")}
 						>
-							<Text style={styles.viewAllButton}>View All</Text>
+							<Text style={styles.viewAllButton}>{t("common.viewAll")}</Text>
 						</Pressable>
 					</View>
 
 					{isLoading ? (
 						<View style={styles.loadingContainer}>
 							<ActivityIndicator size="large" color={theme.colors.primary} />
-							<Text style={styles.loadingText}>Loading appointments...</Text>
+							<Text style={styles.loadingText}>{t("common.loadingAppointments")}</Text>
 						</View>
 					) : error ? (
 						<View style={styles.errorContainer}>
-							<Text style={styles.errorText}>Failed to load appointments</Text>
+							<Text style={styles.errorText}>{t("common.failedToLoadAppointments")}</Text>
 							<Button onPress={() => refetch()} size="sm">
-								Retry
+								{t("common.retry")}
 							</Button>
 						</View>
 					) : todayAppointments.length > 0 ? (
@@ -430,7 +415,7 @@ export default function ProviderDashboard() {
 																},
 															]}
 														>
-															{getStatusConfig(appointment.status).label}
+															{t(getStatusConfig(appointment.status).label)}
 														</Text>
 													</View>
 												</View>
@@ -450,7 +435,9 @@ export default function ProviderDashboard() {
 													</View>
 													<Text style={styles.appointmentDot}>•</Text>
 													<Text style={styles.appointmentDuration}>
-														{appointment.duration} minutes
+														{t("common.minutesCount", {
+															count: appointment.duration,
+														})}
 													</Text>
 												</View>
 											</View>
@@ -464,7 +451,7 @@ export default function ProviderDashboard() {
 													router.push(`/appointment/${appointment.id}`)
 												}
 											>
-												View Details
+												{t("common.viewDetails")}
 											</Button>
 											{(() => {
 												const buttonConfig = getActionButtonConfig(
@@ -477,10 +464,10 @@ export default function ProviderDashboard() {
 														size="sm"
 														style={styles.appointmentButton}
 														onPress={() => {
-															if (buttonConfig.text === "Start Visit") {
+															if (buttonConfig.text === translationKeys["Start Visit"]) {
 																handleStartVisit(appointment.id);
 															} else if (
-																buttonConfig.text === "Complete Visit"
+																buttonConfig.text === translationKeys["Complete Visit"]
 															) {
 																handleCompleteVisit(appointment.id);
 															}
@@ -492,7 +479,7 @@ export default function ProviderDashboard() {
 														loading={updateAppointmentMutation.isPending}
 														variant={buttonConfig.variant}
 													>
-														{buttonConfig.text}
+														{t(buttonConfig.text)}
 													</Button>
 												);
 											})()}
@@ -510,7 +497,7 @@ export default function ProviderDashboard() {
 								strokeWidth={2}
 							/>
 							<Text style={styles.emptyStateText}>
-								No appointments scheduled for today
+								{t("common.noAppointmentsScheduledForToday")}
 							</Text>
 						</View>
 					)}

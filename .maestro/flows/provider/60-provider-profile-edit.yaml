@@ -1,0 +1,17 @@
+appId: ${APP_ID}
+name: Provider - Profile editor
+---
+- launchApp:
+    clearState: false
+- assertVisible: "Consultas de hoje"
+- tapOn:
+    id: "provider-tab-profile"
+- assertVisible: "Perfil"
+- tapOn:
+    id: "provider-profile-menu-professional-profile"
+- assertVisible:
+    id: "provider-profile-edit-screen"
+- assertVisible: "Informações do perfil"
+- assertNotVisible: "Adicionar procedimento"
+- tapOn:
+    id: "provider-profile-edit-back-button"

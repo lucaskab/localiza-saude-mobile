@@ -1,0 +1,9 @@
+appId: ${APP_ID}
+name: Public - Login smoke
+---
+- clearState
+- launchApp
+- assertVisible: "Bem-vindo ao Localiza Saúde"
+- assertVisible: "Encontre e agende consultas com profissionais de saúde"
+- assertVisible: "Continuar com Google"
+- assertVisible: "Ao continuar, você concorda com nossos"

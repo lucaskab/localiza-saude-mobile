@@ -1,0 +1,15 @@
+appId: ${APP_ID}
+name: Provider - Create appointment entry
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    id: "provider-tab-appointments"
+- assertVisible: "Consultas"
+- tapOn: "Novo"
+- assertVisible:
+    id: "provider-create-appointment-screen"
+- assertVisible: "Agende pelo consultório"
+- assertVisible: "Paciente"
+- tapOn:
+    id: "provider-create-appointment-back-button"
