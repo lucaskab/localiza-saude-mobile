@@ -567,6 +567,13 @@ export const ptBR = {
     ratingCount: "{{count}} avaliações",
     reviewCount: "{{count}} avaliações",
     selectedProceduresCount: "{{count}} procedimentos selecionados",
+    complianceAndTerms: "Compliance e termos",
+    platformTerms: "Termos da plataforma",
+    platformTermsDescription: "Declaro que li e aceito os termos de uso da Localiza Saúde.",
+    lgpdConsent: "Consentimento LGPD",
+    lgpdConsentDescription: "Autorizo o tratamento dos meus dados para cadastro, verificação e operação da plataforma.",
+    professionalResponsibility: "Responsabilidade profissional independente",
+    professionalResponsibilityDescription: "Confirmo que sou responsável pela veracidade das informações, documentos e atendimento prestado.",
     ptBR: "Português",
     en: "Inglês",
     es: "Espanhol"

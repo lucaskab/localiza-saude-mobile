@@ -57,6 +57,9 @@ export interface HealthcareProvider {
 	paymentMethods: string[];
 	cancellationPolicy: string | null;
 	clinicPhotos: string[];
+	termsAcceptedAt?: string | null;
+	lgpdConsentAt?: string | null;
+	professionalResponsibilityAcceptedAt?: string | null;
 	nextAvailableAt?: string | null;
 	startingPriceCents?: number | null;
 	averageRating?: number;

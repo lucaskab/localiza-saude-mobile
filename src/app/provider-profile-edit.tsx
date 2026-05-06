@@ -29,6 +29,7 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { z } from "zod";
 import { ScreenHeader } from "@/components/screen-header";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth";
@@ -61,9 +62,16 @@ const profileFormSchema = z.object({
 	acceptedInsurance: z.string().nullable(),
 	paymentMethods: z.string().nullable(),
 	cancellationPolicy: z.string().nullable(),
+	termsAccepted: z.boolean(),
+	lgpdConsent: z.boolean(),
+	professionalResponsibilityAccepted: z.boolean(),
 });
 
 type ProfileFormData = z.infer<typeof profileFormSchema>;
+type ProfileTextField = Exclude<
+	keyof ProfileFormData,
+	"termsAccepted" | "lgpdConsent" | "professionalResponsibilityAccepted"
+>;
 
 const emptyProfileForm: ProfileFormData = {
 	displayName: null,
@@ -88,6 +96,9 @@ const emptyProfileForm: ProfileFormData = {
 	acceptedInsurance: null,
 	paymentMethods: null,
 	cancellationPolicy: null,
+	termsAccepted: false,
+	lgpdConsent: false,
+	professionalResponsibilityAccepted: false,
 };
 
 function joinList(value?: string[] | null) {
@@ -101,6 +112,11 @@ function splitList(value?: string | null) {
 			.map((item) => item.trim())
 			.filter(Boolean) || []
 	);
+}
+
+function toAcceptanceDate(accepted: boolean, currentValue?: string | null) {
+	if (!accepted) return null;
+	return currentValue || new Date().toISOString();
 }
 
 export default function ProviderProfileEdit() {
@@ -146,6 +162,11 @@ export default function ProviderProfileEdit() {
 			acceptedInsurance: joinList(healthcareProvider?.acceptedInsurance),
 			paymentMethods: joinList(healthcareProvider?.paymentMethods),
 			cancellationPolicy: healthcareProvider?.cancellationPolicy || null,
+			termsAccepted: Boolean(healthcareProvider?.termsAcceptedAt),
+			lgpdConsent: Boolean(healthcareProvider?.lgpdConsentAt),
+			professionalResponsibilityAccepted: Boolean(
+				healthcareProvider?.professionalResponsibilityAcceptedAt,
+			),
 		});
 	}, [healthcareProvider, reset]);
 
@@ -195,6 +216,18 @@ export default function ProviderProfileEdit() {
 					paymentMethods: splitList(parsed.data.paymentMethods),
 					cancellationPolicy:
 						parsed.data.cancellationPolicy?.trim() || null,
+					termsAcceptedAt: toAcceptanceDate(
+						parsed.data.termsAccepted,
+						healthcareProvider.termsAcceptedAt,
+					),
+					lgpdConsentAt: toAcceptanceDate(
+						parsed.data.lgpdConsent,
+						healthcareProvider.lgpdConsentAt,
+					),
+					professionalResponsibilityAcceptedAt: toAcceptanceDate(
+						parsed.data.professionalResponsibilityAccepted,
+						healthcareProvider.professionalResponsibilityAcceptedAt,
+					),
 				},
 			});
 			reset(parsed.data);
@@ -585,6 +618,30 @@ export default function ProviderProfileEdit() {
 								multiline
 							/>
 						</View>
+
+						<View style={styles.card}>
+							<Text style={styles.sectionSubtitle}>
+								{t("common.complianceAndTerms")}
+							</Text>
+							<ComplianceCheckbox
+								control={control}
+								name="termsAccepted"
+								title={t("common.platformTerms")}
+								description={t("common.platformTermsDescription")}
+							/>
+							<ComplianceCheckbox
+								control={control}
+								name="lgpdConsent"
+								title={t("common.lgpdConsent")}
+								description={t("common.lgpdConsentDescription")}
+							/>
+							<ComplianceCheckbox
+								control={control}
+								name="professionalResponsibilityAccepted"
+								title={t("common.professionalResponsibility")}
+								description={t("common.professionalResponsibilityDescription")}
+							/>
+						</View>
 					</View>
 				)}
 			</ScrollView>
@@ -615,6 +672,40 @@ export default function ProviderProfileEdit() {
 	);
 }
 
+function ComplianceCheckbox({
+	control,
+	name,
+	title,
+	description,
+}: {
+	control: Control<ProfileFormData>;
+	name:
+		| "termsAccepted"
+		| "lgpdConsent"
+		| "professionalResponsibilityAccepted";
+	title: string;
+	description: string;
+}) {
+	return (
+		<Controller
+			control={control}
+			name={name}
+			render={({ field }) => (
+				<View style={styles.complianceRow}>
+					<Checkbox
+						checked={Boolean(field.value)}
+						onCheckedChange={field.onChange}
+					/>
+					<View style={styles.complianceTextContainer}>
+						<Text style={styles.complianceTitle}>{title}</Text>
+						<Text style={styles.complianceDescription}>{description}</Text>
+					</View>
+				</View>
+			)}
+		/>
+	);
+}
+
 function FormInput({
 	control,
 	icon,
@@ -627,7 +718,7 @@ function FormInput({
 	control: Control<ProfileFormData>;
 	icon?: LucideIcon;
 	label: string;
-	name: keyof ProfileFormData;
+	name: ProfileTextField;
 	placeholder?: string;
 	multiline?: boolean;
 	keyboardType?: "default" | "numeric";
@@ -773,6 +864,30 @@ const styles = StyleSheet.create((theme) => ({
 		flex: 1,
 		minWidth: 120,
 		backgroundColor: theme.colors.destructive,
+	},
+	complianceRow: {
+		flexDirection: "row",
+		alignItems: "flex-start",
+		gap: theme.gap(2),
+		padding: theme.gap(2),
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		borderRadius: theme.radius.md,
+		backgroundColor: theme.colors.muted,
+	},
+	complianceTextContainer: {
+		flex: 1,
+		gap: theme.gap(0.5),
+	},
+	complianceTitle: {
+		fontSize: 14,
+		fontWeight: "600",
+		color: theme.colors.foreground,
+	},
+	complianceDescription: {
+		fontSize: 13,
+		color: theme.colors.mutedForeground,
+		lineHeight: 18,
 	},
 	stickyButtonContainer: {
 		position: "absolute",

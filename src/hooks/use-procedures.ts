@@ -196,6 +196,9 @@ interface UpdateHealthcareProviderData {
 	paymentMethods?: string[];
 	cancellationPolicy?: string | null;
 	clinicPhotos?: string[];
+	termsAcceptedAt?: string | null;
+	lgpdConsentAt?: string | null;
+	professionalResponsibilityAcceptedAt?: string | null;
 }
 
 type LicenseDocumentUploadFile = {

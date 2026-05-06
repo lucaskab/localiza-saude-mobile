@@ -569,6 +569,13 @@ export const es = {
     "ratingCount": "{{count}} calificaciones",
     "reviewCount": "{{count}} reseñas",
     "selectedProceduresCount": "{{count}} procedimientos seleccionados",
+    "complianceAndTerms": "Compliance y términos",
+    "platformTerms": "Términos de la plataforma",
+    "platformTermsDescription": "Declaro que leí y acepto los términos de uso de Localiza Saúde.",
+    "lgpdConsent": "Consentimiento LGPD",
+    "lgpdConsentDescription": "Autorizo el tratamiento de mis datos para registro, verificación y operación de la plataforma.",
+    "professionalResponsibility": "Responsabilidad profesional independiente",
+    "professionalResponsibilityDescription": "Confirmo que soy responsable por la veracidad de mi información, documentos y atención prestada.",
     "ptBR": "Portugués",
     "en": "Inglés",
     "es": "Español"

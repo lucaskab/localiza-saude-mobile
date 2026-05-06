@@ -569,6 +569,13 @@ export const en = {
     ratingCount: "{{count}} ratings",
     reviewCount: "{{count}} reviews",
     selectedProceduresCount: "{{count}} selected procedures",
+    complianceAndTerms: "Compliance and terms",
+    platformTerms: "Platform terms",
+    platformTermsDescription: "I declare that I have read and accept Localiza Saúde's terms of use.",
+    lgpdConsent: "LGPD consent",
+    lgpdConsentDescription: "I authorize my data to be processed for registration, verification, and platform operation.",
+    professionalResponsibility: "Independent professional responsibility",
+    professionalResponsibilityDescription: "I confirm that I am responsible for the accuracy of my information, documents, and provided care.",
     ptBR: "pt-BR",
     en: "en",
     es: "es"
