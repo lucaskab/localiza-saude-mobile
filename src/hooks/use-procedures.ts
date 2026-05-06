@@ -195,13 +195,22 @@ interface UpdateHealthcareProviderData {
 	acceptedInsurance?: string[];
 	paymentMethods?: string[];
 	cancellationPolicy?: string | null;
-	clinicPhotos?: string[];
 	termsAcceptedAt?: string | null;
 	lgpdConsentAt?: string | null;
 	professionalResponsibilityAcceptedAt?: string | null;
+	faqs?: Array<{
+		question: string;
+		answer: string;
+	}>;
 }
 
 type LicenseDocumentUploadFile = {
+	uri: string;
+	name: string;
+	type: string;
+};
+
+type ClinicPhotoUploadFile = {
 	uri: string;
 	name: string;
 	type: string;
@@ -306,6 +315,63 @@ export const useUploadLicenseDocument = () => {
 	});
 };
 
+export const uploadClinicPhoto = async (
+	providerId: string,
+	file: ClinicPhotoUploadFile,
+): Promise<{
+	healthcareProvider: HealthcareProvider;
+	photo: {
+		url: string;
+		expiresInSeconds: number;
+	};
+}> => {
+	const formData = new FormData();
+
+	// @ts-expect-error - React Native FormData accepts file objects with uri, name, and type
+	formData.append("file", file);
+
+	const { data } = await api.post<{
+		healthcareProvider: HealthcareProvider;
+		photo: {
+			url: string;
+			expiresInSeconds: number;
+		};
+	}>(`/healthcare-providers/${providerId}/clinic-photos`, formData, {
+		headers: {
+			"Content-Type": "multipart/form-data",
+		},
+	});
+
+	return data;
+};
+
+export const useUploadClinicPhoto = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({
+			providerId,
+			file,
+		}: {
+			providerId: string;
+			file: ClinicPhotoUploadFile;
+		}) => uploadClinicPhoto(providerId, file),
+		onSuccess: (response) => {
+			queryClient.invalidateQueries({
+				queryKey: ["healthcare-provider", response.healthcareProvider.id],
+			});
+			queryClient.invalidateQueries({
+				queryKey: [
+					"healthcare-provider",
+					"by-user",
+					response.healthcareProvider.userId,
+				],
+			});
+			queryClient.invalidateQueries({ queryKey: ["healthcare-providers"] });
+		},
+	});
+};
+
 export const deleteLicenseDocument = async (
 	providerId: string,
 ): Promise<{ healthcareProvider: HealthcareProvider }> => {
@@ -331,6 +397,41 @@ export const useDeleteLicenseDocument = () => {
 					response.healthcareProvider.userId,
 				],
 			});
+		},
+	});
+};
+
+export const deleteClinicPhoto = async (
+	providerId: string,
+	index: number,
+): Promise<{ healthcareProvider: HealthcareProvider }> => {
+	const { data } = await api.delete<{ healthcareProvider: HealthcareProvider }>(
+		`/healthcare-providers/${providerId}/clinic-photos`,
+		{
+			data: { index },
+		},
+	);
+	return data;
+};
+
+export const useDeleteClinicPhoto = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ providerId, index }: { providerId: string; index: number }) =>
+			deleteClinicPhoto(providerId, index),
+		onSuccess: (response) => {
+			queryClient.invalidateQueries({
+				queryKey: ["healthcare-provider", response.healthcareProvider.id],
+			});
+			queryClient.invalidateQueries({
+				queryKey: [
+					"healthcare-provider",
+					"by-user",
+					response.healthcareProvider.userId,
+				],
+			});
+			queryClient.invalidateQueries({ queryKey: ["healthcare-providers"] });
 		},
 	});
 };

@@ -6,7 +6,7 @@ import {
 	SlidersHorizontal,
 	Star,
 } from "lucide-react-native";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
 	ActivityIndicator,
 	Alert,
@@ -21,16 +21,22 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getProvidersByCategory, useCategories } from "@/hooks/use-categories";
+import { useCategories } from "@/hooks/use-categories";
 import { useGetOrCreateConversation } from "@/hooks/use-conversations";
 import {
 	useAddFavorite,
 	useFavorites,
 	useRemoveFavorite,
 } from "@/hooks/use-favorites";
+import { useInfiniteHealthcareProviders } from "@/hooks/use-healthcare-providers";
 import { getErrorMessage } from "@/services/api";
 import { formatNextAvailableAt } from "@/utils/availability";
 import { formatAverageRating } from "@/utils/ratings";
+
+function priceToCents(value: string) {
+	const normalized = value.replace(/\D/g, "");
+	return normalized ? Number(normalized) * 100 : undefined;
+}
 
 export default function Search() {
 	const router = useRouter();
@@ -39,6 +45,15 @@ export default function Search() {
 	const insets = useSafeAreaInsets();
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState("all");
+	const [isFilterPanelVisible, setIsFilterPanelVisible] = useState(false);
+	const [serviceModality, setServiceModality] = useState("");
+	const [language, setLanguage] = useState("");
+	const [insurance, setInsurance] = useState("");
+	const [maxPrice, setMaxPrice] = useState("");
+	const [minRating, setMinRating] = useState("");
+	const [onlyVerified, setOnlyVerified] = useState(false);
+	const [onlyAvailable, setOnlyAvailable] = useState(false);
+	const [onlySuperProfessional, setOnlySuperProfessional] = useState(false);
 	const [favoriteMutationProviderId, setFavoriteMutationProviderId] = useState<
 		string | null
 	>(null);
@@ -52,22 +67,44 @@ export default function Search() {
 	);
 
 	// Fetch categories with their healthcare providers
-	const { data, isLoading, error, refetch } = useCategories();
+	const {
+		data,
+		isLoading: isCategoriesLoading,
+		error: categoriesError,
+		refetch: refetchCategories,
+	} = useCategories();
 
 	const categories = data?.categories || [];
-
-	// Get providers based on selected category
-	const providers = getProvidersByCategory(categories, selectedCategory);
-
-	// Client-side filtering for search
-	const filteredProfessionals = providers.filter((provider) => {
-		const matchesSearch =
-			provider.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-			(provider.specialty?.toLowerCase() || "").includes(
-				searchQuery.toLowerCase(),
-			);
-		return matchesSearch;
+	const selectedCategoryName =
+		selectedCategory === "all"
+			? ""
+			: categories.find((category) => category.id === selectedCategory)?.name || "";
+	const {
+		data: providersData,
+		fetchNextPage,
+		hasNextPage,
+		isFetchingNextPage,
+		isLoading: isProvidersLoading,
+		error: providersError,
+		refetch: refetchProviders,
+	} = useInfiniteHealthcareProviders({
+		search: searchQuery.trim() || undefined,
+		specialty: selectedCategoryName || undefined,
+		serviceModality: serviceModality || undefined,
+		language: language || undefined,
+		insurance: insurance.trim() || undefined,
+		maxPriceCents: priceToCents(maxPrice),
+		minRating: minRating ? Number(minRating) : undefined,
+		verified: onlyVerified || undefined,
+		available: onlyAvailable || undefined,
+		superProfessional: onlySuperProfessional || undefined,
+		limit: 12,
 	});
+	const filteredProfessionals =
+		providersData?.pages.flatMap((page) => page.healthcareProviders) || [];
+	const totalProfessionals = providersData?.pages[0]?.total ?? 0;
+	const isLoading = isCategoriesLoading || isProvidersLoading;
+	const error = categoriesError || providersError;
 
 	const handleOpenChat = async (healthcareProviderId: string) => {
 		try {
@@ -99,6 +136,17 @@ export default function Search() {
 		}
 	};
 
+	const clearFilters = () => {
+		setServiceModality("");
+		setLanguage("");
+		setInsurance("");
+		setMaxPrice("");
+		setMinRating("");
+		setOnlyVerified(false);
+		setOnlyAvailable(false);
+		setOnlySuperProfessional(false);
+	};
+
 	return (
 		<View style={styles.container}>
 			{/* Header */}
@@ -112,14 +160,97 @@ export default function Search() {
 						onChangeText={setSearchQuery}
 						containerStyle={styles.searchInputContainer}
 					/>
-					<Pressable style={styles.filterButton}>
+					<Pressable
+						style={[
+							styles.filterButton,
+							isFilterPanelVisible && styles.filterButtonActive,
+						]}
+						onPress={() => setIsFilterPanelVisible((visible) => !visible)}
+					>
 						<SlidersHorizontal
 							size={20}
-							color={theme.colors.foreground}
+							color={
+								isFilterPanelVisible
+									? theme.colors.primaryForeground
+									: theme.colors.foreground
+							}
 							strokeWidth={2}
 						/>
 					</Pressable>
 				</View>
+				{isFilterPanelVisible ? (
+					<View style={styles.filterPanel}>
+						<FilterSection title={t("common.serviceModalities")}>
+							{["Presencial", "Online", "Domiciliar"].map((item) => (
+								<FilterChip
+									key={item}
+									label={item}
+									active={serviceModality === item}
+									onPress={() =>
+										setServiceModality(serviceModality === item ? "" : item)
+									}
+								/>
+							))}
+						</FilterSection>
+						<FilterSection title={t("common.attendanceLanguages")}>
+							{["Português", "Inglês", "Espanhol"].map((item) => (
+								<FilterChip
+									key={item}
+									label={item}
+									active={language === item}
+									onPress={() => setLanguage(language === item ? "" : item)}
+								/>
+							))}
+						</FilterSection>
+						<FilterSection title={t("common.avgRating")}>
+							{["4", "4.5", "4.8"].map((item) => (
+								<FilterChip
+									key={item}
+									label={`${item}+`}
+									active={minRating === item}
+									onPress={() => setMinRating(minRating === item ? "" : item)}
+								/>
+							))}
+						</FilterSection>
+						<View style={styles.filterInputGrid}>
+							<Input
+								placeholder={t("common.acceptedInsurance")}
+								value={insurance}
+								onChangeText={setInsurance}
+								containerStyle={styles.filterInput}
+							/>
+							<Input
+								placeholder={t("common.maxPrice")}
+								value={maxPrice}
+								onChangeText={setMaxPrice}
+								keyboardType="numeric"
+								containerStyle={styles.filterInput}
+							/>
+						</View>
+						<View style={styles.filterChipsRow}>
+							<FilterChip
+								label={t("common.verified")}
+								active={onlyVerified}
+								onPress={() => setOnlyVerified(!onlyVerified)}
+							/>
+							<FilterChip
+								label={t("common.nextAvailable")}
+								active={onlyAvailable}
+								onPress={() => setOnlyAvailable(!onlyAvailable)}
+							/>
+							<FilterChip
+								label={t("common.superProfessional")}
+								active={onlySuperProfessional}
+								onPress={() =>
+									setOnlySuperProfessional(!onlySuperProfessional)
+								}
+							/>
+						</View>
+						<Button variant="ghost" size="sm" onPress={clearFilters}>
+							{t("common.clearFilters")}
+						</Button>
+					</View>
+				) : null}
 			</View>
 
 			{/* Category Filter */}
@@ -200,7 +331,13 @@ export default function Search() {
 						<Text style={styles.errorText}>
 							{t("common.failedToLoadHealthcareProviders")}
 						</Text>
-						<Button onPress={() => refetch()} size="sm">
+						<Button
+							onPress={() => {
+								refetchCategories();
+								refetchProviders();
+							}}
+							size="sm"
+						>
 							{t("common.retry")}
 						</Button>
 					</View>
@@ -211,7 +348,7 @@ export default function Search() {
 					<>
 						<Text style={styles.resultsCount}>
 							{t("common.professionalsFound", {
-								count: filteredProfessionals.length,
+								count: totalProfessionals,
 							})}
 						</Text>
 
@@ -310,6 +447,11 @@ export default function Search() {
 																{t("common.verified")}
 															</Text>
 														)}
+														{provider.isSuperProfessional ? (
+															<Text style={styles.superProfessionalText}>
+																{t("common.superProfessional")}
+															</Text>
+														) : null}
 														{provider.bio && (
 															<Text
 																style={styles.professionalBio}
@@ -342,6 +484,17 @@ export default function Search() {
 																	provider.nextAvailableAt,
 																)}
 															</Text>
+															{typeof provider.completedAppointments ===
+															"number" ? (
+																<>
+																	<View style={styles.statDivider} />
+																	<Text style={styles.ratingCountText}>
+																		{t("common.completedAppointmentCount", {
+																			count: provider.completedAppointments,
+																		})}
+																	</Text>
+																</>
+															) : null}
 														</View>
 														{provider.serviceModalities?.length ? (
 															<Text style={styles.professionalMeta} numberOfLines={1}>
@@ -384,12 +537,70 @@ export default function Search() {
 										</Pressable>
 									);
 								})}
+								<View style={styles.paginationFooter}>
+									<Text style={styles.paginationText}>
+										{t("common.showingProviders", {
+											shown: filteredProfessionals.length.toString(),
+											total: totalProfessionals.toString(),
+										})}
+									</Text>
+									{hasNextPage ? (
+										<Button
+											variant="outline"
+											size="sm"
+											onPress={() => fetchNextPage()}
+											disabled={isFetchingNextPage}
+										>
+											{isFetchingNextPage
+												? t("common.loadingMore")
+												: t("common.loadMore")}
+										</Button>
+									) : null}
+								</View>
 							</View>
 						)}
 					</>
 				)}
 			</ScrollView>
 		</View>
+	);
+}
+
+function FilterSection({
+	children,
+	title,
+}: {
+	children: ReactNode;
+	title: string;
+}) {
+	return (
+		<View style={styles.filterSection}>
+			<Text style={styles.filterSectionTitle}>{title}</Text>
+			<View style={styles.filterChipsRow}>{children}</View>
+		</View>
+	);
+}
+
+function FilterChip({
+	active,
+	label,
+	onPress,
+}: {
+	active: boolean;
+	label: string;
+	onPress: () => void;
+}) {
+	return (
+		<Pressable
+			onPress={onPress}
+			style={[styles.filterChip, active && styles.filterChipActive]}
+		>
+			<Text
+				style={[styles.filterChipText, active && styles.filterChipTextActive]}
+			>
+				{label}
+			</Text>
+		</Pressable>
 	);
 }
 
@@ -453,6 +664,60 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 		justifyContent: "center",
 	},
+	filterButtonActive: {
+		backgroundColor: theme.colors.primary,
+		borderColor: theme.colors.primary,
+	},
+	filterPanel: {
+		marginTop: theme.gap(2),
+		gap: theme.gap(2),
+		padding: theme.gap(2),
+		borderRadius: theme.radius.lg,
+		backgroundColor: theme.colors.background,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+	},
+	filterSection: {
+		gap: theme.gap(1),
+	},
+	filterSectionTitle: {
+		fontSize: 12,
+		fontWeight: "600",
+		color: theme.colors.mutedForeground,
+		textTransform: "uppercase",
+	},
+	filterChipsRow: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		gap: theme.gap(1),
+	},
+	filterChip: {
+		paddingHorizontal: theme.gap(1.5),
+		paddingVertical: theme.gap(0.75),
+		borderRadius: theme.radius.full,
+		backgroundColor: theme.colors.secondary,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+	},
+	filterChipActive: {
+		backgroundColor: theme.colors.primary,
+		borderColor: theme.colors.primary,
+	},
+	filterChipText: {
+		fontSize: 12,
+		fontWeight: "600",
+		color: theme.colors.secondaryForeground,
+	},
+	filterChipTextActive: {
+		color: theme.colors.primaryForeground,
+	},
+	filterInputGrid: {
+		flexDirection: "row",
+		gap: theme.gap(1),
+	},
+	filterInput: {
+		flex: 1,
+	},
 	categorySection: {
 		paddingVertical: theme.gap(2),
 		borderBottomWidth: 1,
@@ -502,6 +767,15 @@ const styles = StyleSheet.create((theme) => ({
 	resultsList: {
 		gap: theme.gap(1.5),
 		paddingBottom: theme.gap(3),
+	},
+	paginationFooter: {
+		alignItems: "center",
+		gap: theme.gap(1),
+		paddingVertical: theme.gap(1.5),
+	},
+	paginationText: {
+		fontSize: 12,
+		color: theme.colors.mutedForeground,
 	},
 	professionalCard: {
 		backgroundColor: theme.colors.surfacePrimary,
@@ -576,6 +850,12 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 12,
 		color: theme.colors.primary,
 		fontWeight: "600",
+		marginBottom: theme.gap(0.5),
+	},
+	superProfessionalText: {
+		fontSize: 12,
+		color: theme.colors.amber,
+		fontWeight: "700",
 		marginBottom: theme.gap(0.5),
 	},
 	professionalBio: {

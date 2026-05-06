@@ -24,10 +24,14 @@ export interface HealthcareProvider {
 	bio: string | null;
 	serviceModalities: string[];
 	clinicAddress: string | null;
+	clinicPhotos: string[];
 	nextAvailableAt?: string | null;
 	startingPriceCents?: number | null;
 	averageRating?: number;
 	totalRatings?: number;
+	completedAppointments?: number;
+	confirmationRate?: number;
+	isSuperProfessional?: boolean;
 	user: User;
 }
 

@@ -3,20 +3,86 @@ import type {
 	HealthcareProvider,
 } from "@/types/healthcare-provider";
 import { api } from "@/services/api";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 interface UseHealthcareProvidersParams {
+	search?: string;
 	specialty?: string;
+	serviceModality?: string;
+	language?: string;
+	insurance?: string;
+	verified?: boolean;
+	superProfessional?: boolean;
+	available?: boolean;
+	minRating?: number;
+	maxPriceCents?: number;
+	limit?: number;
+	offset?: number;
 	enabled?: boolean;
 }
 
 export const getHealthcareProviders = async ({
+	search,
 	specialty,
+	serviceModality,
+	language,
+	insurance,
+	verified,
+	superProfessional,
+	available,
+	minRating,
+	maxPriceCents,
+	limit,
+	offset,
 }: UseHealthcareProvidersParams = {}): Promise<GetHealthcareProvidersResponse> => {
 	const params = new URLSearchParams();
 
+	if (search) {
+		params.append("search", search);
+	}
+
 	if (specialty) {
 		params.append("specialty", specialty);
+	}
+
+	if (serviceModality) {
+		params.append("serviceModality", serviceModality);
+	}
+
+	if (language) {
+		params.append("language", language);
+	}
+
+	if (insurance) {
+		params.append("insurance", insurance);
+	}
+
+	if (verified) {
+		params.append("verified", "true");
+	}
+
+	if (superProfessional) {
+		params.append("superProfessional", "true");
+	}
+
+	if (available) {
+		params.append("available", "true");
+	}
+
+	if (typeof minRating === "number") {
+		params.append("minRating", minRating.toString());
+	}
+
+	if (typeof maxPriceCents === "number") {
+		params.append("maxPriceCents", maxPriceCents.toString());
+	}
+
+	if (typeof limit === "number") {
+		params.append("limit", limit.toString());
+	}
+
+	if (typeof offset === "number") {
+		params.append("offset", offset.toString());
 	}
 
 	const queryString = params.toString();
@@ -29,15 +95,108 @@ export const getHealthcareProviders = async ({
 };
 
 export const useHealthcareProviders = ({
+	search,
 	specialty,
+	serviceModality,
+	language,
+	insurance,
+	verified,
+	superProfessional,
+	available,
+	minRating,
+	maxPriceCents,
+	limit,
 	enabled = true,
 }: UseHealthcareProvidersParams = {}) => {
 	return useQuery({
-		queryKey: ["healthcare-providers", specialty],
+		queryKey: [
+			"healthcare-providers",
+			search,
+			specialty,
+			serviceModality,
+			language,
+			insurance,
+			verified,
+			superProfessional,
+			available,
+			minRating,
+			maxPriceCents,
+			limit,
+		],
 		queryFn: () =>
 			getHealthcareProviders({
+				search,
 				specialty,
+				serviceModality,
+				language,
+				insurance,
+				verified,
+				superProfessional,
+				available,
+				minRating,
+				maxPriceCents,
+				limit,
 			}),
+		enabled,
+		staleTime: 0,
+		refetchOnMount: "always",
+	});
+};
+
+export const useInfiniteHealthcareProviders = ({
+	search,
+	specialty,
+	serviceModality,
+	language,
+	insurance,
+	verified,
+	superProfessional,
+	available,
+	minRating,
+	maxPriceCents,
+	limit = 20,
+	enabled = true,
+}: UseHealthcareProvidersParams = {}) => {
+	return useInfiniteQuery({
+		queryKey: [
+			"healthcare-providers",
+			"infinite",
+			search,
+			specialty,
+			serviceModality,
+			language,
+			insurance,
+			verified,
+			superProfessional,
+			available,
+			minRating,
+			maxPriceCents,
+			limit,
+		],
+		queryFn: ({ pageParam }) =>
+			getHealthcareProviders({
+				search,
+				specialty,
+				serviceModality,
+				language,
+				insurance,
+				verified,
+				superProfessional,
+				available,
+				minRating,
+				maxPriceCents,
+				limit,
+				offset: pageParam,
+			}),
+		getNextPageParam: (lastPage, allPages) => {
+			const totalLoaded = allPages.reduce(
+				(total, page) => total + page.healthcareProviders.length,
+				0,
+			);
+
+			return totalLoaded < lastPage.total ? totalLoaded : undefined;
+		},
+		initialPageParam: 0,
 		enabled,
 		staleTime: 0,
 		refetchOnMount: "always",

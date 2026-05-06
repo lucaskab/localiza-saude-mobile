@@ -5,24 +5,29 @@ import {
 	CreditCard,
 	FileText,
 	GraduationCap,
+	Image as ImageIcon,
 	Languages,
 	MapPin,
+	Plus,
 	Save,
 	ShieldCheck,
 	Trash2,
 	Upload,
 	type LucideIcon,
 	User,
+	X,
 } from "lucide-react-native";
 import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
 import {
 	ActivityIndicator,
 	Alert,
+	Image,
 	ScrollView,
 	Text,
 	View,
 } from "react-native";
-import { Controller, type Control, useForm } from "react-hook-form";
+import { Controller, type Control, useFieldArray, useForm } from "react-hook-form";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
@@ -34,8 +39,10 @@ import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth";
 import {
+	useDeleteClinicPhoto,
 	useDeleteLicenseDocument,
 	useUpdateHealthcareProvider,
+	useUploadClinicPhoto,
 	useUploadLicenseDocument,
 } from "@/hooks/use-procedures";
 
@@ -65,12 +72,21 @@ const profileFormSchema = z.object({
 	termsAccepted: z.boolean(),
 	lgpdConsent: z.boolean(),
 	professionalResponsibilityAccepted: z.boolean(),
+	faqs: z.array(
+		z.object({
+			question: z.string(),
+			answer: z.string(),
+		}),
+	),
 });
 
 type ProfileFormData = z.infer<typeof profileFormSchema>;
 type ProfileTextField = Exclude<
 	keyof ProfileFormData,
-	"termsAccepted" | "lgpdConsent" | "professionalResponsibilityAccepted"
+	| "termsAccepted"
+	| "lgpdConsent"
+	| "professionalResponsibilityAccepted"
+	| "faqs"
 >;
 
 const emptyProfileForm: ProfileFormData = {
@@ -99,6 +115,7 @@ const emptyProfileForm: ProfileFormData = {
 	termsAccepted: false,
 	lgpdConsent: false,
 	professionalResponsibilityAccepted: false,
+	faqs: [],
 };
 
 function joinList(value?: string[] | null) {
@@ -124,9 +141,12 @@ export default function ProviderProfileEdit() {
 	const { t } = useTranslation();
 	const { healthcareProvider } = useAuth();
 	const [isSaving, setIsSaving] = useState(false);
+	const [currentStep, setCurrentStep] = useState(0);
 	const updateProviderMutation = useUpdateHealthcareProvider();
 	const uploadLicenseDocumentMutation = useUploadLicenseDocument();
 	const deleteLicenseDocumentMutation = useDeleteLicenseDocument();
+	const uploadClinicPhotoMutation = useUploadClinicPhoto();
+	const deleteClinicPhotoMutation = useDeleteClinicPhoto();
 
 	const {
 		control,
@@ -136,6 +156,18 @@ export default function ProviderProfileEdit() {
 	} = useForm<ProfileFormData>({
 		defaultValues: emptyProfileForm,
 	});
+	const { fields: faqFields, append: appendFaq, remove: removeFaq } =
+		useFieldArray({
+			control,
+			name: "faqs",
+		});
+	const onboardingSteps = [
+		t("common.basicRegistration"),
+		t("common.publicProfile"),
+		t("common.attendanceAndOperation"),
+		t("common.complianceAndTerms"),
+	];
+	const isLastStep = currentStep === onboardingSteps.length - 1;
 
 	useEffect(() => {
 		reset({
@@ -167,6 +199,11 @@ export default function ProviderProfileEdit() {
 			professionalResponsibilityAccepted: Boolean(
 				healthcareProvider?.professionalResponsibilityAcceptedAt,
 			),
+			faqs:
+				healthcareProvider?.faqs?.map((faq) => ({
+					question: faq.question,
+					answer: faq.answer,
+				})) || [],
 		});
 	}, [healthcareProvider, reset]);
 
@@ -228,6 +265,12 @@ export default function ProviderProfileEdit() {
 						parsed.data.professionalResponsibilityAccepted,
 						healthcareProvider.professionalResponsibilityAcceptedAt,
 					),
+					faqs: parsed.data.faqs
+						.map((faq) => ({
+							question: faq.question.trim(),
+							answer: faq.answer.trim(),
+						}))
+						.filter((faq) => faq.question && faq.answer),
 				},
 			});
 			reset(parsed.data);
@@ -287,6 +330,66 @@ export default function ProviderProfileEdit() {
 		}
 	};
 
+	const handlePickClinicPhoto = async () => {
+		if (!healthcareProvider?.id) {
+			return;
+		}
+
+		const permission =
+			await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+		if (!permission.granted) {
+			Alert.alert(t("common.permissionRequired"), t("common.photoLibraryPermissionRequired"));
+			return;
+		}
+
+		const result = await ImagePicker.launchImageLibraryAsync({
+			mediaTypes: ImagePicker.MediaTypeOptions.Images,
+			allowsEditing: true,
+			aspect: [4, 3],
+			quality: 0.85,
+		});
+
+		if (result.canceled || !result.assets[0]) {
+			return;
+		}
+
+		const asset = result.assets[0];
+		const fileName = asset.fileName || `clinic-photo-${Date.now()}.jpg`;
+
+		try {
+			await uploadClinicPhotoMutation.mutateAsync({
+				providerId: healthcareProvider.id,
+				file: {
+					uri: asset.uri,
+					name: fileName,
+					type: asset.mimeType || "image/jpeg",
+				},
+			});
+			Alert.alert(t("common.success"), t("common.clinicPhotoUploaded"));
+		} catch (error) {
+			console.error("Failed to upload clinic photo:", error);
+			Alert.alert(t("common.error"), t("common.failedToUploadClinicPhoto"));
+		}
+	};
+
+	const handleDeleteClinicPhoto = async (index: number) => {
+		if (!healthcareProvider?.id) {
+			return;
+		}
+
+		try {
+			await deleteClinicPhotoMutation.mutateAsync({
+				providerId: healthcareProvider.id,
+				index,
+			});
+			Alert.alert(t("common.success"), t("common.clinicPhotoRemoved"));
+		} catch (error) {
+			console.error("Failed to delete clinic photo:", error);
+			Alert.alert(t("common.error"), t("common.failedToRemoveClinicPhoto"));
+		}
+	};
+
 	return (
 		<SafeAreaView
 			edges={["top"]}
@@ -305,6 +408,7 @@ export default function ProviderProfileEdit() {
 					backButtonTestID="provider-profile-edit-back-button"
 					style={styles.screenHeader}
 				/>
+				<StepIndicator steps={onboardingSteps} currentStep={currentStep} />
 
 				{!healthcareProvider ? (
 					<View style={styles.errorContainer}>
@@ -315,11 +419,13 @@ export default function ProviderProfileEdit() {
 						/>
 						<Text style={styles.errorText}>{t("common.failedToLoadProfile")}</Text>
 					</View>
-				) : (
-					<View style={styles.section}>
-						<Text style={styles.sectionTitle}>{t("common.profileInformation")}</Text>
+					) : (
+						<View style={styles.section}>
+							<Text style={styles.sectionTitle}>{t("common.profileInformation")}</Text>
 
-						<View style={styles.card}>
+							{currentStep === 0 ? (
+								<>
+							<View style={styles.card}>
 							<View style={styles.fieldGroup}>
 								<Text style={styles.fieldLabel}>{t("common.name")}</Text>
 								<View style={styles.readOnlyField}>
@@ -337,10 +443,9 @@ export default function ProviderProfileEdit() {
 										{healthcareProvider.user?.email || t("common.notSet")}
 									</Text>
 								</View>
-							</View>
-						</View>
-
-						<View style={styles.card}>
+								</View>
+								</View>
+							<View style={styles.card}>
 							<Text style={styles.sectionSubtitle}>
 								{t("common.identification")}
 							</Text>
@@ -388,9 +493,14 @@ export default function ProviderProfileEdit() {
 								label={t("common.attendanceLanguages")}
 								placeholder={t("common.commaSeparatedExamplesLanguages")}
 							/>
-						</View>
+							</View>
 
-						<View style={styles.card}>
+								</>
+							) : null}
+
+							{currentStep === 1 ? (
+								<>
+								<View style={styles.card}>
 							<Text style={styles.sectionSubtitle}>
 								{t("common.professionalVerification")}
 							</Text>
@@ -508,10 +618,10 @@ export default function ProviderProfileEdit() {
 							</View>
 						</View>
 
-						<View style={styles.card}>
-							<Text style={styles.sectionSubtitle}>
-								{t("common.publicProfile")}
-							</Text>
+							<View style={styles.card}>
+								<Text style={styles.sectionSubtitle}>
+									{t("common.publicProfile")}
+								</Text>
 							<FormInput
 								control={control}
 								icon={Briefcase}
@@ -571,6 +681,144 @@ export default function ProviderProfileEdit() {
 
 						<View style={styles.card}>
 							<Text style={styles.sectionSubtitle}>
+								{t("common.clinicPhotos")}
+							</Text>
+							<View style={styles.documentBox}>
+								<View style={styles.documentInfo}>
+									<ImageIcon size={22} color={theme.colors.primary} />
+									<View style={styles.documentTextContainer}>
+										<Text style={styles.documentTitle}>
+											{t("common.careEnvironment")}
+										</Text>
+										<Text style={styles.documentDescription}>
+											{t("common.clinicPhotosDescription")}
+										</Text>
+									</View>
+								</View>
+								<Button
+									variant="outline"
+									onPress={handlePickClinicPhoto}
+									disabled={
+										uploadClinicPhotoMutation.isPending ||
+										(healthcareProvider.clinicPhotos?.length || 0) >= 8
+									}
+									loading={uploadClinicPhotoMutation.isPending}
+									style={styles.documentButton}
+								>
+									<View style={styles.buttonContent}>
+										<Upload size={18} color={theme.colors.foreground} />
+										<Text style={styles.outlineButtonText}>
+											{t("common.uploadPhoto")}
+										</Text>
+									</View>
+								</Button>
+							</View>
+
+							{healthcareProvider.clinicPhotos?.length ? (
+								<View style={styles.clinicPhotosGrid}>
+									{healthcareProvider.clinicPhotos.map((photo, index) => (
+										<View key={`${photo}-${index}`} style={styles.clinicPhotoCard}>
+											<Image source={{ uri: photo }} style={styles.clinicPhoto} />
+											<Button
+												variant="destructive"
+												size="sm"
+												onPress={() => handleDeleteClinicPhoto(index)}
+												disabled={deleteClinicPhotoMutation.isPending}
+												style={styles.clinicPhotoDeleteButton}
+											>
+												<Trash2
+													size={16}
+													color={theme.colors.primaryForeground}
+												/>
+											</Button>
+										</View>
+									))}
+								</View>
+							) : (
+								<Text style={styles.emptyFaqText}>
+									{t("common.noClinicPhotosYet")}
+								</Text>
+							)}
+						</View>
+
+						<View style={styles.card}>
+							<Text style={styles.sectionSubtitle}>
+								{t("common.frequentlyAskedQuestions")}
+							</Text>
+							{faqFields.length === 0 ? (
+								<Text style={styles.emptyFaqText}>
+									{t("common.addFaqsToAnswerCommonQuestions")}
+								</Text>
+							) : null}
+							{faqFields.map((field, index) => (
+								<View key={field.id} style={styles.faqCard}>
+									<View style={styles.faqHeader}>
+										<Text style={styles.faqTitle}>
+											{t("common.questionCount", { count: index + 1 })}
+										</Text>
+										<Button
+											variant="ghost"
+											size="sm"
+											onPress={() => removeFaq(index)}
+											style={styles.faqRemoveButton}
+										>
+											<X size={18} color={theme.colors.foreground} />
+										</Button>
+									</View>
+									<Controller
+										control={control}
+										name={`faqs.${index}.question`}
+										render={({ field }) => (
+											<View style={styles.fieldGroup}>
+												<Text style={styles.fieldLabel}>
+													{t("common.question")}
+												</Text>
+												<Input
+													value={field.value || ""}
+													onChangeText={field.onChange}
+													placeholder={t("common.faqQuestionPlaceholder")}
+												/>
+											</View>
+										)}
+									/>
+									<Controller
+										control={control}
+										name={`faqs.${index}.answer`}
+										render={({ field }) => (
+											<View style={styles.fieldGroup}>
+												<Text style={styles.fieldLabel}>
+													{t("common.answer")}
+												</Text>
+												<Input
+													value={field.value || ""}
+													onChangeText={field.onChange}
+													placeholder={t("common.faqAnswerPlaceholder")}
+													multiline
+												/>
+											</View>
+										)}
+									/>
+								</View>
+							))}
+							<Button
+								variant="outline"
+								onPress={() => appendFaq({ question: "", answer: "" })}
+								disabled={faqFields.length >= 20}
+							>
+								<View style={styles.buttonContent}>
+									<Plus size={18} color={theme.colors.foreground} />
+									<Text style={styles.outlineButtonText}>
+										{t("common.addQuestion")}
+									</Text>
+								</View>
+								</Button>
+							</View>
+								</>
+							) : null}
+
+							{currentStep === 2 ? (
+							<View style={styles.card}>
+							<Text style={styles.sectionSubtitle}>
 								{t("common.attendanceAndOperation")}
 							</Text>
 							<FormInput
@@ -616,10 +864,12 @@ export default function ProviderProfileEdit() {
 								label={t("common.cancellationPolicy")}
 								placeholder={t("common.describeCancellationPolicy")}
 								multiline
-							/>
-						</View>
+								/>
+							</View>
+							) : null}
 
-						<View style={styles.card}>
+							{currentStep === 3 ? (
+							<View style={styles.card}>
 							<Text style={styles.sectionSubtitle}>
 								{t("common.complianceAndTerms")}
 							</Text>
@@ -640,17 +890,27 @@ export default function ProviderProfileEdit() {
 								name="professionalResponsibilityAccepted"
 								title={t("common.professionalResponsibility")}
 								description={t("common.professionalResponsibilityDescription")}
-							/>
+								/>
+							</View>
+							) : null}
 						</View>
-					</View>
-				)}
+					)}
 			</ScrollView>
 
-			{isDirty && healthcareProvider ? (
+			{healthcareProvider ? (
 				<View style={styles.stickyButtonContainer}>
 					<Button
+						variant="outline"
+						onPress={() => setCurrentStep((step) => Math.max(step - 1, 0))}
+						disabled={currentStep === 0}
+						style={styles.stepNavButton}
+					>
+						<Text style={styles.outlineButtonText}>{t("common.back")}</Text>
+					</Button>
+					{isLastStep ? (
+					<Button
 						onPress={handleSubmit(onSubmit)}
-						disabled={isSaving}
+						disabled={isSaving || !isDirty}
 						loading={isSaving}
 						style={styles.saveButton}
 					>
@@ -664,8 +924,20 @@ export default function ProviderProfileEdit() {
 								<Save size={20} color={theme.colors.primaryForeground} />
 							)}
 							<Text style={styles.saveButtonText}>{t("common.saveChanges")}</Text>
-						</View>
-					</Button>
+							</View>
+						</Button>
+					) : (
+						<Button
+							onPress={() =>
+								setCurrentStep((step) =>
+									Math.min(step + 1, onboardingSteps.length - 1),
+								)
+							}
+							style={styles.stepNavButton}
+						>
+							<Text style={styles.saveButtonText}>{t("common.continue")}</Text>
+						</Button>
+					)}
 				</View>
 			) : null}
 		</SafeAreaView>
@@ -703,6 +975,50 @@ function ComplianceCheckbox({
 				</View>
 			)}
 		/>
+	);
+}
+
+function StepIndicator({
+	currentStep,
+	steps,
+}: {
+	currentStep: number;
+	steps: string[];
+}) {
+	return (
+		<ScrollView
+			horizontal
+			showsHorizontalScrollIndicator={false}
+			contentContainerStyle={styles.stepIndicatorList}
+		>
+			{steps.map((step, index) => (
+				<View
+					key={step}
+					style={[
+						styles.stepIndicatorItem,
+						index === currentStep && styles.stepIndicatorItemActive,
+						index < currentStep && styles.stepIndicatorItemCompleted,
+					]}
+				>
+					<Text
+						style={[
+							styles.stepIndicatorMeta,
+							index === currentStep && styles.stepIndicatorTextActive,
+						]}
+					>
+						{index + 1}
+					</Text>
+					<Text
+						style={[
+							styles.stepIndicatorText,
+							index === currentStep && styles.stepIndicatorTextActive,
+						]}
+					>
+						{step}
+					</Text>
+				</View>
+			))}
+		</ScrollView>
 	);
 }
 
@@ -758,7 +1074,41 @@ const styles = StyleSheet.create((theme) => ({
 		paddingBottom: theme.gap(20),
 	},
 	screenHeader: {
-		marginBottom: theme.gap(3),
+		marginBottom: theme.gap(2),
+	},
+	stepIndicatorList: {
+		gap: theme.gap(1),
+		paddingBottom: theme.gap(2),
+	},
+	stepIndicatorItem: {
+		minWidth: 132,
+		borderRadius: theme.radius.lg,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		backgroundColor: theme.colors.secondary,
+		paddingHorizontal: theme.gap(1.5),
+		paddingVertical: theme.gap(1),
+	},
+	stepIndicatorItemActive: {
+		borderColor: theme.colors.primary,
+		backgroundColor: `${theme.colors.primary}14`,
+	},
+	stepIndicatorItemCompleted: {
+		borderColor: `${theme.colors.primary}66`,
+	},
+	stepIndicatorMeta: {
+		fontSize: 11,
+		fontWeight: "700",
+		color: theme.colors.mutedForeground,
+	},
+	stepIndicatorText: {
+		marginTop: theme.gap(0.25),
+		fontSize: 12,
+		fontWeight: "700",
+		color: theme.colors.secondaryForeground,
+	},
+	stepIndicatorTextActive: {
+		color: theme.colors.primary,
 	},
 	errorContainer: {
 		paddingVertical: theme.gap(8),
@@ -865,6 +1215,70 @@ const styles = StyleSheet.create((theme) => ({
 		minWidth: 120,
 		backgroundColor: theme.colors.destructive,
 	},
+	clinicPhotosGrid: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		gap: theme.gap(1.5),
+	},
+	clinicPhotoCard: {
+		position: "relative",
+		width: "47%",
+		aspectRatio: 4 / 3,
+		overflow: "hidden",
+		borderRadius: theme.radius.md,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		backgroundColor: theme.colors.muted,
+	},
+	clinicPhoto: {
+		width: "100%",
+		height: "100%",
+	},
+	clinicPhotoDeleteButton: {
+		position: "absolute",
+		top: theme.gap(1),
+		right: theme.gap(1),
+		width: 36,
+		height: 36,
+		backgroundColor: theme.colors.destructive,
+	},
+	emptyFaqText: {
+		fontSize: 14,
+		color: theme.colors.mutedForeground,
+		padding: theme.gap(2),
+		borderWidth: 1,
+		borderStyle: "dashed",
+		borderColor: theme.colors.border,
+		borderRadius: theme.radius.md,
+		backgroundColor: theme.colors.muted,
+	},
+	faqCard: {
+		gap: theme.gap(2),
+		padding: theme.gap(2),
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		borderRadius: theme.radius.md,
+		backgroundColor: theme.colors.muted,
+	},
+	faqHeader: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		gap: theme.gap(2),
+	},
+	faqTitle: {
+		fontSize: 14,
+		fontWeight: "600",
+		color: theme.colors.foreground,
+	},
+	faqRemoveButton: {
+		width: 40,
+	},
+	outlineButtonText: {
+		fontSize: 15,
+		fontWeight: "600",
+		color: theme.colors.foreground,
+	},
 	complianceRow: {
 		flexDirection: "row",
 		alignItems: "flex-start",
@@ -894,6 +1308,8 @@ const styles = StyleSheet.create((theme) => ({
 		bottom: 0,
 		left: 0,
 		right: 0,
+		flexDirection: "row",
+		gap: theme.gap(1.25),
 		backgroundColor: theme.colors.surfacePrimary,
 		paddingHorizontal: theme.gap(3),
 		paddingVertical: theme.gap(2),
@@ -909,7 +1325,11 @@ const styles = StyleSheet.create((theme) => ({
 		elevation: 5,
 	},
 	saveButton: {
-		width: "100%",
+		flex: 1,
+		borderRadius: theme.radius.lg,
+	},
+	stepNavButton: {
+		flex: 1,
 		borderRadius: theme.radius.lg,
 	},
 	buttonContent: {

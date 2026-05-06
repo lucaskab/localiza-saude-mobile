@@ -64,13 +64,31 @@ export interface HealthcareProvider {
 	startingPriceCents?: number | null;
 	averageRating?: number;
 	totalRatings?: number;
+	completedAppointments?: number;
+	confirmationRate?: number;
+	isSuperProfessional?: boolean;
 	createdAt: string;
 	updatedAt: string;
 	procedures: Procedure[];
+	faqs?: HealthcareProviderFaq[];
+}
+
+export interface HealthcareProviderFaq {
+	id?: string;
+	healthcareProviderId?: string;
+	question: string;
+	answer: string;
+	position?: number;
+	createdAt?: string;
+	updatedAt?: string;
 }
 
 export interface GetHealthcareProvidersResponse {
 	healthcareProviders: HealthcareProvider[];
+	total: number;
+	limit: number;
+	offset: number;
+	hasMore: boolean;
 }
 
 export interface GetHealthcareProviderByIdResponse {

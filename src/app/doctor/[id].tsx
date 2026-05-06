@@ -5,11 +5,15 @@ import {
 	Calendar,
 	CheckCircle2,
 	Clock,
+	CreditCard,
 	DollarSign,
+	MapPin,
+	ShieldCheck,
 	Sparkles,
 	Star,
 	Briefcase,
 	X,
+	type LucideIcon,
 } from "lucide-react-native";
 import {
 	ActivityIndicator,
@@ -207,6 +211,10 @@ export default function DoctorDetails() {
 						totalProcedures,
 				)
 			: 0;
+	const confirmationRatePercentage =
+		typeof provider.confirmationRate === "number"
+			? Math.round(provider.confirmationRate * 100)
+			: null;
 
 	// Working hours (mock data - could come from API in future)
 	const workingHours: { day: TranslationKey; hours: string | TranslationKey }[] = [
@@ -288,6 +296,18 @@ export default function DoctorDetails() {
 									})}
 								</Text>
 							)}
+							{provider.isSuperProfessional ? (
+								<View style={styles.superProfessionalBadge}>
+									<Sparkles
+										size={14}
+										color={theme.colors.amber}
+										strokeWidth={2.5}
+									/>
+									<Text style={styles.superProfessionalBadgeText}>
+										{t("common.superProfessional")}
+									</Text>
+								</View>
+							) : null}
 						</View>
 					</View>
 
@@ -316,6 +336,34 @@ export default function DoctorDetails() {
 								{t("common.procedureCount", { count: totalProcedures })}
 							</Text>
 						</View>
+						{typeof provider.completedAppointments === "number" ? (
+							<View style={styles.statItem}>
+								<Award
+									size={18}
+									color={theme.colors.mutedForeground}
+									strokeWidth={2}
+								/>
+								<Text style={styles.statLabel}>
+									{t("common.completedAppointmentCount", {
+										count: provider.completedAppointments,
+									})}
+								</Text>
+							</View>
+						) : null}
+						{confirmationRatePercentage !== null ? (
+							<View style={styles.statItem}>
+								<CheckCircle2
+									size={18}
+									color={theme.colors.mutedForeground}
+									strokeWidth={2}
+								/>
+								<Text style={styles.statLabel}>
+									{t("common.confirmationRateValue", {
+										percentage: confirmationRatePercentage.toString(),
+									})}
+								</Text>
+							</View>
+						) : null}
 					</View>
 				</View>
 
@@ -348,6 +396,25 @@ export default function DoctorDetails() {
 					</View>
 				</View>
 
+				{provider.clinicPhotos?.length ? (
+					<View style={styles.section}>
+						<Text style={styles.sectionTitle}>{t("common.clinicPhotos")}</Text>
+						<ScrollView
+							horizontal
+							showsHorizontalScrollIndicator={false}
+							contentContainerStyle={styles.clinicPhotosList}
+						>
+							{provider.clinicPhotos.map((photo, index) => (
+								<Image
+									key={`${photo}-${index}`}
+									source={{ uri: photo }}
+									style={styles.clinicPhoto}
+								/>
+							))}
+						</ScrollView>
+					</View>
+				) : null}
+
 				{/* About */}
 				{provider.bio && (
 					<View style={styles.section}>
@@ -355,6 +422,73 @@ export default function DoctorDetails() {
 						<Text style={styles.aboutText}>{provider.bio}</Text>
 					</View>
 				)}
+
+				{provider.clinicAddress ||
+				provider.serviceModalities?.length ||
+				provider.languages?.length ||
+				provider.acceptedInsurance?.length ||
+				provider.paymentMethods?.length ||
+				provider.cancellationPolicy ? (
+					<View style={styles.section}>
+						<Text style={styles.sectionTitle}>
+							{t("common.practicalInformation")}
+						</Text>
+						{provider.clinicAddress ? (
+							<View style={styles.infoRow}>
+								<MapPin
+									size={18}
+									color={theme.colors.primary}
+									strokeWidth={2}
+								/>
+								<Text style={styles.infoRowText}>{provider.clinicAddress}</Text>
+							</View>
+						) : null}
+						<TagGroup
+							title={t("common.serviceModalities")}
+							values={provider.serviceModalities}
+						/>
+						<TagGroup
+							title={t("common.attendanceLanguages")}
+							values={provider.languages}
+						/>
+						<TagGroup
+							title={t("common.acceptedInsurance")}
+							values={provider.acceptedInsurance}
+							icon={ShieldCheck}
+						/>
+						<TagGroup
+							title={t("common.paymentMethods")}
+							values={provider.paymentMethods}
+							icon={CreditCard}
+						/>
+						{provider.cancellationPolicy ? (
+							<View style={styles.policyBox}>
+								<Text style={styles.policyTitle}>
+									{t("common.cancellationPolicy")}
+								</Text>
+								<Text style={styles.policyText}>
+									{provider.cancellationPolicy}
+								</Text>
+							</View>
+						) : null}
+					</View>
+				) : null}
+
+				{provider.faqs?.length ? (
+					<View style={styles.section}>
+						<Text style={styles.sectionTitle}>
+							{t("common.frequentlyAskedQuestions")}
+						</Text>
+						<View style={styles.faqList}>
+							{provider.faqs.map((faq, index) => (
+								<View key={faq.id || index} style={styles.faqItem}>
+									<Text style={styles.faqQuestion}>{faq.question}</Text>
+									<Text style={styles.faqAnswer}>{faq.answer}</Text>
+								</View>
+							))}
+						</View>
+					</View>
+				) : null}
 
 				{/* Rating Prompt */}
 				{isCustomer && (
@@ -612,6 +746,40 @@ export default function DoctorDetails() {
 	);
 }
 
+function TagGroup({
+	icon: Icon,
+	title,
+	values,
+}: {
+	icon?: LucideIcon;
+	title: string;
+	values?: string[];
+}) {
+	const { theme } = useUnistyles();
+
+	if (!values?.length) {
+		return null;
+	}
+
+	return (
+		<View style={styles.tagGroup}>
+			<View style={styles.tagGroupHeader}>
+				{Icon ? (
+					<Icon size={16} color={theme.colors.primary} strokeWidth={2} />
+				) : null}
+				<Text style={styles.tagGroupTitle}>{title}</Text>
+			</View>
+			<View style={styles.tagList}>
+				{values.map((value) => (
+					<View key={value} style={styles.tag}>
+						<Text style={styles.tagText}>{value}</Text>
+					</View>
+				))}
+			</View>
+		</View>
+	);
+}
+
 const styles = StyleSheet.create((theme) => ({
 	container: {
 		flex: 1,
@@ -753,6 +921,24 @@ const styles = StyleSheet.create((theme) => ({
 		color: theme.colors.mutedForeground,
 		fontFamily: "monospace",
 	},
+	superProfessionalBadge: {
+		marginTop: theme.gap(1),
+		alignSelf: "flex-start",
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(0.75),
+		paddingHorizontal: theme.gap(1.5),
+		paddingVertical: theme.gap(0.75),
+		borderRadius: theme.radius.full,
+		backgroundColor: `${theme.colors.amber}1A`,
+		borderWidth: 1,
+		borderColor: `${theme.colors.amber}33`,
+	},
+	superProfessionalBadgeText: {
+		fontSize: 12,
+		fontWeight: "700",
+		color: theme.colors.foreground,
+	},
 	statsRow: {
 		flexDirection: "row",
 		alignItems: "center",
@@ -819,6 +1005,98 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 14,
 		color: theme.colors.mutedForeground,
 		lineHeight: 22,
+	},
+	infoRow: {
+		flexDirection: "row",
+		alignItems: "flex-start",
+		gap: theme.gap(1),
+		marginBottom: theme.gap(1.5),
+	},
+	infoRowText: {
+		flex: 1,
+		fontSize: 14,
+		color: theme.colors.mutedForeground,
+		lineHeight: 20,
+	},
+	tagGroup: {
+		gap: theme.gap(1),
+		marginBottom: theme.gap(1.5),
+	},
+	tagGroupHeader: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(0.75),
+	},
+	tagGroupTitle: {
+		fontSize: 13,
+		fontWeight: "700",
+		color: theme.colors.foreground,
+	},
+	tagList: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		gap: theme.gap(0.75),
+	},
+	tag: {
+		paddingHorizontal: theme.gap(1.25),
+		paddingVertical: theme.gap(0.6),
+		borderRadius: theme.radius.full,
+		backgroundColor: theme.colors.secondary,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+	},
+	tagText: {
+		fontSize: 12,
+		fontWeight: "600",
+		color: theme.colors.secondaryForeground,
+	},
+	policyBox: {
+		gap: theme.gap(0.5),
+		padding: theme.gap(1.5),
+		borderRadius: theme.radius.lg,
+		backgroundColor: theme.colors.background,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+	},
+	policyTitle: {
+		fontSize: 13,
+		fontWeight: "700",
+		color: theme.colors.foreground,
+	},
+	policyText: {
+		fontSize: 13,
+		color: theme.colors.mutedForeground,
+		lineHeight: 19,
+	},
+	clinicPhotosList: {
+		gap: theme.gap(1.5),
+	},
+	clinicPhoto: {
+		width: 220,
+		height: 150,
+		borderRadius: theme.radius.lg,
+		backgroundColor: theme.colors.muted,
+	},
+	faqList: {
+		gap: theme.gap(1.5),
+	},
+	faqItem: {
+		backgroundColor: theme.colors.background,
+		borderRadius: theme.radius.lg,
+		padding: theme.gap(2),
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+	},
+	faqQuestion: {
+		fontSize: 15,
+		fontWeight: "600",
+		color: theme.colors.foreground,
+	},
+	faqAnswer: {
+		marginTop: theme.gap(0.75),
+		fontSize: 14,
+		color: theme.colors.mutedForeground,
+		lineHeight: 20,
 	},
 	ratingPrompt: {
 		marginHorizontal: theme.gap(3),

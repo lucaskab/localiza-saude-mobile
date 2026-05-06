@@ -220,6 +220,11 @@ export default function Home() {
 												{provider.verificationStatus === "VERIFIED" ? (
 													<Text style={styles.verifiedText}>{t("common.verified")}</Text>
 												) : null}
+												{provider.isSuperProfessional ? (
+													<Text style={styles.superProfessionalText}>
+														{t("common.superProfessional")}
+													</Text>
+												) : null}
 												<View style={styles.professionalStats}>
 													<View style={styles.ratingContainer}>
 														<Star
@@ -235,6 +240,13 @@ export default function Home() {
 															{formatRatingCount(provider.totalRatings)}
 														</Text>
 													</View>
+													{typeof provider.completedAppointments === "number" ? (
+														<Text style={styles.metricText}>
+															{t("common.completedAppointmentCount", {
+																count: provider.completedAppointments,
+															})}
+														</Text>
+													) : null}
 												</View>
 											</View>
 										</View>
@@ -469,10 +481,17 @@ const styles = StyleSheet.create((theme) => ({
 		fontWeight: "600",
 		marginBottom: theme.gap(1),
 	},
+	superProfessionalText: {
+		fontSize: 12,
+		color: theme.colors.amber,
+		fontWeight: "700",
+		marginBottom: theme.gap(1),
+	},
 	professionalStats: {
 		flexDirection: "row",
 		alignItems: "center",
 		gap: theme.gap(2),
+		flexWrap: "wrap",
 	},
 	ratingContainer: {
 		flexDirection: "row",
@@ -487,6 +506,11 @@ const styles = StyleSheet.create((theme) => ({
 	reviewsText: {
 		fontSize: 14,
 		color: theme.colors.mutedForeground,
+	},
+	metricText: {
+		fontSize: 12,
+		color: theme.colors.mutedForeground,
+		fontWeight: "500",
 	},
 	professionalFooter: {
 		flexDirection: "row",
