@@ -268,7 +268,7 @@ export default function Search() {
 																style={styles.professionalName}
 																numberOfLines={1}
 															>
-																{provider.user.name}
+																{provider.displayName || provider.user.name}
 															</Text>
 															<Pressable
 																onPress={(e) => {
@@ -301,8 +301,15 @@ export default function Search() {
 															style={styles.professionalSpecialty}
 															numberOfLines={1}
 														>
-															{provider.specialty || t("common.healthcareProvider")}
+															{[provider.professionalCategory, provider.specialty]
+																.filter(Boolean)
+																.join(" · ") || t("common.healthcareProvider")}
 														</Text>
+														{provider.verificationStatus === "VERIFIED" && (
+															<Text style={styles.verifiedText}>
+																{t("common.verified")}
+															</Text>
+														)}
 														{provider.bio && (
 															<Text
 																style={styles.professionalBio}
@@ -336,6 +343,11 @@ export default function Search() {
 																)}
 															</Text>
 														</View>
+														{provider.serviceModalities?.length ? (
+															<Text style={styles.professionalMeta} numberOfLines={1}>
+																{provider.serviceModalities.slice(0, 2).join(" · ")}
+															</Text>
+														) : null}
 														<View style={styles.professionalActions}>
 															<Pressable
 																onPress={(e) => {
@@ -560,6 +572,12 @@ const styles = StyleSheet.create((theme) => ({
 		color: theme.colors.mutedForeground,
 		marginBottom: theme.gap(0.5),
 	},
+	verifiedText: {
+		fontSize: 12,
+		color: theme.colors.primary,
+		fontWeight: "600",
+		marginBottom: theme.gap(0.5),
+	},
 	professionalBio: {
 		fontSize: 12,
 		color: theme.colors.mutedForeground,
@@ -632,6 +650,11 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 12,
 		color: theme.colors.primary,
 		fontWeight: "500",
+	},
+	professionalMeta: {
+		fontSize: 12,
+		color: theme.colors.mutedForeground,
+		marginTop: theme.gap(1),
 	},
 	loadingContainer: {
 		paddingVertical: theme.gap(6),

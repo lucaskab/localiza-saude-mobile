@@ -258,9 +258,9 @@ export default function DoctorDetails() {
 						<View style={styles.infoTitleContainer}>
 							<View style={styles.nameRow}>
 								<Text style={styles.name} numberOfLines={2}>
-									{providerUser.name}
+									{provider.displayName || providerUser.name}
 								</Text>
-								{providerUser.emailVerified && (
+								{provider.verificationStatus === "VERIFIED" && (
 									<View style={styles.verifiedBadge}>
 										<CheckCircle2
 											size={20}
@@ -271,12 +271,20 @@ export default function DoctorDetails() {
 								)}
 							</View>
 							<Text style={styles.specialty}>
-								{provider.specialty || t("common.healthcareProvider")}
+								{[provider.professionalCategory, provider.specialty]
+									.filter(Boolean)
+									.join(" · ") || t("common.healthcareProvider")}
 							</Text>
 							{provider.professionalId && (
 								<Text style={styles.professionalId}>
 									{t("common.licenseProfessionalId", {
-										professionalId: provider.professionalId,
+										professionalId: [
+											provider.licenseCouncil,
+											provider.professionalId,
+											provider.licenseState,
+										]
+											.filter(Boolean)
+											.join(" "),
 									})}
 								</Text>
 							)}

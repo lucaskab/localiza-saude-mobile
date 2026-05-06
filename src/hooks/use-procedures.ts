@@ -172,10 +172,37 @@ export const useDeleteProcedure = () => {
 
 // Update healthcare provider mutation
 interface UpdateHealthcareProviderData {
+	displayName?: string | null;
+	document?: string | null;
+	birthDate?: string | null;
+	gender?: string | null;
+	languages?: string[];
 	specialty?: string | null;
+	professionalCategory?: string | null;
 	professionalId?: string | null;
+	licenseCouncil?: string | null;
+	licenseState?: string | null;
+	verificationStatus?: "PENDING" | "VERIFIED" | "REJECTED";
 	bio?: string | null;
+	approach?: string | null;
+	education?: string | null;
+	certifications?: string | null;
+	yearsOfExperience?: number | null;
+	targetAudiences?: string[];
+	serviceModalities?: string[];
+	clinicAddress?: string | null;
+	homeCareRadiusKm?: number | null;
+	acceptedInsurance?: string[];
+	paymentMethods?: string[];
+	cancellationPolicy?: string | null;
+	clinicPhotos?: string[];
 }
+
+type LicenseDocumentUploadFile = {
+	uri: string;
+	name: string;
+	type: string;
+};
 
 export const updateHealthcareProvider = async (
 	providerId: string,
@@ -200,6 +227,97 @@ export const useUpdateHealthcareProvider = () => {
 		}) => updateHealthcareProvider(providerId, data),
 		onSuccess: (response) => {
 			// Invalidate healthcare provider queries
+			queryClient.invalidateQueries({
+				queryKey: ["healthcare-provider", response.healthcareProvider.id],
+			});
+			queryClient.invalidateQueries({
+				queryKey: [
+					"healthcare-provider",
+					"by-user",
+					response.healthcareProvider.userId,
+				],
+			});
+		},
+	});
+};
+
+export const uploadLicenseDocument = async (
+	providerId: string,
+	file: LicenseDocumentUploadFile,
+): Promise<{
+	healthcareProvider: HealthcareProvider;
+	document: {
+		fileName: string | null;
+		fileSize: number | null;
+		mimeType: string | null;
+		sha256: string | null;
+		uploadedAt: string | null;
+	};
+}> => {
+	const formData = new FormData();
+
+	// @ts-expect-error - React Native FormData accepts file objects with uri, name, and type
+	formData.append("file", file);
+
+	const { data } = await api.post<{
+		healthcareProvider: HealthcareProvider;
+		document: {
+			fileName: string | null;
+			fileSize: number | null;
+			mimeType: string | null;
+			sha256: string | null;
+			uploadedAt: string | null;
+		};
+	}>(`/healthcare-providers/${providerId}/license-document`, formData, {
+		headers: {
+			"Content-Type": "multipart/form-data",
+		},
+	});
+
+	return data;
+};
+
+export const useUploadLicenseDocument = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({
+			providerId,
+			file,
+		}: {
+			providerId: string;
+			file: LicenseDocumentUploadFile;
+		}) => uploadLicenseDocument(providerId, file),
+		onSuccess: (response) => {
+			queryClient.invalidateQueries({
+				queryKey: ["healthcare-provider", response.healthcareProvider.id],
+			});
+			queryClient.invalidateQueries({
+				queryKey: [
+					"healthcare-provider",
+					"by-user",
+					response.healthcareProvider.userId,
+				],
+			});
+		},
+	});
+};
+
+export const deleteLicenseDocument = async (
+	providerId: string,
+): Promise<{ healthcareProvider: HealthcareProvider }> => {
+	const { data } = await api.delete<{ healthcareProvider: HealthcareProvider }>(
+		`/healthcare-providers/${providerId}/license-document`,
+	);
+	return data;
+};
+
+export const useDeleteLicenseDocument = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: deleteLicenseDocument,
+		onSuccess: (response) => {
 			queryClient.invalidateQueries({
 				queryKey: ["healthcare-provider", response.healthcareProvider.id],
 			});

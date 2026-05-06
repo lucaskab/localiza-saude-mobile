@@ -1,5 +1,4 @@
-import { ArrowLeft, Bell, BellRing } from "lucide-react-native";
-import { useRouter } from "expo-router";
+import { Bell, BellRing } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import {
 	ActivityIndicator,
@@ -13,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ScreenHeader } from "@/components/screen-header";
 import { Button } from "@/components/ui/button";
 import {
 	useNotificationPreferences,
@@ -72,7 +72,6 @@ const buildPreferences = (
 export default function NotificationSettings() {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation();
-	const router = useRouter();
 	const [isRegisteringDevice, setIsRegisteringDevice] = useState(false);
 	const [deviceTokenEnabled, setDeviceTokenEnabled] = useState(() =>
 		hasRegisteredPushToken(),
@@ -132,34 +131,12 @@ export default function NotificationSettings() {
 				contentContainerStyle={styles.content}
 				showsVerticalScrollIndicator={false}
 			>
-				<View style={styles.header}>
-					<Pressable
-						accessibilityRole="button"
-						accessibilityLabel={t("common.goBack")}
-						testID="notification-settings-back-button"
-						onPress={() => router.back()}
-						style={styles.backButton}
-					>
-						<ArrowLeft
-							size={20}
-							color={theme.colors.foreground}
-							strokeWidth={2}
-						/>
-					</Pressable>
-					<View style={styles.headerIcon}>
-						<Bell
-							size={22}
-							color={theme.colors.primary}
-							strokeWidth={2}
-						/>
-					</View>
-					<View style={styles.headerCopy}>
-						<Text style={styles.title}>{t("common.notifications")}</Text>
-						<Text style={styles.subtitle}>
-							{t("common.manageYourNotifications")}
-						</Text>
-					</View>
-				</View>
+				<ScreenHeader
+					title={t("common.notifications")}
+					subtitle={t("common.manageYourNotifications")}
+					icon={Bell}
+					backButtonTestID="notification-settings-back-button"
+				/>
 
 				<View style={styles.deviceCard}>
 					<View style={styles.deviceIcon}>
@@ -273,45 +250,6 @@ const styles = StyleSheet.create((theme) => ({
 	content: {
 		padding: theme.gap(3),
 		gap: theme.gap(3),
-	},
-	header: {
-		backgroundColor: theme.colors.surfacePrimary,
-		borderRadius: theme.radius.lg,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		padding: theme.gap(2),
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.gap(2),
-	},
-	backButton: {
-		width: 40,
-		height: 40,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.secondary,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	headerIcon: {
-		width: 44,
-		height: 44,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.secondary,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	headerCopy: {
-		flex: 1,
-	},
-	title: {
-		fontSize: 20,
-		fontWeight: "600",
-		color: theme.colors.foreground,
-	},
-	subtitle: {
-		fontSize: 13,
-		color: theme.colors.mutedForeground,
-		marginTop: theme.gap(0.5),
 	},
 	deviceCard: {
 		backgroundColor: theme.colors.surfacePrimary,

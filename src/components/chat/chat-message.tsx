@@ -7,15 +7,13 @@ import {
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useUnistyles } from "react-native-unistyles";
 import type { Message } from "@/types/conversation";
-import { formatTimestamp, isImage, isPdf } from "./chat-utils";
-import { MessageImage } from "./message-image";
-import { MessagePdf } from "./message-pdf";
+import { formatTimestamp } from "./chat-utils";
 
 interface ChatMessageProps {
 	message: Message;
 	currentUserId?: string;
 	onFilePress: (
-		fileUrl: string | null,
+		messageId: string,
 		fileName: string | null,
 		mimeType: string | null,
 	) => void;
@@ -62,48 +60,34 @@ export function ChatMessage({
 					<Pressable
 						onPress={() =>
 							onFilePress(
-								message.fileUrl,
+								message.id,
 								message.fileName,
 								message.fileMimeType,
 							)
 						}
 					>
-						{message.fileMimeType && isImage(message.fileMimeType) ? (
-							<MessageImage
-								uri={message.fileUrl || ""}
-								fileName={message.fileName}
-								isMine={isMine}
+						<View
+							style={[
+								styles.fileAttachment,
+								isMine && styles.fileAttachmentMine,
+							]}
+						>
+							<FileIcon
+								size={16}
+								color={
+									isMine
+										? theme.colors.primaryForeground
+										: theme.colors.foreground
+								}
+								strokeWidth={2}
 							/>
-						) : message.fileMimeType && isPdf(message.fileMimeType) ? (
-							<MessagePdf
-								uri={message.fileUrl || ""}
-								fileName={message.fileName}
-								isMine={isMine}
-							/>
-						) : (
-							<View
-								style={[
-									styles.fileAttachment,
-									isMine && styles.fileAttachmentMine,
-								]}
+							<Text
+								style={[styles.fileName, isMine && styles.fileNameMine]}
+								numberOfLines={1}
 							>
-								<FileIcon
-									size={16}
-									color={
-										isMine
-											? theme.colors.primaryForeground
-											: theme.colors.foreground
-									}
-									strokeWidth={2}
-								/>
-								<Text
-									style={[styles.fileName, isMine && styles.fileNameMine]}
-									numberOfLines={1}
-								>
-									{message.fileName || "File"}
-								</Text>
-							</View>
-						)}
+								{message.fileName || "File"}
+							</Text>
+						</View>
 					</Pressable>
 				)}
 

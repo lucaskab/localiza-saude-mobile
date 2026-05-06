@@ -15,7 +15,7 @@ name: Provider - Core navigation
     id: "provider-tab-profile"
 - assertVisible: "Perfil"
 - assertVisible:
-    id: "provider-profile-menu-professional-profile"
+    id: "provider-profile-edit-button"
 - assertVisible:
     id: "provider-profile-menu-reviews"
 - assertVisible:

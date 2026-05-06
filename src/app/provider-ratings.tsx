@@ -11,14 +11,13 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import {
 	AlertCircle,
-	ArrowLeft,
 	MessageCircle,
 	Star,
 	TrendingUp,
 } from "lucide-react-native";
-import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ScreenHeader } from "@/components/screen-header";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
 import { useRatingsByProvider } from "@/hooks/use-ratings";
@@ -33,7 +32,6 @@ export default function ProviderRatings() {
 	const { theme } = useUnistyles();
 	const { i18n, t } = useTranslation();
 	const insets = useSafeAreaInsets();
-	const router = useRouter();
 	const { healthcareProvider, isLoading: isAuthLoading } = useAuth();
 	const providerId = healthcareProvider?.id || "";
 
@@ -127,35 +125,15 @@ export default function ProviderRatings() {
 	};
 
 	const renderHeader = () => (
-		<View style={styles.navigationHeader}>
-			<Pressable
-				accessibilityRole="button"
-				accessibilityLabel={t("common.goBack")}
-				testID="provider-ratings-back-button"
-				onPress={() => router.back()}
-				style={styles.backButton}
-			>
-				<ArrowLeft
-					size={20}
-					color={theme.colors.foreground}
-					strokeWidth={2}
-				/>
-			</Pressable>
-			<View style={styles.headerIcon}>
-				<Star
-					size={22}
-					color={theme.colors.amber}
-					fill={theme.colors.amber}
-					strokeWidth={2}
-				/>
-			</View>
-			<View style={styles.headerCopy}>
-				<Text style={styles.headerTitle}>{t("common.reviews")}</Text>
-				<Text style={styles.headerSubtitle}>
-					{t("common.patientFeedbackAboutAppointmentsAndCareExperience")}
-				</Text>
-			</View>
-		</View>
+		<ScreenHeader
+			title={t("common.reviews")}
+			subtitle={t("common.patientFeedbackAboutAppointmentsAndCareExperience")}
+			icon={Star}
+			iconColor={theme.colors.amber}
+			iconFill={theme.colors.amber}
+			iconBackgroundColor={`${theme.colors.amber}1F`}
+			backButtonTestID="provider-ratings-back-button"
+		/>
 	);
 
 	if (isInitialLoading) {
@@ -442,46 +420,6 @@ const styles = StyleSheet.create((theme) => ({
 		paddingHorizontal: theme.gap(3),
 		paddingTop: theme.gap(3),
 		gap: theme.gap(3),
-	},
-	navigationHeader: {
-		backgroundColor: theme.colors.surfacePrimary,
-		borderRadius: theme.radius.lg,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		padding: theme.gap(2),
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.gap(2),
-	},
-	backButton: {
-		width: 40,
-		height: 40,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.secondary,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	headerIcon: {
-		width: 44,
-		height: 44,
-		borderRadius: theme.radius.md,
-		backgroundColor: `${theme.colors.amber}1F`,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	headerCopy: {
-		flex: 1,
-	},
-	headerTitle: {
-		fontSize: 20,
-		fontWeight: "600",
-		color: theme.colors.foreground,
-	},
-	headerSubtitle: {
-		fontSize: 13,
-		color: theme.colors.mutedForeground,
-		lineHeight: 18,
-		marginTop: theme.gap(0.5),
 	},
 	summaryCard: {
 		backgroundColor: theme.colors.surfacePrimary,

@@ -209,12 +209,17 @@ export default function Home() {
 														style={styles.professionalName}
 														numberOfLines={1}
 													>
-														{provider.user.name}
+														{provider.displayName || provider.user.name}
 													</Text>
 												</View>
 												<Text style={styles.professionalSpecialty}>
-													{provider.specialty || t("common.healthcareProvider")}
+													{[provider.professionalCategory, provider.specialty]
+														.filter(Boolean)
+														.join(" · ") || t("common.healthcareProvider")}
 												</Text>
+												{provider.verificationStatus === "VERIFIED" ? (
+													<Text style={styles.verifiedText}>{t("common.verified")}</Text>
+												) : null}
 												<View style={styles.professionalStats}>
 													<View style={styles.ratingContainer}>
 														<Star
@@ -456,6 +461,12 @@ const styles = StyleSheet.create((theme) => ({
 	professionalSpecialty: {
 		fontSize: 14,
 		color: theme.colors.mutedForeground,
+		marginBottom: theme.gap(0.5),
+	},
+	verifiedText: {
+		fontSize: 12,
+		color: theme.colors.primary,
+		fontWeight: "600",
 		marginBottom: theme.gap(1),
 	},
 	professionalStats: {

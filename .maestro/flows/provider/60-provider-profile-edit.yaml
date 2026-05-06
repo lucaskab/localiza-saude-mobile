@@ -8,7 +8,7 @@ name: Provider - Profile editor
     id: "provider-tab-profile"
 - assertVisible: "Perfil"
 - tapOn:
-    id: "provider-profile-menu-professional-profile"
+    id: "provider-profile-edit-button"
 - assertVisible:
     id: "provider-profile-edit-screen"
 - assertVisible: "Informações do perfil"

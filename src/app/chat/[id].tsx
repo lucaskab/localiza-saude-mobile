@@ -27,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
 import {
+	getMessageFileUrl,
 	useConversationMessages,
 	useSendFileMessage,
 	useSendTextMessage,
@@ -196,20 +197,20 @@ export default function ChatScreen() {
 	};
 
 	const handleFilePress = async (
-		fileUrl: string | null,
-		_fileName: string | null,
-		mimeType: string | null,
+		messageId: string,
+		fileName: string | null,
+		fallbackMimeType: string | null,
 	) => {
-		if (!fileUrl) {
-			Alert.alert(t("common.error"), t("common.fileURLNotAvailable"));
-			return;
-		}
-
 		try {
+			const file = await getMessageFileUrl(messageId);
+			const fileUrl = file.url;
+			const mimeType = file.fileMimeType || fallbackMimeType;
+			const finalFileName = file.fileName || fileName;
+
 			if (mimeType && isImage(mimeType)) {
 				await WebBrowser.openBrowserAsync(fileUrl);
 			} else if (mimeType && isPdf(mimeType)) {
-				const pdfName = encodeURIComponent(_fileName || "PDF document");
+				const pdfName = encodeURIComponent(finalFileName || "PDF document");
 				const pdfUrl = encodeURIComponent(fileUrl);
 				router.push(`/pdf-viewer?uri=${pdfUrl}&name=${pdfName}` as never);
 			} else {

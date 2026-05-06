@@ -73,12 +73,6 @@ export default function ProviderTabs() {
 				}}
 			/>
 			<Tabs.Screen
-				name="ratings"
-				options={{
-					href: null,
-				}}
-			/>
-			<Tabs.Screen
 				name="profile"
 				options={{
 					title: t("common.profile"),

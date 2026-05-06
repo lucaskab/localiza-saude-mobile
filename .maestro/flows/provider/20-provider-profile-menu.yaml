@@ -17,7 +17,7 @@ name: Provider - Profile menu links
 - assertVisible: "Avaliações"
 - assertVisible: "Feedback de pacientes sobre consultas e experiência de cuidado."
 - tapOn:
-    id: "provider-tab-profile"
+    id: "provider-ratings-back-button"
 - assertVisible:
     id: "provider-profile-menu-language"
 - scrollUntilVisible:
@@ -35,14 +35,9 @@ name: Provider - Profile menu links
 - tapOn:
     id: "language-settings-back-button"
 - assertVisible:
-    id: "provider-profile-menu-professional-profile"
-- scrollUntilVisible:
-    element:
-      id: "provider-profile-menu-professional-profile"
-    direction: UP
-    optional: true
+    id: "provider-profile-edit-button"
 - tapOn:
-    id: "provider-profile-menu-professional-profile"
+    id: "provider-profile-edit-button"
 - assertVisible: "Perfil profissional"
 - assertVisible: "Informações do perfil"
 - tapOn:

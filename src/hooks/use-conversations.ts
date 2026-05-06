@@ -316,6 +316,23 @@ export const useSendFileMessage = () => {
 	});
 };
 
+export const getMessageFileUrl = async (
+	messageId: string,
+): Promise<{
+	url: string;
+	fileName: string | null;
+	fileMimeType: string | null;
+	expiresIn: number;
+}> => {
+	const { data } = await api.get<{
+		url: string;
+		fileName: string | null;
+		fileMimeType: string | null;
+		expiresIn: number;
+	}>(`/conversations/messages/${messageId}/file-url`);
+	return data;
+};
+
 // Get or create conversation
 export const getOrCreateConversation = async (
 	data: GetOrCreateConversationData,

@@ -1,6 +1,8 @@
 import type { ExpoConfig } from "@expo/config-types";
 
 const IS_DEV = process.env.APP_VARIANT === "development";
+const ENABLE_APPLE_SIGN_IN =
+	process.env.EXPO_PUBLIC_ENABLE_APPLE_SIGN_IN === "true";
 
 const getUniqueIdentifier = () => {
 	if (IS_DEV) {
@@ -59,7 +61,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => ({
 		"expo-font",
 		"expo-notifications",
 		"expo-web-browser",
-		"expo-apple-authentication",
+		...(ENABLE_APPLE_SIGN_IN ? ["expo-apple-authentication"] : []),
 		"@config-plugins/react-native-blob-util",
 		"@config-plugins/react-native-pdf",
 		[

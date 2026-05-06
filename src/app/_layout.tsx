@@ -53,9 +53,20 @@ function RootNavigator() {
 					<Stack.Screen name="language-settings" />
 					<Stack.Screen name="medical-record" />
 					<Stack.Screen name="notification-settings" />
+					<Stack.Screen name="settings" />
 					<Stack.Screen name="provider-create-appointment" />
+					<Stack.Screen
+						name="provider-procedure-create"
+						options={{
+							presentation: "formSheet",
+							sheetAllowedDetents: [0.72, 0.92],
+							sheetGrabberVisible: true,
+							contentStyle: { backgroundColor: "transparent" },
+						}}
+					/>
 					<Stack.Screen name="provider-profile-edit" />
 					<Stack.Screen name="provider-procedures" />
+					<Stack.Screen name="provider-ratings" />
 					<Stack.Screen name="provider-schedule" />
 				</Stack>
 			</AuthProvider>

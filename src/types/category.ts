@@ -13,10 +13,19 @@ export interface User {
 export interface HealthcareProvider {
 	id: string;
 	userId: string;
+	displayName: string | null;
+	languages: string[];
 	specialty: string | null;
+	professionalCategory: string | null;
 	professionalId: string | null;
+	licenseCouncil: string | null;
+	licenseState: string | null;
+	verificationStatus: "PENDING" | "VERIFIED" | "REJECTED";
 	bio: string | null;
+	serviceModalities: string[];
+	clinicAddress: string | null;
 	nextAvailableAt?: string | null;
+	startingPriceCents?: number | null;
 	averageRating?: number;
 	totalRatings?: number;
 	user: User;

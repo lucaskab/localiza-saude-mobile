@@ -7,6 +7,9 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
 
+const isAppleSignInEnabled =
+	process.env.EXPO_PUBLIC_ENABLE_APPLE_SIGN_IN === "true";
+
 export default function Login() {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation();
@@ -15,6 +18,11 @@ export default function Login() {
 	const [isAppleSignInPending, setIsAppleSignInPending] = useState(false);
 
 	useEffect(() => {
+		if (!isAppleSignInEnabled) {
+			setIsAppleAuthAvailable(false);
+			return;
+		}
+
 		AppleAuthentication.isAvailableAsync()
 			.then(setIsAppleAuthAvailable)
 			.catch(() => setIsAppleAuthAvailable(false));

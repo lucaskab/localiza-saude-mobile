@@ -1,9 +1,9 @@
-import { ArrowLeft, Check, Globe2 } from "lucide-react-native";
-import { useRouter } from "expo-router";
+import { Check, Globe2 } from "lucide-react-native";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { ScreenHeader } from "@/components/screen-header";
 import {
 	type SupportedLanguage,
 	supportedLanguages,
@@ -13,7 +13,6 @@ import {
 export default function LanguageSettings() {
 	const { theme } = useUnistyles();
 	const { i18n, t } = useTranslation();
-	const router = useRouter();
 	const activeLanguage = supportedLanguages.includes(
 		i18n.language as SupportedLanguage,
 	)
@@ -30,34 +29,12 @@ export default function LanguageSettings() {
 				contentContainerStyle={styles.content}
 				showsVerticalScrollIndicator={false}
 			>
-				<View style={styles.header}>
-					<Pressable
-						accessibilityRole="button"
-						accessibilityLabel={t("common.goBack")}
-						testID="language-settings-back-button"
-						onPress={() => router.back()}
-						style={styles.backButton}
-					>
-						<ArrowLeft
-							size={20}
-							color={theme.colors.foreground}
-							strokeWidth={2}
-						/>
-					</Pressable>
-					<View style={styles.headerIcon}>
-						<Globe2
-							size={22}
-							color={theme.colors.primary}
-							strokeWidth={2}
-						/>
-					</View>
-					<View style={styles.headerCopy}>
-						<Text style={styles.title}>{t("common.language")}</Text>
-						<Text style={styles.subtitle}>
-							{t("common.choosePreferredLanguage")}
-						</Text>
-					</View>
-				</View>
+				<ScreenHeader
+					title={t("common.language")}
+					subtitle={t("common.choosePreferredLanguage")}
+					icon={Globe2}
+					backButtonTestID="language-settings-back-button"
+				/>
 
 				<View style={styles.menuList}>
 					{supportedLanguagesWithNames.map(({ code, name }) => {
@@ -132,45 +109,6 @@ const styles = StyleSheet.create((theme) => ({
 	content: {
 		padding: theme.gap(3),
 		gap: theme.gap(3),
-	},
-	header: {
-		backgroundColor: theme.colors.surfacePrimary,
-		borderRadius: theme.radius.lg,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		padding: theme.gap(2),
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.gap(2),
-	},
-	backButton: {
-		width: 40,
-		height: 40,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.secondary,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	headerIcon: {
-		width: 44,
-		height: 44,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.secondary,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	headerCopy: {
-		flex: 1,
-	},
-	title: {
-		fontSize: 20,
-		fontWeight: "600",
-		color: theme.colors.foreground,
-	},
-	subtitle: {
-		fontSize: 13,
-		color: theme.colors.mutedForeground,
-		marginTop: theme.gap(0.5),
 	},
 	menuList: {
 		gap: theme.gap(1),

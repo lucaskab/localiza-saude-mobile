@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, ArrowLeft, CalendarClock, Clock, Plus, Save, Trash2 } from "lucide-react-native";
+import { AlertCircle, CalendarClock, Clock, Plus, Save, Trash2 } from "lucide-react-native";
 import {
 	View,
 	Text,
@@ -14,7 +14,7 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
-import { useRouter } from "expo-router";
+import { ScreenHeader } from "@/components/screen-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth";
@@ -54,7 +54,6 @@ type DaySchedule = z.infer<typeof dayScheduleSchema>;
 export default function ProviderSchedule() {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation();
-	const router = useRouter();
 	const { healthcareProvider } = useAuth();
 	const [isSaving, setIsSaving] = useState(false);
 
@@ -425,34 +424,13 @@ export default function ProviderSchedule() {
 				contentContainerStyle={styles.scrollContent}
 				showsVerticalScrollIndicator={false}
 			>
-				<View style={styles.editHeader}>
-					<Pressable
-						accessibilityRole="button"
-						accessibilityLabel={t("common.goBack")}
-						testID="provider-schedule-back-button"
-						onPress={() => router.back()}
-						style={styles.backButton}
-					>
-						<ArrowLeft
-							size={20}
-							color={theme.colors.foreground}
-							strokeWidth={2}
-						/>
-					</Pressable>
-					<View style={styles.headerIcon}>
-						<CalendarClock
-							size={22}
-							color={theme.colors.primary}
-							strokeWidth={2}
-						/>
-					</View>
-					<View style={styles.editHeaderCopy}>
-						<Text style={styles.editHeaderTitle}>{t("common.schedule")}</Text>
-						<Text style={styles.editHeaderSubtitle}>
-							{t("common.workingScheduleDescription")}
-						</Text>
-					</View>
-				</View>
+				<ScreenHeader
+					title={t("common.schedule")}
+					subtitle={t("common.workingScheduleDescription")}
+					icon={CalendarClock}
+					backButtonTestID="provider-schedule-back-button"
+					style={styles.screenHeader}
+				/>
 
 				<View style={styles.description}>
 					<Text style={styles.descriptionText}>
@@ -519,45 +497,8 @@ const styles = StyleSheet.create((theme) => ({
 		paddingTop: theme.gap(3),
 		paddingBottom: theme.gap(20), // Extra padding for sticky button
 	},
-	editHeader: {
-		backgroundColor: theme.colors.surfacePrimary,
-		borderRadius: theme.radius.lg,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		padding: theme.gap(2),
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.gap(2),
+	screenHeader: {
 		marginBottom: theme.gap(3),
-	},
-	backButton: {
-		width: 40,
-		height: 40,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.secondary,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	headerIcon: {
-		width: 40,
-		height: 40,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.secondary,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	editHeaderCopy: {
-		flex: 1,
-	},
-	editHeaderTitle: {
-		fontSize: 18,
-		fontWeight: "600",
-		color: theme.colors.foreground,
-	},
-	editHeaderSubtitle: {
-		fontSize: 13,
-		color: theme.colors.mutedForeground,
-		marginTop: theme.gap(0.5),
 	},
 	description: {
 		marginBottom: theme.gap(3),
