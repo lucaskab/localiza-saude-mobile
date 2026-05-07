@@ -1,4 +1,5 @@
 import type { PatientProfile, PatientProfileData } from "@/types/patient-profile";
+import type { Customer, HealthcareProvider, Procedure } from "@/types/user";
 
 export type AppointmentStatus =
 	| "SCHEDULED"
@@ -7,44 +8,6 @@ export type AppointmentStatus =
 	| "COMPLETED"
 	| "CANCELLED"
 	| "NO_SHOW";
-
-export interface User {
-	id: string;
-	name: string;
-	email: string;
-	phone: string | null;
-	image: string | null;
-	role: string;
-}
-
-export interface Customer {
-	id: string;
-	userId: string;
-	user: User;
-	createdAt: string;
-	updatedAt: string;
-}
-
-export interface HealthcareProvider {
-	id: string;
-	userId: string;
-	specialty: string | null;
-	professionalId: string | null;
-	user: User;
-	createdAt: string;
-	updatedAt: string;
-}
-
-export interface Procedure {
-	id: string;
-	name: string;
-	description: string | null;
-	priceInCents: number;
-	durationInMinutes: number;
-	healthcareProviderId: string;
-	createdAt: string;
-	updatedAt: string;
-}
 
 export interface AppointmentProcedure {
 	id: string;
@@ -87,6 +50,10 @@ export interface CreateAppointmentData {
 
 export interface GetAppointmentsResponse {
 	appointments: Appointment[];
+	total?: number;
+	limit?: number;
+	offset?: number;
+	hasMore?: boolean;
 }
 
 export interface GetAppointmentByIdResponse {

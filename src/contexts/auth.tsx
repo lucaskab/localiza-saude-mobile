@@ -20,18 +20,9 @@ import {
 } from "@/services/push-notifications";
 import type { Customer } from "@/types/customer";
 import type { HealthcareProvider } from "@/types/healthcare-provider";
+import type { User } from "@/types/user";
 
 WebBrowser.maybeCompleteAuthSession();
-
-interface User {
-	id: string;
-	name: string;
-	email: string;
-	emailVerified: boolean;
-	image: string | null;
-	role?: "HEALTHCARE_PROVIDER" | "CUSTOMER";
-	onboardingCompleted?: boolean;
-}
 
 interface AuthState {
 	sessionToken: string;
@@ -117,7 +108,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 				const session = await authClient.getSession();
 
 				if (session.data?.session.token && session.data?.user) {
-					const user = session.data.user as User;
+					const user = session.data.user as unknown as User;
 
 					// Set token in memory for API requests
 					api.setAuthToken(session.data.session.token);
@@ -210,7 +201,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 		const session = await authClient.getSession();
 
 		if (session.data?.session.token && session.data?.user) {
-			const user = session.data.user as User;
+			const user = session.data.user as unknown as User;
 
 			api.setAuthToken(session.data.session.token);
 

@@ -246,6 +246,7 @@ export const es = {
     "procedures": "Procedimientos",
     "professionalID": "Registro profesional",
     "professionalVerification": "Verificación profesional",
+    "professionalVerificationRequired": "Completa profesión, especialidad, consejo, estado del registro, número de registro y envía el documento del consejo para solicitar verificación.",
     "publicProfile": "Perfil público",
     "rate": "Calificar",
     "rateThisProvider": "Calificar a este profesional",

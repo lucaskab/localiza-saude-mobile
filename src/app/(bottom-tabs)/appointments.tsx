@@ -265,7 +265,7 @@ export default function Appointments() {
 						{filteredAppointments.map((appointment) => {
 							const { date, time } = formatDateTime(appointment.scheduledAt);
 							const provider = appointment.healthcareProvider;
-							const providerUser = provider.user;
+							const providerUser = provider;
 							const patientName = getAppointmentPatientName(appointment);
 
 							return (
@@ -375,7 +375,7 @@ export default function Appointments() {
 												size="sm"
 												style={styles.actionButton}
 												onPress={() =>
-													handleOpenChat(appointment.healthcareProvider.user.id)
+													handleOpenChat(appointment.healthcareProvider.id)
 												}
 												disabled={createConversationMutation.isPending}
 											>
@@ -437,7 +437,7 @@ export default function Appointments() {
 												size="sm"
 												style={styles.actionButton}
 												onPress={() =>
-													handleOpenChat(appointment.healthcareProvider.user.id)
+													handleOpenChat(appointment.healthcareProvider.id)
 												}
 												disabled={createConversationMutation.isPending}
 											>

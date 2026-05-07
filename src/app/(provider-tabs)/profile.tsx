@@ -118,13 +118,13 @@ export default function ProviderProfile() {
           style={[styles.header, { paddingTop: insets.top + theme.gap(3) }]}
         >
           <View style={styles.userInfo}>
-            <Avatar source={healthcareProvider?.user?.image} size="md" />
+            <Avatar source={healthcareProvider?.image} size="md" />
             <View style={styles.userDetails}>
               <Text style={styles.userName}>
-                {healthcareProvider?.user?.name || t("common.provider")}
+                {healthcareProvider?.name || t("common.provider")}
               </Text>
               <Text style={styles.userEmail}>
-                {healthcareProvider?.user?.email || t("common.notSet")}
+                {healthcareProvider?.email || t("common.notSet")}
               </Text>
               <Text style={styles.userSpecialty}>
                 {healthcareProvider?.specialty || t("common.specialty")}

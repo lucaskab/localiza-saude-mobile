@@ -234,9 +234,9 @@ export const useCreateCustomer = () => {
 			queryClient.setQueryData(["customer", customer.id], response);
 
 			// Also cache by userId for quick lookup
-			if (customer.userId) {
+			if (customer.id) {
 				queryClient.setQueryData(
-					["customer", "user", customer.userId],
+					["customer", "user", customer.id],
 					response,
 				);
 			}
@@ -293,9 +293,9 @@ export const useUpdateCustomer = () => {
 			queryClient.invalidateQueries({ queryKey: ["customers"] });
 
 			// Update userId cache if available
-			if (customer.userId) {
+			if (customer.id) {
 				queryClient.setQueryData(
-					["customer", "user", customer.userId],
+					["customer", "user", customer.id],
 					response,
 				);
 			}

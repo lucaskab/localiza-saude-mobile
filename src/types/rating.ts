@@ -1,34 +1,11 @@
-export interface RatingUser {
-	id: string;
-	name: string;
-	email: string;
-	phone: string | null;
-	image: string | null;
-	role: string;
-}
-
-export interface RatingCustomer {
-	id: string;
-	userId: string;
-	user: RatingUser;
-	createdAt: string;
-	updatedAt: string;
-}
-
-export interface RatingHealthcareProvider {
-	id: string;
-	userId: string;
-	user: RatingUser;
-	createdAt: string;
-	updatedAt: string;
-}
+import type { Customer, HealthcareProvider } from "@/types/user";
 
 export interface Rating {
 	id: string;
 	customerId: string;
-	customer: RatingCustomer;
+	customer: Customer;
 	healthcareProviderId: string;
-	healthcareProvider: RatingHealthcareProvider;
+	healthcareProvider: HealthcareProvider;
 	rating: number;
 	comment: string | null;
 	createdAt: string;

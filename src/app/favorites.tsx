@@ -134,22 +134,22 @@ export default function FavoritesScreen() {
 								style={styles.card}
 							>
 								<View style={styles.cardHeader}>
-									{provider.user.image ? (
+									{provider.image ? (
 										<Image
-											source={{ uri: provider.user.image }}
+											source={{ uri: provider.image }}
 											style={styles.avatar}
 										/>
 									) : (
 										<View style={[styles.avatar, styles.avatarFallback]}>
 											<Text style={styles.avatarInitial}>
-												{provider.user.name.charAt(0).toUpperCase()}
+												{provider.name.charAt(0).toUpperCase()}
 											</Text>
 										</View>
 									)}
 
 									<View style={styles.providerInfo}>
 										<Text style={styles.providerName} numberOfLines={1}>
-											{provider.user.name}
+											{provider.name}
 										</Text>
 										<Text style={styles.providerSpecialty} numberOfLines={1}>
 											{provider.specialty || t("common.healthcareProvider")}

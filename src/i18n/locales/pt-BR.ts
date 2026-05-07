@@ -241,6 +241,7 @@ export const ptBR = {
     procedures: "Procedimentos",
     professionalID: "Registro profissional",
     professionalVerification: "Verificação profissional",
+    professionalVerificationRequired: "Preencha profissão, especialidade, conselho, UF, número do registro e envie o documento do conselho para solicitar a verificação.",
     publicProfile: "Perfil público",
     rate: "Avaliar",
     rateThisProvider: "Avaliar este profissional",

@@ -96,7 +96,7 @@ export default function ProviderRatings() {
 		});
 
 	const getCustomerInitial = (rating: Rating) =>
-		rating.customer.user.name.charAt(0).toUpperCase();
+		rating.customer.name.charAt(0).toUpperCase();
 
 	const getRatingTone = (rating: number) => {
 		const fivePointRating = ratingToFivePointScale(rating);
@@ -305,9 +305,9 @@ export default function ProviderRatings() {
 									<View key={rating.id} style={styles.reviewCard}>
 										<View style={styles.reviewHeader}>
 											<View style={styles.customerAvatarContainer}>
-												{rating.customer.user.image ? (
+												{rating.customer.image ? (
 													<Image
-														source={{ uri: rating.customer.user.image }}
+														source={{ uri: rating.customer.image }}
 														style={styles.customerAvatar}
 													/>
 												) : (
@@ -321,7 +321,7 @@ export default function ProviderRatings() {
 
 											<View style={styles.customerInfo}>
 												<Text style={styles.customerName} numberOfLines={1}>
-													{rating.customer.user.name}
+													{rating.customer.name}
 												</Text>
 												<Text style={styles.reviewDate}>
 													{formatDate(rating.createdAt)}

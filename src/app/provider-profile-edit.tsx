@@ -142,6 +142,7 @@ export default function ProviderProfileEdit() {
 	const { healthcareProvider } = useAuth();
 	const [isSaving, setIsSaving] = useState(false);
 	const [currentStep, setCurrentStep] = useState(0);
+	const [hasLicenseDocument, setHasLicenseDocument] = useState(false);
 	const updateProviderMutation = useUpdateHealthcareProvider();
 	const uploadLicenseDocumentMutation = useUploadLicenseDocument();
 	const deleteLicenseDocumentMutation = useDeleteLicenseDocument();
@@ -170,6 +171,7 @@ export default function ProviderProfileEdit() {
 	const isLastStep = currentStep === onboardingSteps.length - 1;
 
 	useEffect(() => {
+		setHasLicenseDocument(Boolean(healthcareProvider?.licenseDocumentFileName));
 		reset({
 			displayName: healthcareProvider?.displayName || null,
 			document: healthcareProvider?.document || null,
@@ -210,8 +212,26 @@ export default function ProviderProfileEdit() {
 	const onSubmit = async (data: ProfileFormData) => {
 		const parsed = profileFormSchema.safeParse(data);
 
-		if (!parsed.success || parsed.data.specialty.trim().length === 0) {
-			Alert.alert(t("common.validationError"), t("common.specialtyIsRequired"));
+		const requiredVerificationFields = parsed.success
+			? [
+					parsed.data.professionalCategory?.trim(),
+					parsed.data.specialty.trim(),
+					parsed.data.professionalId?.trim(),
+					parsed.data.licenseCouncil?.trim(),
+					parsed.data.licenseState?.trim(),
+				]
+			: [];
+
+		if (
+			!parsed.success ||
+			requiredVerificationFields.some((value) => !value) ||
+			!hasLicenseDocument
+		) {
+			setCurrentStep(1);
+			Alert.alert(
+				t("common.validationError"),
+				t("common.professionalVerificationRequired"),
+			);
 			return;
 		}
 
@@ -309,6 +329,7 @@ export default function ProviderProfileEdit() {
 					type: asset.mimeType || "application/octet-stream",
 				},
 			});
+			setHasLicenseDocument(true);
 			Alert.alert(t("common.success"), t("common.documentUploadedSecurely"));
 		} catch (error) {
 			console.error("Failed to upload professional document:", error);
@@ -323,6 +344,7 @@ export default function ProviderProfileEdit() {
 
 		try {
 			await deleteLicenseDocumentMutation.mutateAsync(healthcareProvider.id);
+			setHasLicenseDocument(false);
 			Alert.alert(t("common.success"), t("common.documentRemoved"));
 		} catch (error) {
 			console.error("Failed to delete professional document:", error);
@@ -431,7 +453,7 @@ export default function ProviderProfileEdit() {
 								<View style={styles.readOnlyField}>
 									<User size={16} color={theme.colors.mutedForeground} />
 									<Text style={styles.readOnlyText}>
-										{healthcareProvider.user?.name || t("common.notSet")}
+										{healthcareProvider?.name || t("common.notSet")}
 									</Text>
 								</View>
 							</View>
@@ -440,7 +462,7 @@ export default function ProviderProfileEdit() {
 								<Text style={styles.fieldLabel}>{t("common.email")}</Text>
 								<View style={styles.readOnlyField}>
 									<Text style={styles.readOnlyText}>
-										{healthcareProvider.user?.email || t("common.notSet")}
+										{healthcareProvider?.email || t("common.notSet")}
 									</Text>
 								</View>
 								</View>
@@ -508,7 +530,7 @@ export default function ProviderProfileEdit() {
 								control={control}
 								icon={Briefcase}
 								name="professionalCategory"
-								label={t("common.professionalCategory")}
+								label={`${t("common.professionalCategory")} *`}
 								placeholder={t("common.eGHealthcareProfession")}
 							/>
 							<Controller
@@ -534,7 +556,9 @@ export default function ProviderProfileEdit() {
 								name="professionalId"
 								render={({ field }) => (
 									<View style={styles.fieldGroup}>
-										<Text style={styles.fieldLabel}>{t("common.professionalID")}</Text>
+										<Text style={styles.fieldLabel}>
+											{t("common.professionalID")} <Text style={styles.required}>*</Text>
+										</Text>
 										<Input
 											leftIcon={FileText}
 											value={field.value || ""}
@@ -548,14 +572,14 @@ export default function ProviderProfileEdit() {
 								control={control}
 								icon={ShieldCheck}
 								name="licenseCouncil"
-								label={t("common.professionalCouncil")}
+								label={`${t("common.professionalCouncil")} *`}
 								placeholder={t("common.eGCRMCRPCRN")}
 							/>
 							<FormInput
 								control={control}
 								icon={MapPin}
 								name="licenseState"
-								label={t("common.registrationState")}
+								label={`${t("common.registrationState")} *`}
 								placeholder="SP"
 							/>
 							<View style={styles.documentBox}>

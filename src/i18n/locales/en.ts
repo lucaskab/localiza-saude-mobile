@@ -246,6 +246,7 @@ export const en = {
     procedures: "Procedures",
     professionalID: "Professional ID",
     professionalVerification: "Professional verification",
+    professionalVerificationRequired: "Fill in profession, specialty, council, registration state, registration number, and upload the council document to request verification.",
     publicProfile: "Public profile",
     rate: "Rate",
     rateThisProvider: "Rate this provider",

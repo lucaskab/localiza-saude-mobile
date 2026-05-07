@@ -426,11 +426,11 @@ export default function Booking() {
 				{/* Professional Info */}
 				<View style={styles.professionalInfo}>
 					<Image
-						source={{ uri: provider.user.image || "https://i.pravatar.cc/150" }}
+						source={{ uri: provider.image || "https://i.pravatar.cc/150" }}
 						style={styles.professionalImage}
 					/>
 					<View style={styles.professionalDetails}>
-						<Text style={styles.professionalName}>{provider.user.name}</Text>
+						<Text style={styles.professionalName}>{provider.name}</Text>
 						<Text style={styles.professionalSpecialty}>
 							{provider.specialty || t("common.healthcareProvider")}
 						</Text>

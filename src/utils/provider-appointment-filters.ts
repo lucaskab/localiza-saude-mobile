@@ -326,9 +326,9 @@ export const getFilteredProviderAppointments = ({
 
 			const patientName = getAppointmentPatientName(appointment).toLowerCase();
 			const patientPhone =
-				appointment.patientProfile?.phone || appointment.customer?.user.phone || "";
+				appointment.patientProfile?.phone || appointment.customer?.phone || "";
 			const patientEmail =
-				appointment.patientProfile?.email || appointment.customer?.user.email || "";
+				appointment.patientProfile?.email || appointment.customer?.email || "";
 			const procedures = appointment.appointmentProcedures
 				.map((ap) => ap.procedure.name.toLowerCase())
 				.join(" ");

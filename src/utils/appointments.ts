@@ -2,7 +2,7 @@ import type { Appointment } from "@/types/appointment";
 
 export const getAppointmentPatientName = (appointment: Appointment) =>
 	appointment.patientProfile?.fullName ||
-	appointment.customer?.user.name ||
+	appointment.customer?.name ||
 	"Patient";
 
 export const getAppointmentPatientSubtitle = (appointment: Appointment) => {
@@ -18,13 +18,13 @@ export const getAppointmentPatientSubtitle = (appointment: Appointment) => {
 };
 
 export const getAppointmentPatientImage = (appointment: Appointment) =>
-	appointment.customer?.user.image || null;
+	appointment.customer?.image || null;
 
 export const getAppointmentPatientEmail = (appointment: Appointment) =>
-	appointment.patientProfile?.email || appointment.customer?.user.email || null;
+	appointment.patientProfile?.email || appointment.customer?.email || null;
 
 export const getAppointmentPatientPhone = (appointment: Appointment) =>
-	appointment.patientProfile?.phone || appointment.customer?.user.phone || null;
+	appointment.patientProfile?.phone || appointment.customer?.phone || null;
 
 export const getAppointmentCustomerUserId = (appointment: Appointment) =>
-	appointment.customer?.user.id || null;
+	appointment.customer?.id || null;

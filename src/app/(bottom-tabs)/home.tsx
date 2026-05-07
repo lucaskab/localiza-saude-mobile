@@ -186,9 +186,9 @@ export default function Home() {
 								>
 									<View style={styles.professionalCard}>
 										<View style={styles.professionalContent}>
-											{provider.user.image ? (
+											{provider.image ? (
 												<Image
-													source={{ uri: provider.user.image }}
+													source={{ uri: provider.image }}
 													style={styles.professionalImage}
 												/>
 											) : (
@@ -199,7 +199,7 @@ export default function Home() {
 													]}
 												>
 													<Text style={styles.professionalImageInitial}>
-														{provider.user.name.charAt(0).toUpperCase()}
+														{provider.name.charAt(0).toUpperCase()}
 													</Text>
 												</View>
 											)}
@@ -209,7 +209,7 @@ export default function Home() {
 														style={styles.professionalName}
 														numberOfLines={1}
 													>
-														{provider.displayName || provider.user.name}
+														{provider.displayName || provider.name}
 													</Text>
 												</View>
 												<Text style={styles.professionalSpecialty}>

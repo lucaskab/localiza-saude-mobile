@@ -231,7 +231,7 @@ export default function AppointmentDetails() {
 		try {
 			const participantId = isHealthcareProvider
 				? getAppointmentCustomerUserId(appointmentItem)
-				: appointmentItem.healthcareProvider.user.id;
+				: appointmentItem.healthcareProvider.id;
 
 			if (!participantId) {
 				Alert.alert(
@@ -295,12 +295,12 @@ export default function AppointmentDetails() {
 		  }
 		: {
 				title: t("common.provider"),
-				name: appointment.healthcareProvider.user.name,
+				name: appointment.healthcareProvider.name,
 				subtitle:
 					appointment.healthcareProvider.specialty || t("common.healthcareProvider2"),
-				image: appointment.healthcareProvider.user.image,
-				email: appointment.healthcareProvider.user.email,
-				phone: appointment.healthcareProvider.user.phone,
+				image: appointment.healthcareProvider.image,
+				email: appointment.healthcareProvider.email,
+				phone: appointment.healthcareProvider.phone,
 		  };
 
 	const providerActions = isHealthcareProvider

@@ -1,30 +1,12 @@
-export interface User {
-	id: string;
-	name: string;
-	email: string;
-	phone: string | null;
-	image: string | null;
-	role: string;
-}
-
-export interface HealthcareProvider {
-	id: string;
-	userId: string;
-	specialty: string | null;
-	professionalId: string | null;
-	bio: string | null;
-	user: User;
-	createdAt: string;
-	updatedAt: string;
-}
+import type { HealthcareProvider } from "@/types/user";
 
 export interface Schedule {
 	id: string;
 	healthcareProviderId: string;
 	healthcareProvider: HealthcareProvider;
-	dayOfWeek: number; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-	startTime: string; // HH:mm format
-	endTime: string; // HH:mm format
+	dayOfWeek: number;
+	startTime: string;
+	endTime: string;
 	isActive: boolean;
 	createdAt: string;
 	updatedAt: string;

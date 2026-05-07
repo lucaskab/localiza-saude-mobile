@@ -1,51 +1,16 @@
-// User type (nested in healthcare provider)
-export interface User {
-	id: string;
-	name: string;
-	firstName: string | null;
-	lastName: string | null;
-	email: string;
-	phone: string | null;
-	image: string | null;
-}
+import type { HealthcareProvider } from "@/types/user";
 
-// Healthcare Provider type (nested in category)
-export interface HealthcareProvider {
-	id: string;
-	userId: string;
-	displayName: string | null;
-	languages: string[];
-	specialty: string | null;
-	professionalCategory: string | null;
-	professionalId: string | null;
-	licenseCouncil: string | null;
-	licenseState: string | null;
-	verificationStatus: "PENDING" | "VERIFIED" | "REJECTED";
-	bio: string | null;
-	serviceModalities: string[];
-	clinicAddress: string | null;
-	clinicPhotos: string[];
-	nextAvailableAt?: string | null;
-	startingPriceCents?: number | null;
-	averageRating?: number;
-	totalRatings?: number;
-	completedAppointments?: number;
-	confirmationRate?: number;
-	isSuperProfessional?: boolean;
-	user: User;
-}
+export type { HealthcareProvider } from "@/types/user";
 
-// Category entity type matching backend schema
 export interface Category {
 	id: string;
 	name: string;
 	description: string | null;
-	createdAt: string; // ISO date string
-	updatedAt: string; // ISO date string
+	createdAt: string;
+	updatedAt: string;
 	healthcareProviders: HealthcareProvider[];
 }
 
-// API Response types
 export interface GetCategoriesResponse {
 	categories: Category[];
 }
@@ -66,7 +31,6 @@ export interface DeleteCategoryResponse {
 	message: string;
 }
 
-// API Request types
 export interface CreateCategoryData {
 	name: string;
 	description?: string | null;

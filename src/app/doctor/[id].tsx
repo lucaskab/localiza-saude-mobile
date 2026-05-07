@@ -74,7 +74,7 @@ export default function DoctorDetails() {
 
 	const provider = data?.healthcareProvider;
 	const isOwnRating = (rating: Rating) =>
-		rating.customerId === customer?.id || rating.customer.userId === user?.id;
+		rating.customerId === customer?.id || rating.customer.id === user?.id;
 	const existingRating = useMemo(
 		() => ratingsData?.ratings.find(isOwnRating),
 		[customer?.id, ratingsData?.ratings, user?.id],
@@ -148,7 +148,7 @@ export default function DoctorDetails() {
 		);
 	}
 
-	const providerUser = provider.user;
+	const providerUser = provider;
 	const averageRating = ratingsData?.stats.averageRating ?? provider.averageRating;
 	const totalRatings = ratingsData?.stats.totalRatings ?? provider.totalRatings;
 

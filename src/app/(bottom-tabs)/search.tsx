@@ -382,9 +382,9 @@ export default function Search() {
 										>
 											<View style={styles.professionalCard}>
 												<View style={styles.professionalContent}>
-													{provider.user.image ? (
+													{provider.image ? (
 														<Image
-															source={{ uri: provider.user.image }}
+															source={{ uri: provider.image }}
 															style={styles.professionalImage}
 														/>
 													) : (
@@ -395,7 +395,7 @@ export default function Search() {
 															]}
 														>
 															<Text style={styles.professionalImageInitial}>
-																{provider.user.name.charAt(0).toUpperCase()}
+																{provider.name.charAt(0).toUpperCase()}
 															</Text>
 														</View>
 													)}
@@ -405,7 +405,7 @@ export default function Search() {
 																style={styles.professionalName}
 																numberOfLines={1}
 															>
-																{provider.displayName || provider.user.name}
+																{provider.displayName || provider.name}
 															</Text>
 															<Pressable
 																onPress={(e) => {
@@ -505,7 +505,7 @@ export default function Search() {
 															<Pressable
 																onPress={(e) => {
 																	e?.stopPropagation();
-																	handleOpenChat(provider.user.id);
+																	handleOpenChat(provider.id);
 																}}
 																style={styles.chatButton}
 																disabled={createConversationMutation.isPending}

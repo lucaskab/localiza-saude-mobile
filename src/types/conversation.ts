@@ -1,24 +1,13 @@
+import type { User } from "@/types/user";
+
 export type MessageSenderType = "CUSTOMER" | "HEALTHCARE_PROVIDER";
 export type MessageType = "TEXT" | "FILE";
 export type MessageStatus = "pending" | "sent" | "error";
 
-export interface User {
-	id: string;
-	name: string;
-	firstName: string | null;
-	lastName: string | null;
-	image: string | null;
-}
-
-export interface Customer {
-	id: string;
-	user: User;
-}
-
-export interface HealthcareProvider {
-	id: string;
-	user: User;
-}
+export type ConversationParticipant = Pick<
+	User,
+	"id" | "name" | "firstName" | "lastName" | "image"
+>;
 
 export interface RelatedAppointment {
 	id: string;
@@ -40,9 +29,8 @@ export interface Message {
 	relatedAppointmentId: string | null;
 	createdAt: string;
 	updatedAt: string;
-	sender: User;
+	sender: ConversationParticipant;
 	relatedAppointment: RelatedAppointment | null;
-	// Optimistic UI fields
 	status?: MessageStatus;
 	isOptimistic?: boolean;
 	tempId?: string;
@@ -64,12 +52,11 @@ export interface Conversation {
 	lastMessageAt: string | null;
 	createdAt: string;
 	updatedAt: string;
-	customer: Customer;
-	healthcareProvider: HealthcareProvider;
+	customer: ConversationParticipant;
+	healthcareProvider: ConversationParticipant;
 	lastMessage: LastMessage | null;
 }
 
-// API Response types
 export interface GetConversationsResponse {
 	conversations: Conversation[];
 	total: number;
@@ -92,11 +79,6 @@ export interface SendTextMessageData {
 	relatedAppointmentId?: string;
 }
 
-export interface SendTextMessageResponse {
-	message: Message;
-	conversation: Conversation;
-}
-
 export interface SendFileMessageData {
 	conversationId?: string;
 	recipientId: string;
@@ -104,8 +86,14 @@ export interface SendFileMessageData {
 		uri: string;
 		name: string;
 		type: string;
+		size?: number | null;
 	};
 	relatedAppointmentId?: string;
+}
+
+export interface SendTextMessageResponse {
+	message: Message;
+	conversation: Conversation;
 }
 
 export interface SendFileMessageResponse {
@@ -123,4 +111,10 @@ export interface GetOrCreateConversationResponse {
 
 export interface DeleteMessageResponse {
 	message: string;
+}
+
+export interface GetMessageFileUrlResponse {
+	url: string;
+	fileName: string | null;
+	fileMimeType: string | null;
 }

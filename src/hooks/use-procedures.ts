@@ -182,7 +182,6 @@ interface UpdateHealthcareProviderData {
 	professionalId?: string | null;
 	licenseCouncil?: string | null;
 	licenseState?: string | null;
-	verificationStatus?: "PENDING" | "VERIFIED" | "REJECTED";
 	bio?: string | null;
 	approach?: string | null;
 	education?: string | null;
@@ -246,7 +245,7 @@ export const useUpdateHealthcareProvider = () => {
 				queryKey: [
 					"healthcare-provider",
 					"by-user",
-					response.healthcareProvider.userId,
+					response.healthcareProvider.id,
 				],
 			});
 		},
@@ -308,7 +307,7 @@ export const useUploadLicenseDocument = () => {
 				queryKey: [
 					"healthcare-provider",
 					"by-user",
-					response.healthcareProvider.userId,
+					response.healthcareProvider.id,
 				],
 			});
 		},
@@ -364,7 +363,7 @@ export const useUploadClinicPhoto = () => {
 				queryKey: [
 					"healthcare-provider",
 					"by-user",
-					response.healthcareProvider.userId,
+					response.healthcareProvider.id,
 				],
 			});
 			queryClient.invalidateQueries({ queryKey: ["healthcare-providers"] });
@@ -394,7 +393,7 @@ export const useDeleteLicenseDocument = () => {
 				queryKey: [
 					"healthcare-provider",
 					"by-user",
-					response.healthcareProvider.userId,
+					response.healthcareProvider.id,
 				],
 			});
 		},
@@ -428,7 +427,7 @@ export const useDeleteClinicPhoto = () => {
 				queryKey: [
 					"healthcare-provider",
 					"by-user",
-					response.healthcareProvider.userId,
+					response.healthcareProvider.id,
 				],
 			});
 			queryClient.invalidateQueries({ queryKey: ["healthcare-providers"] });

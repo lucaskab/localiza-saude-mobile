@@ -105,8 +105,8 @@ export default function ChatScreen() {
 	// Get otherParticipant info from conversation
 	const otherParticipant = conversation
 		? isCustomer
-			? conversation.healthcareProvider.user
-			: conversation.customer.user
+			? conversation.healthcareProvider
+			: conversation.customer
 		: null;
 
 	const otherParticipantName = otherParticipant?.name || null;

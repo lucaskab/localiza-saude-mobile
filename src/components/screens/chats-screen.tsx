@@ -44,8 +44,8 @@ export default function ChatsScreen() {
 		if (!searchQuery.trim()) return true;
 
 		const otherParticipant = isCustomer
-			? conversation.healthcareProvider.user
-			: conversation.customer.user;
+			? conversation.healthcareProvider
+			: conversation.customer;
 
 		return otherParticipant.name
 			.toLowerCase()
@@ -92,8 +92,8 @@ export default function ChatsScreen() {
 
 	const renderConversation = ({ item }: { item: Conversation }) => {
 		const otherParticipant = isCustomer
-			? item.healthcareProvider.user
-			: item.customer.user;
+			? item.healthcareProvider
+			: item.customer;
 
 		return (
 			<Pressable
