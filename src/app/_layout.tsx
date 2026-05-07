@@ -47,6 +47,7 @@ function RootNavigator() {
 					}}
 				>
 					<Stack.Screen name="login" />
+					<Stack.Screen name="onboarding" />
 					<Stack.Screen name="(bottom-tabs)" />
 					<Stack.Screen name="(provider-tabs)" />
 					<Stack.Screen name="favorites" />

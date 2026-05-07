@@ -30,6 +30,7 @@ interface User {
 	emailVerified: boolean;
 	image: string | null;
 	role?: "HEALTHCARE_PROVIDER" | "CUSTOMER";
+	onboardingCompleted?: boolean;
 }
 
 interface AuthState {
@@ -42,12 +43,16 @@ interface AuthState {
 interface AuthContextData {
 	signInWithGoogle: () => Promise<void>;
 	signInWithApple: () => Promise<void>;
+	completeOnboarding: (
+		role: "HEALTHCARE_PROVIDER" | "CUSTOMER",
+	) => Promise<void>;
 	signOut: () => void;
 	user: User | null;
 	customer: Customer | null;
 	healthcareProvider: HealthcareProvider | null;
 	isAuthenticated: boolean;
 	isLoading: boolean;
+	needsOnboarding: boolean;
 	isCustomer: boolean;
 	isHealthcareProvider: boolean;
 }
@@ -58,11 +63,18 @@ interface AuthProviderProps {
 
 const AuthContext = createContext({} as AuthContextData);
 
+type CompleteOnboardingResponse = {
+	user: User;
+	customer: Customer | null;
+	healthcareProvider: HealthcareProvider | null;
+};
+
 export const AuthProvider = ({ children }: AuthProviderProps) => {
 	const [authState, setAuthState] = useState<AuthState | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 
 	const isAuthenticated = !!authState?.sessionToken && !!authState?.user;
+	const needsOnboarding = authState?.user?.onboardingCompleted === false;
 	const isCustomer = authState?.user?.role === "CUSTOMER";
 	const isHealthcareProvider = authState?.user?.role === "HEALTHCARE_PROVIDER";
 
@@ -109,6 +121,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
 					// Set token in memory for API requests
 					api.setAuthToken(session.data.session.token);
+
+					if (user.onboardingCompleted === false) {
+						setAuthState({
+							sessionToken: session.data.session.token,
+							user,
+							customer: null,
+							healthcareProvider: null,
+						});
+						return;
+					}
 
 					// Fetch customer data if user is a customer
 					let customer: Customer | null = null;
@@ -192,6 +214,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
 			api.setAuthToken(session.data.session.token);
 
+			if (user.onboardingCompleted === false) {
+				setAuthState({
+					sessionToken: session.data.session.token,
+					user,
+					customer: null,
+					healthcareProvider: null,
+				});
+				router.replace("/onboarding" as never);
+				return;
+			}
+
 			let customer: Customer | null = null;
 			if (user.role === "CUSTOMER") {
 				customer = await fetchCustomerData(user.id);
@@ -220,6 +253,36 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
 		throw new Error("Failed to get session after sign-in");
 	}, [fetchCustomerData, fetchHealthcareProviderData]);
+
+	const completeOnboarding = useCallback(
+		async (role: "HEALTHCARE_PROVIDER" | "CUSTOMER") => {
+			if (!authState?.sessionToken) {
+				throw new Error("Missing authenticated session");
+			}
+
+			const { data } = await api.post<CompleteOnboardingResponse>(
+				"/auth/onboarding/complete",
+				{
+					role,
+				},
+			);
+
+			setAuthState({
+				sessionToken: authState.sessionToken,
+				user: data.user,
+				customer: data.customer,
+				healthcareProvider: data.healthcareProvider,
+			});
+
+			if (role === "HEALTHCARE_PROVIDER") {
+				router.replace("/provider-profile-edit");
+				return;
+			}
+
+			router.replace("/(bottom-tabs)/home");
+		},
+		[authState?.sessionToken],
+	);
 
 	const signInWithGoogle = useCallback(async () => {
 		try {
@@ -310,12 +373,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 		() => ({
 			signInWithGoogle,
 			signInWithApple,
+			completeOnboarding,
 			signOut,
 			isAuthenticated,
 			user: authState?.user || null,
 			customer: authState?.customer || null,
 			healthcareProvider: authState?.healthcareProvider || null,
 			isLoading,
+			needsOnboarding,
 			isCustomer,
 			isHealthcareProvider,
 		}),
@@ -325,10 +390,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 			authState?.customer,
 			authState?.healthcareProvider,
 			isLoading,
+			needsOnboarding,
 			isCustomer,
 			isHealthcareProvider,
 			signInWithGoogle,
 			signInWithApple,
+			completeOnboarding,
 			signOut,
 		],
 	);
