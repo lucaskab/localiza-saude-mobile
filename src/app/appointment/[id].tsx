@@ -18,14 +18,32 @@ import {
 	Users,
 	Video,
 } from "lucide-react-native";
-import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { useState } from "react";
+import {
+	ActivityIndicator,
+	Alert,
+	Image,
+	Linking,
+	Pressable,
+	ScrollView,
+	Text,
+	TextInput,
+	View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { getServiceModalityLabelKey } from "@/constants/service-modalities";
 import { useAuth } from "@/contexts/auth";
-import { useAppointment, useUpdateAppointment } from "@/hooks/use-appointments";
+import {
+	useAppointment,
+	useRequestAppointmentReschedule,
+	useRespondAppointmentReschedule,
+	useTimeSlots,
+	useUpdateAppointment,
+} from "@/hooks/use-appointments";
 import { useGetOrCreateConversation } from "@/hooks/use-conversations";
 import { useAppointmentMedicalRecord } from "@/hooks/use-medical-record";
 import type { Appointment, AppointmentStatus } from "@/types/appointment";
@@ -69,6 +87,8 @@ const formatShortDate = (isoString: string) =>
 	});
 
 const formatPrice = (priceInCents: number) => `$${(priceInCents / 100).toFixed(2)}`;
+
+const todayDateString = () => new Date().toISOString().split("T")[0] || "";
 
 const getStatusConfig = (status: AppointmentStatus) => {
 	switch (status) {
@@ -194,12 +214,29 @@ export default function AppointmentDetails() {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation();
 	const { isHealthcareProvider, isCustomer } = useAuth();
+	const [showRescheduleForm, setShowRescheduleForm] = useState(false);
+	const [rescheduleDate, setRescheduleDate] = useState("");
+	const [rescheduleTime, setRescheduleTime] = useState("");
+	const [rescheduleReason, setRescheduleReason] = useState("");
 
 	const { data: appointmentData, isLoading, error } = useAppointment(id || "", !!id);
 	const updateAppointmentMutation = useUpdateAppointment();
+	const requestRescheduleMutation = useRequestAppointmentReschedule();
+	const respondRescheduleMutation = useRespondAppointmentReschedule();
 	const createConversationMutation = useGetOrCreateConversation();
 
 	const appointment = appointmentData?.appointment;
+	const rescheduleProcedureIds =
+		appointment?.appointmentProcedures.map((item) => item.procedureId) || [];
+	const { data: timeSlotsData, isLoading: isLoadingTimeSlots } = useTimeSlots({
+		healthcareProviderId: appointment?.healthcareProviderId || "",
+		date: rescheduleDate,
+		procedureIds: rescheduleProcedureIds,
+		enabled:
+			!!appointment?.healthcareProviderId &&
+			!!rescheduleDate &&
+			rescheduleProcedureIds.length > 0,
+	});
 	const shouldRequestMedicalRecord =
 		isHealthcareProvider && appointment?.status === "CONFIRMED";
 	const {
@@ -258,6 +295,65 @@ export default function AppointmentDetails() {
 		await Linking.openURL(url);
 	};
 
+	const handleSubmitReschedule = async () => {
+		if (!appointment || !rescheduleDate || !rescheduleTime) {
+			return;
+		}
+
+		try {
+			await requestRescheduleMutation.mutateAsync({
+				appointmentId: appointment.id,
+				data: {
+					scheduledAt: new Date(
+						`${rescheduleDate}T${rescheduleTime}:00`,
+					).toISOString(),
+					reason: rescheduleReason.trim() || null,
+				},
+			});
+
+			setShowRescheduleForm(false);
+			setRescheduleDate("");
+			setRescheduleTime("");
+			setRescheduleReason("");
+			Alert.alert(
+				t("common.success"),
+				isHealthcareProvider
+					? "Solicitação de reagendamento enviada."
+					: "Consulta reagendada com sucesso.",
+			);
+		} catch (rescheduleError) {
+			console.error("Failed to reschedule appointment:", rescheduleError);
+			Alert.alert(t("common.error"), "Não foi possível reagendar a consulta.");
+		}
+	};
+
+	const handleRespondToReschedule = async (
+		requestId: string,
+		action: "ACCEPT" | "DECLINE",
+	) => {
+		if (!appointment) {
+			return;
+		}
+
+		try {
+			await respondRescheduleMutation.mutateAsync({
+				appointmentId: appointment.id,
+				requestId,
+				data: { action },
+			});
+			Alert.alert(
+				t("common.success"),
+				action === "ACCEPT" ? "Novo horário aceito." : "Solicitação recusada.",
+			);
+		} catch (respondError) {
+			console.error("Failed to respond to reschedule request:", respondError);
+			Alert.alert(
+				t("common.error"),
+				"Não foi possível responder à solicitação.",
+			);
+		}
+	};
+
 	if (isLoading) {
 		return (
 			<SafeAreaView edges={["top"]} style={styles.container}>
@@ -314,6 +410,13 @@ export default function AppointmentDetails() {
 		: [];
 	const canOpenChat =
 		!isHealthcareProvider || Boolean(getAppointmentCustomerUserId(appointment));
+	const pendingRescheduleRequest = appointment.rescheduleRequests.find(
+		(request) => request.status === "PENDING",
+	);
+	const canReschedule =
+		appointment.status === "SCHEDULED" || appointment.status === "CONFIRMED";
+	const availableRescheduleSlots =
+		timeSlotsData?.slots.filter((slot) => slot.available) || [];
 
 	return (
 		<SafeAreaView edges={["top"]} style={styles.container}>
@@ -429,13 +532,13 @@ export default function AppointmentDetails() {
 							</Button>
 						</View>
 					) : null}
-					{appointment.onlineMeetingUrl ? (
-						<View style={styles.actionRow}>
-							<Button
-								style={styles.flexButton}
-								onPress={() =>
-									handleOpenOnlineMeeting(appointment.onlineMeetingUrl as string)
-								}
+						{appointment.onlineMeetingUrl ? (
+							<View style={styles.actionRow}>
+								<Button
+									style={styles.flexButton}
+									onPress={() =>
+										handleOpenOnlineMeeting(appointment.onlineMeetingUrl as string)
+									}
 							>
 								<View style={styles.inlineButtonContent}>
 									<Video
@@ -447,12 +550,148 @@ export default function AppointmentDetails() {
 										{t("common.openGoogleMeet")}
 									</Text>
 								</View>
+								</Button>
+							</View>
+						) : null}
+						{canReschedule ? (
+							<View style={styles.actionRow}>
+								<Button
+									variant="outline"
+									style={styles.flexButton}
+									onPress={() => setShowRescheduleForm((current) => !current)}
+								>
+									Reagendar consulta
+								</Button>
+							</View>
+						) : null}
+					</View>
+
+				{pendingRescheduleRequest ? (
+					<View style={styles.section}>
+						<Text style={styles.sectionTitle}>Solicitação de reagendamento</Text>
+						<View style={styles.infoCard}>
+							<Text style={styles.notesText}>
+								Novo horário proposto:{" "}
+								{formatDate(pendingRescheduleRequest.proposedScheduledAt)} às{" "}
+								{formatTime(pendingRescheduleRequest.proposedScheduledAt)}
+							</Text>
+							{pendingRescheduleRequest.reason ? (
+								<Text style={styles.notesText}>
+									Motivo: {pendingRescheduleRequest.reason}
+								</Text>
+							) : null}
+							{isCustomer ? (
+								<View style={styles.statusActions}>
+									<Button
+										disabled={respondRescheduleMutation.isPending}
+										loading={respondRescheduleMutation.isPending}
+										onPress={() =>
+											handleRespondToReschedule(
+												pendingRescheduleRequest.id,
+												"ACCEPT",
+											)
+										}
+									>
+										Aceitar novo horário
+									</Button>
+									<Button
+										variant="outline"
+										disabled={respondRescheduleMutation.isPending}
+										onPress={() =>
+											handleRespondToReschedule(
+												pendingRescheduleRequest.id,
+												"DECLINE",
+											)
+										}
+									>
+										Recusar
+									</Button>
+								</View>
+							) : (
+								<Text style={styles.notesText}>
+									Aguardando resposta do paciente.
+								</Text>
+							)}
+						</View>
+					</View>
+				) : null}
+
+				{showRescheduleForm ? (
+					<View style={styles.section}>
+						<Text style={styles.sectionTitle}>Escolher novo horário</Text>
+						<View style={styles.infoCard}>
+							<DatePickerInput
+								value={rescheduleDate}
+								minDate={todayDateString()}
+								onChange={(dateString) => {
+									setRescheduleDate(dateString);
+									setRescheduleTime("");
+								}}
+							/>
+							{rescheduleDate ? (
+								<View style={styles.rescheduleSlots}>
+									<Text style={styles.notesTitle}>Horários disponíveis</Text>
+									{isLoadingTimeSlots ? (
+										<ActivityIndicator
+											size="small"
+											color={theme.colors.primary}
+										/>
+									) : null}
+									{availableRescheduleSlots.length > 0 ? (
+										<View style={styles.slotGrid}>
+											{availableRescheduleSlots.map((slot) => (
+												<Pressable
+													key={slot.startTime}
+													onPress={() => setRescheduleTime(slot.startTime)}
+													style={[
+														styles.timeSlot,
+														rescheduleTime === slot.startTime &&
+															styles.timeSlotSelected,
+													]}
+												>
+													<Text
+														style={[
+															styles.timeSlotText,
+															rescheduleTime === slot.startTime &&
+																styles.timeSlotTextSelected,
+														]}
+													>
+														{slot.startTime}
+													</Text>
+												</Pressable>
+											))}
+										</View>
+									) : null}
+									{!isLoadingTimeSlots && availableRescheduleSlots.length === 0 ? (
+										<Text style={styles.notesText}>
+											Nenhum horário disponível nessa data.
+										</Text>
+									) : null}
+								</View>
+							) : null}
+							{isHealthcareProvider ? (
+								<TextInput
+									value={rescheduleReason}
+									onChangeText={setRescheduleReason}
+									placeholder="Motivo da solicitação"
+									multiline
+									style={styles.rescheduleReasonInput}
+								/>
+							) : null}
+							<Button
+								disabled={!rescheduleTime || requestRescheduleMutation.isPending}
+								loading={requestRescheduleMutation.isPending}
+								onPress={handleSubmitReschedule}
+							>
+								{isHealthcareProvider
+									? "Enviar solicitação"
+									: "Confirmar novo horário"}
 							</Button>
 						</View>
-					) : null}
-				</View>
+					</View>
+				) : null}
 
-				{appointment.patientProfile ? (
+					{appointment.patientProfile ? (
 					<View style={styles.section}>
 						<Text style={styles.sectionTitle}>{t("common.patientProfile")}</Text>
 						<View style={styles.infoCard}>
@@ -969,6 +1208,49 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 14,
 		lineHeight: 21,
 		color: theme.colors.foreground,
+	},
+	rescheduleSlots: {
+		gap: theme.gap(1.5),
+	},
+	slotGrid: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		gap: theme.gap(1),
+	},
+	timeSlot: {
+		minWidth: 72,
+		alignItems: "center",
+		justifyContent: "center",
+		borderRadius: theme.radius.lg,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		backgroundColor: theme.colors.surfaceMuted,
+		paddingHorizontal: theme.gap(1.5),
+		paddingVertical: theme.gap(1),
+	},
+	timeSlotSelected: {
+		borderColor: theme.colors.primary,
+		backgroundColor: theme.colors.primary,
+	},
+	timeSlotText: {
+		fontSize: 13,
+		fontWeight: "700",
+		color: theme.colors.foreground,
+	},
+	timeSlotTextSelected: {
+		color: theme.colors.primaryForeground,
+	},
+	rescheduleReasonInput: {
+		minHeight: 96,
+		borderRadius: theme.radius.lg,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		backgroundColor: theme.colors.background,
+		paddingHorizontal: theme.gap(1.5),
+		paddingVertical: theme.gap(1.25),
+		fontSize: 14,
+		color: theme.colors.foreground,
+		textAlignVertical: "top",
 	},
 	medicalRecordHeader: {
 		flexDirection: "row",

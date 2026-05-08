@@ -8,6 +8,8 @@ import type {
 	UpdateAppointmentData,
 	UpdateAppointmentResponse,
 	DeleteAppointmentResponse,
+	RequestAppointmentRescheduleData,
+	RespondAppointmentRescheduleData,
 } from "@/types/appointment";
 import { api } from "@/services/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -284,6 +286,73 @@ export const useUpdateAppointment = () => {
 			queryClient.invalidateQueries({ queryKey: ["timeSlots"] });
 			queryClient.invalidateQueries({ queryKey: ["categories"] });
 			queryClient.invalidateQueries({ queryKey: ["healthcare-providers"] });
+		},
+	});
+};
+
+export const requestAppointmentReschedule = async (
+	appointmentId: string,
+	data: RequestAppointmentRescheduleData,
+): Promise<UpdateAppointmentResponse> => {
+	const { data: response } = await api.post<UpdateAppointmentResponse>(
+		`/appointments/${appointmentId}/reschedule`,
+		data,
+	);
+	return response;
+};
+
+export const useRequestAppointmentReschedule = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({
+			appointmentId,
+			data,
+		}: {
+			appointmentId: string;
+			data: RequestAppointmentRescheduleData;
+		}) => requestAppointmentReschedule(appointmentId, data),
+		onSuccess: (_, variables) => {
+			queryClient.invalidateQueries({
+				queryKey: ["appointment", variables.appointmentId],
+			});
+			queryClient.invalidateQueries({ queryKey: ["appointments"] });
+			queryClient.invalidateQueries({ queryKey: ["timeSlots"] });
+		},
+	});
+};
+
+export const respondAppointmentReschedule = async (
+	appointmentId: string,
+	requestId: string,
+	data: RespondAppointmentRescheduleData,
+): Promise<UpdateAppointmentResponse> => {
+	const { data: response } = await api.patch<UpdateAppointmentResponse>(
+		`/appointments/${appointmentId}/reschedule-requests/${requestId}`,
+		data,
+	);
+	return response;
+};
+
+export const useRespondAppointmentReschedule = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({
+			appointmentId,
+			requestId,
+			data,
+		}: {
+			appointmentId: string;
+			requestId: string;
+			data: RespondAppointmentRescheduleData;
+		}) => respondAppointmentReschedule(appointmentId, requestId, data),
+		onSuccess: (_, variables) => {
+			queryClient.invalidateQueries({
+				queryKey: ["appointment", variables.appointmentId],
+			});
+			queryClient.invalidateQueries({ queryKey: ["appointments"] });
+			queryClient.invalidateQueries({ queryKey: ["timeSlots"] });
 		},
 	});
 };

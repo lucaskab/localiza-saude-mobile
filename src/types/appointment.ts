@@ -22,6 +22,24 @@ export interface AppointmentProcedure {
 	createdAt: string;
 }
 
+export type AppointmentRescheduleRequestStatus =
+	| "PENDING"
+	| "ACCEPTED"
+	| "DECLINED"
+	| "CANCELLED";
+
+export interface AppointmentRescheduleRequest {
+	id: string;
+	appointmentId: string;
+	requestedByUserId: string;
+	proposedScheduledAt: string;
+	status: AppointmentRescheduleRequestStatus;
+	reason: string | null;
+	respondedAt: string | null;
+	createdAt: string;
+	updatedAt: string;
+}
+
 export interface Appointment {
 	id: string;
 	customerId: string | null;
@@ -43,6 +61,7 @@ export interface Appointment {
 	createdAt: string;
 	updatedAt: string;
 	appointmentProcedures: AppointmentProcedure[];
+	rescheduleRequests: AppointmentRescheduleRequest[];
 }
 
 export type CreateAppointmentPatient =
@@ -83,6 +102,15 @@ export interface UpdateAppointmentData {
 
 export interface UpdateAppointmentResponse {
 	appointment: Appointment;
+}
+
+export interface RequestAppointmentRescheduleData {
+	scheduledAt: Date | string;
+	reason?: string | null;
+}
+
+export interface RespondAppointmentRescheduleData {
+	action: "ACCEPT" | "DECLINE";
 }
 
 export interface DeleteAppointmentResponse {
