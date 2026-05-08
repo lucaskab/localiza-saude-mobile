@@ -1,4 +1,7 @@
+import type { ServiceModality } from "@/constants/service-modalities";
+
 export type UserRole = "HEALTHCARE_PROVIDER" | "CUSTOMER";
+export type { ServiceModality };
 
 export interface Procedure {
 	id: string;
@@ -67,7 +70,7 @@ export type HealthcareProvider = BaseUser & {
 	certifications: string | null;
 	yearsOfExperience: number | null;
 	targetAudiences: string[];
-	serviceModalities: string[];
+	serviceModalities: ServiceModality[];
 	clinicAddress: string | null;
 	homeCareRadiusKm: number | null;
 	acceptedInsurance: string[];

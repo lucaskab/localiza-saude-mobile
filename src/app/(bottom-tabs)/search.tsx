@@ -21,6 +21,10 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+	getServiceModalityLabelKey,
+	serviceModalityOptions,
+} from "@/constants/service-modalities";
 import { useCategories } from "@/hooks/use-categories";
 import { useGetOrCreateConversation } from "@/hooks/use-conversations";
 import {
@@ -181,13 +185,15 @@ export default function Search() {
 				{isFilterPanelVisible ? (
 					<View style={styles.filterPanel}>
 						<FilterSection title={t("common.serviceModalities")}>
-							{["Presencial", "Online", "Domiciliar"].map((item) => (
+							{serviceModalityOptions.map((item) => (
 								<FilterChip
-									key={item}
-									label={item}
-									active={serviceModality === item}
+									key={item.value}
+									label={t(item.labelKey)}
+									active={serviceModality === item.value}
 									onPress={() =>
-										setServiceModality(serviceModality === item ? "" : item)
+										setServiceModality(
+											serviceModality === item.value ? "" : item.value,
+										)
 									}
 								/>
 							))}
@@ -498,7 +504,16 @@ export default function Search() {
 														</View>
 														{provider.serviceModalities?.length ? (
 															<Text style={styles.professionalMeta} numberOfLines={1}>
-																{provider.serviceModalities.slice(0, 2).join(" · ")}
+																{provider.serviceModalities
+																	.slice(0, 2)
+																	.map(
+																		(modality) =>
+																			t(
+																				getServiceModalityLabelKey(modality) ||
+																					"common.notInformed",
+																			),
+																	)
+																	.join(" · ")}
 															</Text>
 														) : null}
 														<View style={styles.professionalActions}>

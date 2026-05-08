@@ -1,5 +1,5 @@
-import { Calendar, Clock, MessageCircle } from "lucide-react-native";
-import { Image, Text, View } from "react-native";
+import { Calendar, Clock, MessageCircle, Video } from "lucide-react-native";
+import { Image, Linking, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
@@ -128,6 +128,22 @@ export function ProviderAppointmentCard({
 			</View>
 
 			<View style={styles.appointmentActions}>
+				{appointment.onlineMeetingUrl ? (
+					<Button
+						size="sm"
+						style={styles.actionButton}
+						onPress={() => Linking.openURL(appointment.onlineMeetingUrl as string)}
+					>
+						<Video
+							size={16}
+							color={theme.colors.primaryForeground}
+							strokeWidth={2}
+						/>
+						<Text style={styles.meetButtonText}>
+							{t("common.openGoogleMeet")}
+						</Text>
+					</Button>
+				) : null}
 				{customerUserId ? (
 					<Button
 						variant="outline"
@@ -274,5 +290,10 @@ const styles = StyleSheet.create((theme) => ({
 	chatButtonText: {
 		marginLeft: theme.gap(1),
 		fontSize: 14,
+	},
+	meetButtonText: {
+		marginLeft: theme.gap(1),
+		fontSize: 14,
+		color: theme.colors.primaryForeground,
 	},
 }));

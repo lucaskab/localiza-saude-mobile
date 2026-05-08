@@ -166,6 +166,8 @@ export const translationKeys = {
   Notes: "common.notes",
   "Notes:": "common.notes2",
   "Open Chat": "common.openChat",
+  "Open Google Meet": "common.openGoogleMeet",
+  "Online meeting": "common.onlineMeeting",
   "Optional review": "common.optionalReview",
   Past: "common.past",
   Patient: "common.patient",

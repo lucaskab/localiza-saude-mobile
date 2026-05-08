@@ -16,12 +16,14 @@ import {
 	Stethoscope,
 	UserRound,
 	Users,
+	Video,
 } from "lucide-react-native";
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
+import { getServiceModalityLabelKey } from "@/constants/service-modalities";
 import { useAuth } from "@/contexts/auth";
 import { useAppointment, useUpdateAppointment } from "@/hooks/use-appointments";
 import { useGetOrCreateConversation } from "@/hooks/use-conversations";
@@ -252,6 +254,10 @@ export default function AppointmentDetails() {
 		}
 	};
 
+	const handleOpenOnlineMeeting = async (url: string) => {
+		await Linking.openURL(url);
+	};
+
 	if (isLoading) {
 		return (
 			<SafeAreaView edges={["top"]} style={styles.container}>
@@ -373,6 +379,21 @@ export default function AppointmentDetails() {
 							value={formatPrice(appointment.totalPriceCents)}
 						/>
 						<DetailRow
+							icon={HeartPulse}
+							label={t("common.appointmentServiceModality")}
+							value={t(
+								getServiceModalityLabelKey(appointment.serviceModality) ||
+									"common.notInformed",
+							)}
+						/>
+						{appointment.onlineMeetingUrl ? (
+							<DetailRow
+								icon={Video}
+								label={t("common.onlineMeeting")}
+								value="Google Meet"
+							/>
+						) : null}
+						<DetailRow
 							icon={Stethoscope}
 							label={t("common.procedures")}
 							value={procedures.map((procedure) => procedure.name).join(", ") || t("common.appointment")}
@@ -404,6 +425,27 @@ export default function AppointmentDetails() {
 										strokeWidth={2}
 									/>
 									<Text style={styles.inlineButtonLabel}>{t("common.openChat")}</Text>
+								</View>
+							</Button>
+						</View>
+					) : null}
+					{appointment.onlineMeetingUrl ? (
+						<View style={styles.actionRow}>
+							<Button
+								style={styles.flexButton}
+								onPress={() =>
+									handleOpenOnlineMeeting(appointment.onlineMeetingUrl as string)
+								}
+							>
+								<View style={styles.inlineButtonContent}>
+									<Video
+										size={16}
+										color={theme.colors.primaryForeground}
+										strokeWidth={2}
+									/>
+									<Text style={styles.primaryInlineButtonLabel}>
+										{t("common.openGoogleMeet")}
+									</Text>
 								</View>
 							</Button>
 						</View>
@@ -875,6 +917,11 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 14,
 		fontWeight: "600",
 		color: theme.colors.foreground,
+	},
+	primaryInlineButtonLabel: {
+		fontSize: 14,
+		fontWeight: "600",
+		color: theme.colors.primaryForeground,
 	},
 	procedureItem: {
 		gap: theme.gap(0.75),

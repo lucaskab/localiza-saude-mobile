@@ -37,6 +37,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { Input } from "@/components/ui/input";
+import {
+	SERVICE_MODALITY_VALUES,
+	serviceModalityOptions,
+} from "@/constants/service-modalities";
 import { useAuth } from "@/contexts/auth";
 import {
 	useDeleteClinicPhoto,
@@ -63,7 +67,8 @@ const profileFormSchema = z.object({
 	certifications: z.string().nullable(),
 	yearsOfExperience: z.string().nullable(),
 	targetAudiences: z.string().nullable(),
-	serviceModalities: z.string().nullable(),
+	serviceModalities: z
+		.array(z.enum(SERVICE_MODALITY_VALUES)),
 	clinicAddress: z.string().nullable(),
 	homeCareRadiusKm: z.string().nullable(),
 	acceptedInsurance: z.string().nullable(),
@@ -86,6 +91,7 @@ type ProfileTextField = Exclude<
 	| "termsAccepted"
 	| "lgpdConsent"
 	| "professionalResponsibilityAccepted"
+	| "serviceModalities"
 	| "faqs"
 >;
 
@@ -106,7 +112,7 @@ const emptyProfileForm: ProfileFormData = {
 	certifications: null,
 	yearsOfExperience: null,
 	targetAudiences: null,
-	serviceModalities: null,
+	serviceModalities: [],
 	clinicAddress: null,
 	homeCareRadiusKm: null,
 	acceptedInsurance: null,
@@ -164,6 +170,7 @@ export default function ProviderProfileEdit() {
 		});
 	const onboardingSteps = [
 		t("common.basicRegistration"),
+		t("common.professionalVerification"),
 		t("common.publicProfile"),
 		t("common.attendanceAndOperation"),
 		t("common.complianceAndTerms"),
@@ -190,7 +197,7 @@ export default function ProviderProfileEdit() {
 			yearsOfExperience:
 				healthcareProvider?.yearsOfExperience?.toString() || null,
 			targetAudiences: joinList(healthcareProvider?.targetAudiences),
-			serviceModalities: joinList(healthcareProvider?.serviceModalities),
+			serviceModalities: healthcareProvider?.serviceModalities || [],
 			clinicAddress: healthcareProvider?.clinicAddress || null,
 			homeCareRadiusKm: healthcareProvider?.homeCareRadiusKm?.toString() || null,
 			acceptedInsurance: joinList(healthcareProvider?.acceptedInsurance),
@@ -212,25 +219,10 @@ export default function ProviderProfileEdit() {
 	const onSubmit = async (data: ProfileFormData) => {
 		const parsed = profileFormSchema.safeParse(data);
 
-		const requiredVerificationFields = parsed.success
-			? [
-					parsed.data.professionalCategory?.trim(),
-					parsed.data.specialty.trim(),
-					parsed.data.professionalId?.trim(),
-					parsed.data.licenseCouncil?.trim(),
-					parsed.data.licenseState?.trim(),
-				]
-			: [];
-
-		if (
-			!parsed.success ||
-			requiredVerificationFields.some((value) => !value) ||
-			!hasLicenseDocument
-		) {
-			setCurrentStep(1);
+		if (!parsed.success) {
 			Alert.alert(
 				t("common.validationError"),
-				t("common.professionalVerificationRequired"),
+				t("common.pleaseReviewThePatientInformation"),
 			);
 			return;
 		}
@@ -264,7 +256,7 @@ export default function ProviderProfileEdit() {
 						? Number(parsed.data.yearsOfExperience)
 						: null,
 					targetAudiences: splitList(parsed.data.targetAudiences),
-					serviceModalities: splitList(parsed.data.serviceModalities),
+					serviceModalities: parsed.data.serviceModalities,
 					clinicAddress: parsed.data.clinicAddress?.trim() || null,
 					homeCareRadiusKm: parsed.data.homeCareRadiusKm?.trim()
 						? Number(parsed.data.homeCareRadiusKm)
@@ -522,9 +514,12 @@ export default function ProviderProfileEdit() {
 
 							{currentStep === 1 ? (
 								<>
-								<View style={styles.card}>
+							<View style={styles.card}>
 							<Text style={styles.sectionSubtitle}>
 								{t("common.professionalVerification")}
+							</Text>
+							<Text style={styles.documentDescription}>
+								{t("common.professionalVerificationCanBeCompletedLater")}
 							</Text>
 							<FormInput
 								control={control}
@@ -641,7 +636,11 @@ export default function ProviderProfileEdit() {
 								</View>
 							</View>
 						</View>
+								</>
+							) : null}
 
+							{currentStep === 2 ? (
+								<>
 							<View style={styles.card}>
 								<Text style={styles.sectionSubtitle}>
 									{t("common.publicProfile")}
@@ -840,17 +839,54 @@ export default function ProviderProfileEdit() {
 								</>
 							) : null}
 
-							{currentStep === 2 ? (
+							{currentStep === 3 ? (
 							<View style={styles.card}>
 							<Text style={styles.sectionSubtitle}>
 								{t("common.attendanceAndOperation")}
 							</Text>
-							<FormInput
+							<Controller
 								control={control}
-								icon={Briefcase}
 								name="serviceModalities"
-								label={t("common.serviceModalities")}
-								placeholder={t("common.commaSeparatedExamplesModalities")}
+								render={({ field: { value, onChange } }) => (
+									<View style={styles.fieldGroup}>
+										<Text style={styles.fieldLabel}>
+											{t("common.serviceModalities")}
+										</Text>
+										<View style={styles.checkboxList}>
+											{serviceModalityOptions.map((option) => {
+												const checked = value.includes(option.value);
+
+												return (
+													<View
+														key={option.value}
+														style={styles.checkboxOption}
+													>
+														<Checkbox
+															checked={checked}
+															onCheckedChange={(nextChecked) => {
+																onChange(
+																	nextChecked
+																		? [...value, option.value]
+																		: value.filter(
+																				(item) => item !== option.value,
+																			),
+																);
+															}}
+														/>
+														<View style={styles.checkboxTextContent}>
+															<Text style={styles.checkboxTitle}>
+																{t(option.labelKey)}
+															</Text>
+															<Text style={styles.checkboxDescription}>
+																{t(option.descriptionKey)}
+															</Text>
+														</View>
+													</View>
+												);
+											})}
+										</View>
+									</View>
+								)}
 							/>
 							<FormInput
 								control={control}
@@ -892,7 +928,7 @@ export default function ProviderProfileEdit() {
 							</View>
 							) : null}
 
-							{currentStep === 3 ? (
+							{currentStep === 4 ? (
 							<View style={styles.card}>
 							<Text style={styles.sectionSubtitle}>
 								{t("common.complianceAndTerms")}
@@ -1175,6 +1211,33 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 14,
 		fontWeight: "500",
 		color: theme.colors.foreground,
+	},
+	checkboxList: {
+		gap: theme.gap(1.25),
+	},
+	checkboxOption: {
+		flexDirection: "row",
+		alignItems: "flex-start",
+		gap: theme.gap(1.5),
+		padding: theme.gap(1.75),
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		borderRadius: theme.radius.md,
+		backgroundColor: theme.colors.background,
+	},
+	checkboxTextContent: {
+		flex: 1,
+		gap: theme.gap(0.5),
+	},
+	checkboxTitle: {
+		fontSize: 14,
+		fontWeight: "600",
+		color: theme.colors.foreground,
+	},
+	checkboxDescription: {
+		fontSize: 12,
+		color: theme.colors.mutedForeground,
+		lineHeight: 17,
 	},
 	required: {
 		color: theme.colors.destructive,

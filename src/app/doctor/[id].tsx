@@ -32,6 +32,7 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { getServiceModalityLabelKey } from "@/constants/service-modalities";
 import { useAuth } from "@/contexts/auth";
 import { useHealthcareProvider } from "@/hooks/use-healthcare-providers";
 import {
@@ -445,7 +446,9 @@ export default function DoctorDetails() {
 						) : null}
 						<TagGroup
 							title={t("common.serviceModalities")}
-							values={provider.serviceModalities}
+							values={provider.serviceModalities.map((modality) =>
+								t(getServiceModalityLabelKey(modality) || "common.notInformed"),
+							)}
 						/>
 						<TagGroup
 							title={t("common.attendanceLanguages")}

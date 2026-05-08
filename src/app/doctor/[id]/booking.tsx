@@ -11,7 +11,7 @@ import {
 	UserPlus,
 	Users,
 } from "lucide-react-native";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import {
 	ActivityIndicator,
@@ -29,6 +29,11 @@ import { Button } from "@/components/ui/button";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+	SERVICE_MODALITIES,
+	SERVICE_MODALITY_VALUES,
+	serviceModalityOptions,
+} from "@/constants/service-modalities";
 import { useHealthcareProvider } from "@/hooks/use-healthcare-providers";
 import { useProceduresByProvider } from "@/hooks/use-procedures";
 import { useCreateAppointment } from "@/hooks/use-appointments";
@@ -65,6 +70,7 @@ const bookingFormSchema = z
 	.object({
 		selectedDate: z.date(),
 		selectedTime: z.string().min(1),
+		selectedServiceModality: z.enum(SERVICE_MODALITY_VALUES),
 		notes: optionalTextSchema,
 		bookingFor: bookingModeSchema,
 		existingPatientProfileId: z.string(),
@@ -122,7 +128,10 @@ const emptyPatientFields = {
 	patientPreExistingConditions: "",
 	patientEmergencyContactName: "",
 	patientEmergencyContactPhone: "",
-} satisfies Omit<BookingFormData, "selectedDate" | "selectedTime" | "notes">;
+} satisfies Omit<
+	BookingFormData,
+	"selectedDate" | "selectedTime" | "selectedServiceModality" | "notes"
+>;
 
 const formatUtcDateForApi = (date: Date) => {
 	const year = date.getUTCFullYear();
@@ -157,6 +166,7 @@ export default function Booking() {
 		defaultValues: {
 			selectedDate: parseCalendarDateAsUtc(formatUtcDateForApi(new Date())),
 			selectedTime: "",
+			selectedServiceModality: SERVICE_MODALITIES.IN_PERSON,
 			notes: "",
 			...emptyPatientFields,
 		},
@@ -164,6 +174,7 @@ export default function Booking() {
 
 	const selectedDate = watch("selectedDate");
 	const selectedTime = watch("selectedTime");
+	const selectedServiceModality = watch("selectedServiceModality");
 	const bookingFor = watch("bookingFor");
 	const selectedPatientProfileId = watch("existingPatientProfileId");
 	const newPatientName = watch("patientFullName");
@@ -221,7 +232,19 @@ export default function Booking() {
 			? "You"
 			: bookingFor === "existing"
 				? selectedPatientProfile?.fullName || "Selected patient"
-				: newPatientName.trim() || "New patient";
+			: newPatientName.trim() || "New patient";
+
+	const availableServiceModalities = provider?.serviceModalities || [];
+
+	useEffect(() => {
+		if (availableServiceModalities.length === 0) {
+			return;
+		}
+
+		if (!availableServiceModalities.includes(selectedServiceModality)) {
+			setValue("selectedServiceModality", availableServiceModalities[0]);
+		}
+	}, [availableServiceModalities, selectedServiceModality, setValue]);
 
 	// Calculate totals
 	const totalDuration = selectedProcedures.reduce(
@@ -357,6 +380,7 @@ export default function Booking() {
 				healthcareProviderId: id,
 				scheduledAt: appointmentDate.toISOString(),
 				procedureIds,
+				serviceModality: formData.selectedServiceModality,
 				notes: formData.notes,
 				patient,
 			});
@@ -374,7 +398,10 @@ export default function Booking() {
 	};
 
 	const isBookingValid =
-		selectedDate && selectedTime && !createAppointment.isPending;
+		selectedDate &&
+		selectedTime &&
+		availableServiceModalities.includes(selectedServiceModality) &&
+		!createAppointment.isPending;
 
 	// Loading state
 	if (isLoading) {
@@ -814,6 +841,66 @@ export default function Booking() {
 					) : null}
 				</View>
 
+				{/* Service modality */}
+				<View style={styles.section}>
+					<View style={styles.sectionHeader}>
+						<HeartPulse
+							size={20}
+							color={theme.colors.primary}
+							strokeWidth={2}
+						/>
+						<Text style={styles.sectionTitle}>
+							{t("common.appointmentServiceModality")}
+						</Text>
+					</View>
+
+					{availableServiceModalities.length === 0 ? (
+						<Text style={styles.emptyPatientText}>
+							{t("common.providerHasNoServiceModalities")}
+						</Text>
+					) : (
+						<View style={styles.modalityList}>
+							{serviceModalityOptions
+								.filter((option) =>
+									availableServiceModalities.includes(option.value),
+								)
+								.map((option) => {
+									const selected = selectedServiceModality === option.value;
+
+									return (
+										<Pressable
+											key={option.value}
+											style={[
+												styles.modalityOption,
+												selected && styles.modalityOptionActive,
+											]}
+											onPress={() =>
+												setValue("selectedServiceModality", option.value)
+											}
+										>
+											<Text
+												style={[
+													styles.modalityTitle,
+													selected && styles.modalityTitleActive,
+												]}
+											>
+												{t(option.labelKey)}
+											</Text>
+											<Text
+												style={[
+													styles.modalityDescription,
+													selected && styles.modalityDescriptionActive,
+												]}
+											>
+												{t(option.descriptionKey)}
+											</Text>
+										</Pressable>
+									);
+								})}
+						</View>
+					)}
+				</View>
+
 				{/* Select Date */}
 				<View style={styles.section}>
 					<View style={styles.sectionHeader}>
@@ -1083,6 +1170,38 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	modeButtonTextActive: {
 		color: theme.colors.primaryForeground,
+	},
+	modalityList: {
+		gap: theme.gap(1.25),
+		marginTop: theme.gap(1),
+	},
+	modalityOption: {
+		padding: theme.gap(1.75),
+		borderRadius: theme.radius.lg,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		backgroundColor: theme.colors.background,
+		gap: theme.gap(0.5),
+	},
+	modalityOptionActive: {
+		borderColor: theme.colors.primary,
+		backgroundColor: `${theme.colors.primary}12`,
+	},
+	modalityTitle: {
+		fontSize: 15,
+		fontWeight: "700",
+		color: theme.colors.foreground,
+	},
+	modalityTitleActive: {
+		color: theme.colors.primary,
+	},
+	modalityDescription: {
+		fontSize: 13,
+		color: theme.colors.mutedForeground,
+		lineHeight: 18,
+	},
+	modalityDescriptionActive: {
+		color: theme.colors.foreground,
 	},
 	patientProfilesList: {
 		marginTop: theme.gap(2),

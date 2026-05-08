@@ -1,5 +1,10 @@
 import type { PatientProfile, PatientProfileData } from "@/types/patient-profile";
-import type { Customer, HealthcareProvider, Procedure } from "@/types/user";
+import type {
+	Customer,
+	HealthcareProvider,
+	Procedure,
+	ServiceModality,
+} from "@/types/user";
 
 export type AppointmentStatus =
 	| "SCHEDULED"
@@ -27,6 +32,11 @@ export interface Appointment {
 	healthcareProvider: HealthcareProvider;
 	scheduledAt: string;
 	status: AppointmentStatus;
+	serviceModality: ServiceModality;
+	onlineMeetingUrl: string | null;
+	onlineMeetingProvider: string | null;
+	onlineMeetingExternalId: string | null;
+	onlineMeetingCreatedAt: string | null;
 	totalDurationMinutes: number;
 	totalPriceCents: number;
 	notes: string | null;
@@ -44,6 +54,7 @@ export interface CreateAppointmentData {
 	healthcareProviderId?: string;
 	scheduledAt: Date | string;
 	procedureIds: string[];
+	serviceModality?: ServiceModality;
 	notes?: string | null;
 	patient?: CreateAppointmentPatient;
 }

@@ -12,6 +12,7 @@ import {
 	ActivityIndicator,
 	Alert,
 	Image,
+	Linking,
 	Pressable,
 	RefreshControl,
 	ScrollView,
@@ -100,6 +101,10 @@ export default function Appointments() {
 		} catch (error) {
 			Alert.alert(t("common.error"), t("common.failedToOpenChat"));
 		}
+	};
+
+	const handleOpenOnlineMeeting = async (url: string) => {
+		await Linking.openURL(url);
 	};
 
 	// Get status badge
@@ -404,6 +409,33 @@ export default function Appointments() {
 													</View>
 												</Button>
 											)}
+											{appointment.onlineMeetingUrl ? (
+												<Button
+													size="sm"
+													style={styles.actionButton}
+													onPress={() =>
+														handleOpenOnlineMeeting(
+															appointment.onlineMeetingUrl as string,
+														)
+													}
+												>
+													<View style={styles.iconButton}>
+														<Video
+															size={16}
+															color={theme.colors.primaryForeground}
+															strokeWidth={2}
+														/>
+														<Text
+															style={[
+																styles.detailText,
+																{ color: theme.colors.primaryForeground },
+															]}
+														>
+															{t("common.openGoogleMeet")}
+														</Text>
+													</View>
+												</Button>
+											) : null}
 											<Button
 												size="sm"
 												style={styles.actionButton}
