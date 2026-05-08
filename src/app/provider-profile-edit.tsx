@@ -521,6 +521,28 @@ export default function ProviderProfileEdit() {
 							<Text style={styles.documentDescription}>
 								{t("common.professionalVerificationCanBeCompletedLater")}
 							</Text>
+							{healthcareProvider.verificationStatus === "REJECTED" &&
+							healthcareProvider.verificationRejectionReason ? (
+								<View style={styles.rejectionNotice}>
+									<AlertCircle
+										size={20}
+										color={theme.colors.destructive}
+										strokeWidth={2}
+									/>
+									<View style={styles.rejectionNoticeContent}>
+										<Text style={styles.rejectionNoticeTitle}>
+											{t("common.verificationRejected")}
+										</Text>
+										<Text style={styles.rejectionNoticeText}>
+											{t("common.verificationRejectionReason")}:{" "}
+											{healthcareProvider.verificationRejectionReason}
+										</Text>
+										<Text style={styles.rejectionNoticeText}>
+											{t("common.correctInformationAndUploadAgain")}
+										</Text>
+									</View>
+								</View>
+							) : null}
 							<FormInput
 								control={control}
 								icon={Briefcase}
@@ -1287,6 +1309,29 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 13,
 		color: theme.colors.foreground,
 		fontWeight: "500",
+	},
+	rejectionNotice: {
+		flexDirection: "row",
+		gap: theme.gap(1.5),
+		padding: theme.gap(2),
+		borderRadius: theme.radius.md,
+		borderWidth: 1,
+		borderColor: `${theme.colors.destructive}33`,
+		backgroundColor: `${theme.colors.destructive}10`,
+	},
+	rejectionNoticeContent: {
+		flex: 1,
+		gap: theme.gap(0.5),
+	},
+	rejectionNoticeTitle: {
+		fontSize: 14,
+		fontWeight: "700",
+		color: theme.colors.destructive,
+	},
+	rejectionNoticeText: {
+		fontSize: 13,
+		color: theme.colors.foreground,
+		lineHeight: 18,
 	},
 	documentActions: {
 		flexDirection: "row",

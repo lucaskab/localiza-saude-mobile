@@ -13,6 +13,7 @@ import {
 	MessageSquareText,
 	Pencil,
 	Settings,
+	AlertCircle,
 } from "lucide-react-native";
 import type { ComponentType } from "react";
 import { useTranslation } from "react-i18next";
@@ -149,6 +150,36 @@ export default function ProviderProfile() {
             </Pressable>
           </View>
         </View>
+
+        {healthcareProvider?.verificationStatus === "REJECTED" &&
+        healthcareProvider.verificationRejectionReason ? (
+          <Pressable
+            onPress={() => router.push("/provider-profile-edit" as never)}
+            style={({ pressed }) => [
+              styles.rejectionCard,
+              pressed && styles.rejectionCardPressed,
+            ]}
+          >
+            <AlertCircle
+              size={20}
+              color={theme.colors.destructive}
+              strokeWidth={2}
+            />
+            <View style={styles.rejectionContent}>
+              <Text style={styles.rejectionTitle}>
+                {t("common.verificationRejected")}
+              </Text>
+              <Text style={styles.rejectionText} numberOfLines={2}>
+                {healthcareProvider.verificationRejectionReason}
+              </Text>
+            </View>
+            <ChevronRight
+              size={18}
+              color={theme.colors.mutedForeground}
+              strokeWidth={2}
+            />
+          </Pressable>
+        ) : null}
 
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
@@ -305,6 +336,35 @@ const styles = StyleSheet.create((theme) => ({
     gap: theme.gap(2),
     paddingHorizontal: theme.gap(3),
     paddingVertical: theme.gap(3),
+  },
+  rejectionCard: {
+    marginHorizontal: theme.gap(3),
+    marginTop: theme.gap(3),
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: `${theme.colors.destructive}33`,
+    backgroundColor: `${theme.colors.destructive}10`,
+    padding: theme.gap(2),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.gap(1.5),
+  },
+  rejectionCardPressed: {
+    opacity: 0.72,
+  },
+  rejectionContent: {
+    flex: 1,
+    gap: theme.gap(0.25),
+  },
+  rejectionTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.destructive,
+  },
+  rejectionText: {
+    fontSize: 12,
+    color: theme.colors.foreground,
+    lineHeight: 17,
   },
   statCard: {
     flex: 1,

@@ -1,6 +1,6 @@
 import type { ServiceModality } from "@/constants/service-modalities";
 
-export type UserRole = "HEALTHCARE_PROVIDER" | "CUSTOMER";
+export type UserRole = "HEALTHCARE_PROVIDER" | "CUSTOMER" | "ADMIN";
 export type { ServiceModality };
 
 export interface Procedure {
@@ -63,7 +63,9 @@ export type HealthcareProvider = BaseUser & {
 	licenseDocumentSha256?: string | null;
 	licenseDocumentUploadedAt?: string | null;
 	verificationStatus: "PENDING" | "VERIFIED" | "REJECTED";
+	verificationRejectionReason?: string | null;
 	verifiedAt: string | null;
+	verifiedByUserId?: string | null;
 	bio: string | null;
 	approach: string | null;
 	education: string | null;
@@ -91,4 +93,8 @@ export type HealthcareProvider = BaseUser & {
 	faqs?: HealthcareProviderFaq[];
 };
 
-export type User = Customer | HealthcareProvider;
+export type AdminUser = BaseUser & {
+	role: "ADMIN";
+};
+
+export type User = Customer | HealthcareProvider | AdminUser;
