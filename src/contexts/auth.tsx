@@ -46,6 +46,7 @@ interface AuthContextData {
 	needsOnboarding: boolean;
 	isCustomer: boolean;
 	isHealthcareProvider: boolean;
+	isStaff: boolean;
 }
 
 interface AuthProviderProps {
@@ -68,6 +69,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 	const needsOnboarding = authState?.user?.onboardingCompleted === false;
 	const isCustomer = authState?.user?.role === "CUSTOMER";
 	const isHealthcareProvider = authState?.user?.role === "HEALTHCARE_PROVIDER";
+	const isStaff = authState?.user?.role === "STAFF";
 
 	/**
 	 * Fetches customer data for users with CUSTOMER role
@@ -235,6 +237,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
 			if (user.role === "HEALTHCARE_PROVIDER") {
 				router.replace("/(provider-tabs)/dashboard");
+			} else if (user.role === "STAFF") {
+				router.replace("/staff" as never);
 			} else {
 				router.replace("/(bottom-tabs)/home");
 			}
@@ -374,6 +378,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 			needsOnboarding,
 			isCustomer,
 			isHealthcareProvider,
+			isStaff,
 		}),
 		[
 			isAuthenticated,
@@ -384,6 +389,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 			needsOnboarding,
 			isCustomer,
 			isHealthcareProvider,
+			isStaff,
 			signInWithGoogle,
 			signInWithApple,
 			completeOnboarding,

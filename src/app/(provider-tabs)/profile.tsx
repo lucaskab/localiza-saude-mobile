@@ -4,6 +4,7 @@ import { useProceduresByProvider } from "@/hooks/use-procedures";
 import type { TranslationKey } from "@/i18n";
 import { useRouter } from "expo-router";
 import {
+	Building2,
 	Bell,
 	BriefcaseBusiness,
 	CalendarClock,
@@ -37,6 +38,13 @@ type ProviderMenuItem = {
 };
 
 const providerMenuItems: ProviderMenuItem[] = [
+	{
+		icon: Building2,
+    label: "common.clinic",
+    description: "common.manageClinicDescription",
+    route: "/provider-clinic",
+    testID: "provider-profile-menu-clinic",
+  },
 	{
 		icon: BriefcaseBusiness,
     label: "common.procedures",

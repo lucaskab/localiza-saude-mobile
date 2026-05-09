@@ -1,6 +1,15 @@
 import type { ServiceModality } from "@/constants/service-modalities";
 
-export type UserRole = "HEALTHCARE_PROVIDER" | "CUSTOMER" | "ADMIN";
+export type UserRole = "HEALTHCARE_PROVIDER" | "CUSTOMER" | "ADMIN" | "STAFF";
+export type ClinicEmployeeRole = "OWNER" | "PROVIDER" | "STAFF";
+export type ClinicPermission =
+	| "MANAGE_PROVIDER_PROFILE"
+	| "MANAGE_PROVIDER_SCHEDULE"
+	| "MANAGE_APPOINTMENTS"
+	| "MANAGE_PROCEDURES"
+	| "VIEW_PATIENTS"
+	| "MANAGE_CLINIC_INFO"
+	| "MANAGE_STAFF";
 export type { ServiceModality };
 
 export interface Procedure {
@@ -103,4 +112,38 @@ export type AdminUser = BaseUser & {
 	role: "ADMIN";
 };
 
-export type User = Customer | HealthcareProvider | AdminUser;
+export type StaffUser = BaseUser & {
+	role: "STAFF";
+};
+
+export type User = Customer | HealthcareProvider | AdminUser | StaffUser;
+
+export interface ClinicEmployee {
+	id: string;
+	clinicId: string;
+	userId: string;
+	role: ClinicEmployeeRole;
+	permissions: ClinicPermission[];
+	active: boolean;
+	createdAt: string;
+	updatedAt: string;
+	user: User;
+}
+
+export interface Clinic {
+	id: string;
+	name: string;
+	type: "MEDICAL" | "HEALTH" | "DENTAL" | "EYE" | "BEAUTY" | "FREE";
+	description: string | null;
+	address: string | null;
+	latitude: number | null;
+	longitude: number | null;
+	phone: string | null;
+	email: string | null;
+	ownerId: string;
+	isActive: boolean;
+	createdAt: string;
+	updatedAt: string;
+	healthcareProviders?: HealthcareProvider[];
+	employees?: ClinicEmployee[];
+}

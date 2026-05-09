@@ -2,7 +2,14 @@ import { Redirect } from "expo-router";
 import { useAuth } from "@/contexts/auth";
 
 export default function Index() {
-	const { user, isLoading, isCustomer, isHealthcareProvider, needsOnboarding } =
+	const {
+		user,
+		isLoading,
+		isCustomer,
+		isHealthcareProvider,
+		isStaff,
+		needsOnboarding,
+	} =
 		useAuth();
 
 	// Wait for auth to initialize before redirecting
@@ -25,6 +32,10 @@ export default function Index() {
 
 	if (isCustomer) {
 		return <Redirect href="/(bottom-tabs)/home" />;
+	}
+
+	if (isStaff) {
+		return <Redirect href={"/staff" as never} />;
 	}
 
 	// Fallback to login if role is not set

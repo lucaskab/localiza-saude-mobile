@@ -2,7 +2,6 @@ import { useRouter } from "expo-router";
 import * as Location from "expo-location";
 import {
 	Heart,
-	LocateFixed,
 	MessageCircle,
 	Search as SearchIcon,
 	SlidersHorizontal,
@@ -48,6 +47,8 @@ function formatDistance(distance?: number | null) {
 	if (typeof distance !== "number") return null;
 	return distance < 10 ? distance.toFixed(1) : Math.round(distance).toString();
 }
+
+const radiusOptions = ["5", "10", "15", "25", "50"];
 
 export default function Search() {
 	const router = useRouter();
@@ -314,15 +315,17 @@ export default function Search() {
 								active={Boolean(nearMeLocation)}
 								onPress={handleNearMe}
 							/>
-							<Input
-								leftIcon={LocateFixed}
-								placeholder={t("common.radiusKm")}
-								value={radiusInKm}
-								onChangeText={setRadiusInKm}
-								keyboardType="numeric"
-								editable={Boolean(nearMeLocation)}
-								containerStyle={styles.radiusInput}
-							/>
+							<Text style={styles.radiusLabel}>{t("common.radiusKm")}</Text>
+						</View>
+						<View style={styles.radiusChipsRow}>
+							{radiusOptions.map((radiusOption) => (
+								<FilterChip
+									key={radiusOption}
+									label={`${radiusOption} km`}
+									active={radiusInKm === radiusOption}
+									onPress={() => setRadiusInKm(radiusOption)}
+								/>
+							))}
 						</View>
 						<View style={styles.filterChipsRow}>
 							<FilterChip
@@ -849,10 +852,18 @@ const styles = StyleSheet.create((theme) => ({
 	locationRow: {
 		flexDirection: "row",
 		alignItems: "center",
+		flexWrap: "wrap",
 		gap: theme.gap(1),
 	},
-	radiusInput: {
-		width: 128,
+	radiusLabel: {
+		fontSize: 13,
+		fontWeight: "700",
+		color: theme.colors.mutedForeground,
+	},
+	radiusChipsRow: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		gap: theme.gap(1),
 	},
 	categorySection: {
 		paddingVertical: theme.gap(2),
