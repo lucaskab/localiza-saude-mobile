@@ -74,6 +74,11 @@ export type HealthcareProvider = BaseUser & {
 	targetAudiences: string[];
 	serviceModalities: ServiceModality[];
 	clinicAddress: string | null;
+	clinicLatitude?: number | null;
+	clinicLongitude?: number | null;
+	clinicNeighborhood?: string | null;
+	clinicCity?: string | null;
+	clinicState?: string | null;
 	homeCareRadiusKm: number | null;
 	acceptedInsurance: string[];
 	paymentMethods: string[];
@@ -88,6 +93,7 @@ export type HealthcareProvider = BaseUser & {
 	totalRatings?: number;
 	completedAppointments?: number;
 	confirmationRate?: number;
+	distanceInKm?: number | null;
 	isSuperProfessional?: boolean;
 	procedures: Procedure[];
 	faqs?: HealthcareProviderFaq[];

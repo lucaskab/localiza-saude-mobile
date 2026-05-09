@@ -11,6 +11,11 @@ interface UseHealthcareProvidersParams {
 	serviceModality?: string;
 	language?: string;
 	insurance?: string;
+	city?: string;
+	neighborhood?: string;
+	latitude?: number;
+	longitude?: number;
+	radiusInKm?: number;
 	verified?: boolean;
 	superProfessional?: boolean;
 	available?: boolean;
@@ -27,6 +32,11 @@ export const getHealthcareProviders = async ({
 	serviceModality,
 	language,
 	insurance,
+	city,
+	neighborhood,
+	latitude,
+	longitude,
+	radiusInKm,
 	verified,
 	superProfessional,
 	available,
@@ -55,6 +65,26 @@ export const getHealthcareProviders = async ({
 
 	if (insurance) {
 		params.append("insurance", insurance);
+	}
+
+	if (city) {
+		params.append("city", city);
+	}
+
+	if (neighborhood) {
+		params.append("neighborhood", neighborhood);
+	}
+
+	if (typeof latitude === "number") {
+		params.append("latitude", latitude.toString());
+	}
+
+	if (typeof longitude === "number") {
+		params.append("longitude", longitude.toString());
+	}
+
+	if (typeof radiusInKm === "number") {
+		params.append("radiusInKm", radiusInKm.toString());
 	}
 
 	if (verified) {
@@ -100,6 +130,11 @@ export const useHealthcareProviders = ({
 	serviceModality,
 	language,
 	insurance,
+	city,
+	neighborhood,
+	latitude,
+	longitude,
+	radiusInKm,
 	verified,
 	superProfessional,
 	available,
@@ -116,6 +151,11 @@ export const useHealthcareProviders = ({
 			serviceModality,
 			language,
 			insurance,
+			city,
+			neighborhood,
+			latitude,
+			longitude,
+			radiusInKm,
 			verified,
 			superProfessional,
 			available,
@@ -130,6 +170,11 @@ export const useHealthcareProviders = ({
 				serviceModality,
 				language,
 				insurance,
+				city,
+				neighborhood,
+				latitude,
+				longitude,
+				radiusInKm,
 				verified,
 				superProfessional,
 				available,
@@ -149,6 +194,11 @@ export const useInfiniteHealthcareProviders = ({
 	serviceModality,
 	language,
 	insurance,
+	city,
+	neighborhood,
+	latitude,
+	longitude,
+	radiusInKm,
 	verified,
 	superProfessional,
 	available,
@@ -166,6 +216,11 @@ export const useInfiniteHealthcareProviders = ({
 			serviceModality,
 			language,
 			insurance,
+			city,
+			neighborhood,
+			latitude,
+			longitude,
+			radiusInKm,
 			verified,
 			superProfessional,
 			available,
@@ -180,6 +235,11 @@ export const useInfiniteHealthcareProviders = ({
 				serviceModality,
 				language,
 				insurance,
+				city,
+				neighborhood,
+				latitude,
+				longitude,
+				radiusInKm,
 				verified,
 				superProfessional,
 				available,
@@ -269,7 +329,7 @@ export const getNearbyHealthcareProviders = async ({
 	});
 
 	const { data } = await api.get<GetHealthcareProvidersResponse>(
-		`/healthcare-providers/nearby?${params.toString()}`,
+		`/healthcare-providers?${params.toString()}`,
 	);
 	return data;
 };

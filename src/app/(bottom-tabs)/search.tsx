@@ -1,6 +1,8 @@
 import { useRouter } from "expo-router";
+import * as Location from "expo-location";
 import {
 	Heart,
+	LocateFixed,
 	MessageCircle,
 	Search as SearchIcon,
 	SlidersHorizontal,
@@ -42,6 +44,11 @@ function priceToCents(value: string) {
 	return normalized ? Number(normalized) * 100 : undefined;
 }
 
+function formatDistance(distance?: number | null) {
+	if (typeof distance !== "number") return null;
+	return distance < 10 ? distance.toFixed(1) : Math.round(distance).toString();
+}
+
 export default function Search() {
 	const router = useRouter();
 	const { theme } = useUnistyles();
@@ -53,6 +60,14 @@ export default function Search() {
 	const [serviceModality, setServiceModality] = useState("");
 	const [language, setLanguage] = useState("");
 	const [insurance, setInsurance] = useState("");
+	const [city, setCity] = useState("");
+	const [neighborhood, setNeighborhood] = useState("");
+	const [nearMeLocation, setNearMeLocation] = useState<{
+		latitude: number;
+		longitude: number;
+	} | null>(null);
+	const [radiusInKm, setRadiusInKm] = useState("15");
+	const [isLocating, setIsLocating] = useState(false);
 	const [maxPrice, setMaxPrice] = useState("");
 	const [minRating, setMinRating] = useState("");
 	const [onlyVerified, setOnlyVerified] = useState(false);
@@ -97,6 +112,11 @@ export default function Search() {
 		serviceModality: serviceModality || undefined,
 		language: language || undefined,
 		insurance: insurance.trim() || undefined,
+		city: city.trim() || undefined,
+		neighborhood: neighborhood.trim() || undefined,
+		latitude: nearMeLocation?.latitude,
+		longitude: nearMeLocation?.longitude,
+		radiusInKm: nearMeLocation ? Number(radiusInKm) || 15 : undefined,
 		maxPriceCents: priceToCents(maxPrice),
 		minRating: minRating ? Number(minRating) : undefined,
 		verified: onlyVerified || undefined,
@@ -144,11 +164,46 @@ export default function Search() {
 		setServiceModality("");
 		setLanguage("");
 		setInsurance("");
+		setCity("");
+		setNeighborhood("");
+		setNearMeLocation(null);
+		setRadiusInKm("15");
 		setMaxPrice("");
 		setMinRating("");
 		setOnlyVerified(false);
 		setOnlyAvailable(false);
 		setOnlySuperProfessional(false);
+	};
+
+	const handleNearMe = async () => {
+		if (nearMeLocation) {
+			setNearMeLocation(null);
+			return;
+		}
+
+		setIsLocating(true);
+
+		try {
+			const permission = await Location.requestForegroundPermissionsAsync();
+
+			if (permission.status !== "granted") {
+				Alert.alert(t("common.error"), t("common.locationPermissionDenied"));
+				return;
+			}
+
+			const location = await Location.getCurrentPositionAsync({
+				accuracy: Location.Accuracy.Balanced,
+			});
+
+			setNearMeLocation({
+				latitude: location.coords.latitude,
+				longitude: location.coords.longitude,
+			});
+		} catch {
+			Alert.alert(t("common.error"), t("common.locationPermissionDenied"));
+		} finally {
+			setIsLocating(false);
+		}
 	};
 
 	return (
@@ -231,6 +286,42 @@ export default function Search() {
 								onChangeText={setMaxPrice}
 								keyboardType="numeric"
 								containerStyle={styles.filterInput}
+							/>
+						</View>
+						<View style={styles.filterInputGrid}>
+							<Input
+								placeholder={t("common.city")}
+								value={city}
+								onChangeText={setCity}
+								containerStyle={styles.filterInput}
+							/>
+							<Input
+								placeholder={t("common.neighborhood")}
+								value={neighborhood}
+								onChangeText={setNeighborhood}
+								containerStyle={styles.filterInput}
+							/>
+						</View>
+						<View style={styles.locationRow}>
+							<FilterChip
+								label={
+									isLocating
+										? "..."
+										: nearMeLocation
+											? t("common.usingMyLocation")
+											: t("common.nearMe")
+								}
+								active={Boolean(nearMeLocation)}
+								onPress={handleNearMe}
+							/>
+							<Input
+								leftIcon={LocateFixed}
+								placeholder={t("common.radiusKm")}
+								value={radiusInKm}
+								onChangeText={setRadiusInKm}
+								keyboardType="numeric"
+								editable={Boolean(nearMeLocation)}
+								containerStyle={styles.radiusInput}
 							/>
 						</View>
 						<View style={styles.filterChipsRow}>
@@ -490,6 +581,18 @@ export default function Search() {
 																	provider.nextAvailableAt,
 																)}
 															</Text>
+															{formatDistance(provider.distanceInKm) ? (
+																<>
+																	<View style={styles.statDivider} />
+																	<Text style={styles.locationText}>
+																			{t("common.distanceAway", {
+																				distance: formatDistance(
+																					provider.distanceInKm,
+																				) ?? "",
+																			})}
+																	</Text>
+																</>
+															) : null}
 															{typeof provider.completedAppointments ===
 															"number" ? (
 																<>
@@ -513,6 +616,16 @@ export default function Search() {
 																					"common.notInformed",
 																			),
 																	)
+																	.join(" · ")}
+															</Text>
+														) : null}
+														{provider.clinicNeighborhood || provider.clinicCity ? (
+															<Text style={styles.professionalMeta} numberOfLines={1}>
+																{[
+																	provider.clinicNeighborhood,
+																	provider.clinicCity,
+																]
+																	.filter(Boolean)
 																	.join(" · ")}
 															</Text>
 														) : null}
@@ -733,6 +846,14 @@ const styles = StyleSheet.create((theme) => ({
 	filterInput: {
 		flex: 1,
 	},
+	locationRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(1),
+	},
+	radiusInput: {
+		width: 128,
+	},
 	categorySection: {
 		paddingVertical: theme.gap(2),
 		borderBottomWidth: 1,
@@ -945,6 +1066,11 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 12,
 		color: theme.colors.primary,
 		fontWeight: "500",
+	},
+	locationText: {
+		fontSize: 12,
+		color: theme.colors.foreground,
+		fontWeight: "600",
 	},
 	professionalMeta: {
 		fontSize: 12,

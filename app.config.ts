@@ -38,6 +38,8 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => ({
 			NSBonjourServices: ["_expo._tcp"],
 			NSLocalNetworkUsageDescription:
 				"This app uses the local network to connect to the Expo development server.",
+			NSLocationWhenInUseUsageDescription:
+				"Usamos sua localização para encontrar profissionais de saúde próximos a você.",
 		},
 	},
 	android: {
@@ -47,6 +49,7 @@ export default ({ config }: { config: ExpoConfig }): ExpoConfig => ({
 			backgroundImage: "./assets/images/android-icon-background.png",
 			monochromeImage: "./assets/images/android-icon-monochrome.png",
 		},
+		permissions: ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"],
 		predictiveBackGestureEnabled: false,
 		package: getUniqueIdentifier(),
 	},
