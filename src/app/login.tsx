@@ -30,6 +30,10 @@ export default function Login() {
 	const [isAppleSignInPending, setIsAppleSignInPending] = useState(false);
 	const [isEmailAuthPending, setIsEmailAuthPending] = useState(false);
 
+	const changeAuthMode = (nextMode: AuthMode) => {
+		setAuthMode(nextMode);
+	};
+
 	useEffect(() => {
 		if (!isAppleSignInEnabled) {
 			setIsAppleAuthAvailable(false);
@@ -116,64 +120,56 @@ export default function Login() {
 					</View>
 
 					{/* Title */}
-					<Text style={styles.title}>{t("common.welcomeToHealthCare")}</Text>
+					<Text style={styles.title}>
+						{authMode === "forgot-password"
+							? t("common.forgotPasswordTitle")
+							: t("common.welcomeToHealthCare")}
+					</Text>
 					<Text style={styles.subtitle}>
-						{t("common.findAndBookAppointmentsWithHealthcareProfessionals")}
+						{authMode === "forgot-password"
+							? t("common.forgotPasswordDescription")
+							: t("common.findAndBookAppointmentsWithHealthcareProfessionals")}
 					</Text>
 				</View>
 
 				{/* Login Buttons Section */}
 				<View style={styles.buttonsContainer}>
-					<View style={styles.segmentedControl}>
-						<Pressable
-							onPress={() => setAuthMode("sign-in")}
-							style={[
-								styles.segmentedOption,
-								authMode === "sign-in" && styles.segmentedOptionActive,
-							]}
-						>
-							<Text
+					{authMode !== "forgot-password" ? (
+						<View style={styles.segmentedControl}>
+							<Pressable
+								onPress={() => changeAuthMode("sign-in")}
 								style={[
-									styles.segmentedText,
-									authMode === "sign-in" && styles.segmentedTextActive,
+									styles.segmentedOption,
+									authMode === "sign-in" && styles.segmentedOptionActive,
 								]}
 							>
-								{t("common.signIn")}
-							</Text>
-						</Pressable>
-						<Pressable
-							onPress={() => setAuthMode("sign-up")}
-							style={[
-								styles.segmentedOption,
-								authMode === "sign-up" && styles.segmentedOptionActive,
-							]}
-						>
-							<Text
+								<Text
+									style={[
+										styles.segmentedText,
+										authMode === "sign-in" && styles.segmentedTextActive,
+									]}
+								>
+									{t("common.signIn")}
+								</Text>
+							</Pressable>
+							<Pressable
+								onPress={() => changeAuthMode("sign-up")}
 								style={[
-									styles.segmentedText,
-									authMode === "sign-up" && styles.segmentedTextActive,
+									styles.segmentedOption,
+									authMode === "sign-up" && styles.segmentedOptionActive,
 								]}
 							>
-								{t("common.createAccount")}
-							</Text>
-						</Pressable>
-						<Pressable
-							onPress={() => setAuthMode("forgot-password")}
-							style={[
-								styles.segmentedOption,
-								authMode === "forgot-password" && styles.segmentedOptionActive,
-							]}
-						>
-							<Text
-								style={[
-									styles.segmentedText,
-									authMode === "forgot-password" && styles.segmentedTextActive,
-								]}
-							>
-								{t("common.resetPassword")}
-							</Text>
-						</Pressable>
-					</View>
+								<Text
+									style={[
+										styles.segmentedText,
+										authMode === "sign-up" && styles.segmentedTextActive,
+									]}
+								>
+									{t("common.createAccount")}
+								</Text>
+							</Pressable>
+						</View>
+					) : null}
 
 					{authMode === "sign-up" ? (
 						<TextInput
@@ -210,6 +206,16 @@ export default function Login() {
 							onChangeText={setPassword}
 						/>
 					) : null}
+					{authMode === "sign-in" ? (
+						<Pressable
+							style={styles.forgotPasswordButton}
+							onPress={() => changeAuthMode("forgot-password")}
+						>
+							<Text style={styles.forgotPasswordText}>
+								{t("common.forgotPasswordLink")}
+							</Text>
+						</Pressable>
+					) : null}
 
 					<Button
 						disabled={!email.trim() || isEmailAuthPending}
@@ -224,48 +230,64 @@ export default function Login() {
 								? t("common.createAccount")
 								: t("common.signIn")}
 					</Button>
-
-					<View style={styles.divider}>
-						<View style={styles.dividerLine} />
-						<Text style={styles.dividerText}>{t("common.or")}</Text>
-						<View style={styles.dividerLine} />
-					</View>
-
-					{/* Google Login */}
-					<Button
-						onPress={handleGoogleLogin}
-						variant="outline"
-						size="lg"
-						style={styles.button}
-					>
-						<View style={styles.buttonContent}>
-							<View style={styles.googleIcon}>
-								<Text style={styles.googleText}>G</Text>
-							</View>
-							<Text style={styles.buttonText}>{t("common.continueWithGoogle")}</Text>
-						</View>
-					</Button>
-
-					{isAppleAuthAvailable ? (
-						<View
-							style={[
-								styles.appleButtonWrapper,
-								isAppleSignInPending && styles.appleButtonWrapperDisabled,
-							]}
-							pointerEvents={isAppleSignInPending ? "none" : "auto"}
+					{authMode === "forgot-password" ? (
+						<Button
+							size="lg"
+							style={styles.button}
+							variant="ghost"
+							onPress={() => changeAuthMode("sign-in")}
 						>
-							<AppleAuthentication.AppleAuthenticationButton
-								buttonType={
-									AppleAuthentication.AppleAuthenticationButtonType.CONTINUE
-								}
-								buttonStyle={
-									AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-								}
-								cornerRadius={12}
-								style={styles.appleButton}
-								onPress={handleAppleLogin}
-							/>
-						</View>
+							{t("common.backToLogin")}
+						</Button>
+					) : null}
+
+					{authMode !== "forgot-password" ? (
+						<>
+							<View style={styles.divider}>
+								<View style={styles.dividerLine} />
+								<Text style={styles.dividerText}>{t("common.or")}</Text>
+								<View style={styles.dividerLine} />
+							</View>
+
+							{/* Google Login */}
+							<Button
+								onPress={handleGoogleLogin}
+								variant="outline"
+								size="lg"
+								style={styles.button}
+							>
+								<View style={styles.buttonContent}>
+									<View style={styles.googleIcon}>
+										<Text style={styles.googleText}>G</Text>
+									</View>
+									<Text style={styles.buttonText}>
+										{t("common.continueWithGoogle")}
+									</Text>
+								</View>
+							</Button>
+
+							{isAppleAuthAvailable ? (
+								<View
+									style={[
+										styles.appleButtonWrapper,
+										isAppleSignInPending && styles.appleButtonWrapperDisabled,
+									]}
+									pointerEvents={isAppleSignInPending ? "none" : "auto"}
+								>
+									<AppleAuthentication.AppleAuthenticationButton
+										buttonType={
+											AppleAuthentication.AppleAuthenticationButtonType.CONTINUE
+										}
+										buttonStyle={
+											AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+										}
+										cornerRadius={12}
+										style={styles.appleButton}
+										onPress={handleAppleLogin}
+									/>
+								</View>
+							) : null}
+						</>
 					) : null}
 
 					{/* Terms */}
@@ -373,6 +395,15 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 16,
 		color: theme.colors.foreground,
 		backgroundColor: theme.colors.background,
+	},
+	forgotPasswordButton: {
+		alignSelf: "flex-end",
+		paddingVertical: theme.gap(0.5),
+	},
+	forgotPasswordText: {
+		fontSize: 14,
+		fontWeight: "600",
+		color: theme.colors.primary,
 	},
 	button: {
 		width: "100%",
