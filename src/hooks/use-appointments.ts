@@ -10,6 +10,8 @@ import type {
 	DeleteAppointmentResponse,
 	RequestAppointmentRescheduleData,
 	RespondAppointmentRescheduleData,
+	CreateAppointmentWaitlistEntryData,
+	CreateAppointmentWaitlistEntryResponse,
 } from "@/types/appointment";
 import { api } from "@/services/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -249,6 +251,29 @@ export const useCreateAppointment = () => {
 			queryClient.invalidateQueries({ queryKey: ["categories"] });
 			queryClient.invalidateQueries({ queryKey: ["healthcare-providers"] });
 			queryClient.invalidateQueries({ queryKey: ["patient-profiles"] });
+		},
+	});
+};
+
+export const createAppointmentWaitlistEntry = async (
+	data: CreateAppointmentWaitlistEntryData,
+): Promise<CreateAppointmentWaitlistEntryResponse> => {
+	const { data: response } =
+		await api.post<CreateAppointmentWaitlistEntryResponse>(
+			"/appointment-waitlist",
+			data,
+		);
+	return response;
+};
+
+export const useCreateAppointmentWaitlistEntry = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: createAppointmentWaitlistEntry,
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["appointment-waitlist"] });
+			queryClient.invalidateQueries({ queryKey: ["timeSlots"] });
 		},
 	});
 };

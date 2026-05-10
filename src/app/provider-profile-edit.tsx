@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
 	AlertCircle,
 	Briefcase,
+	Clock,
 	CreditCard,
 	FileText,
 	GraduationCap,
@@ -19,6 +20,7 @@ import {
 } from "lucide-react-native";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
+import { router } from "expo-router";
 import {
 	ActivityIndicator,
 	Alert,
@@ -27,7 +29,13 @@ import {
 	Text,
 	View,
 } from "react-native";
-import { Controller, type Control, useFieldArray, useForm } from "react-hook-form";
+import {
+	Controller,
+	type Control,
+	useFieldArray,
+	useForm,
+	useWatch,
+} from "react-hook-form";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
@@ -69,11 +77,18 @@ const profileFormSchema = z.object({
 	targetAudiences: z.string().nullable(),
 	serviceModalities: z
 		.array(z.enum(SERVICE_MODALITY_VALUES)),
-	clinicAddress: z.string().nullable(),
 	homeCareRadiusKm: z.string().nullable(),
 	acceptedInsurance: z.string().nullable(),
 	paymentMethods: z.string().nullable(),
 	cancellationPolicy: z.string().nullable(),
+	cancellationPolicyEnabled: z.boolean(),
+	cancellationPolicyHoursBefore: z.string().nullable(),
+	cancellationPolicyPenaltyType: z
+		.enum(["", "FIXED", "PERCENTAGE"])
+		.default(""),
+	cancellationPolicyFixedFee: z.string().nullable(),
+	cancellationPolicyPercentage: z.string().nullable(),
+	cancellationPolicyRequiresJustification: z.boolean(),
 	termsAccepted: z.boolean(),
 	lgpdConsent: z.boolean(),
 	professionalResponsibilityAccepted: z.boolean(),
@@ -92,6 +107,8 @@ type ProfileTextField = Exclude<
 	| "lgpdConsent"
 	| "professionalResponsibilityAccepted"
 	| "serviceModalities"
+	| "cancellationPolicyEnabled"
+	| "cancellationPolicyRequiresJustification"
 	| "faqs"
 >;
 
@@ -113,11 +130,16 @@ const emptyProfileForm: ProfileFormData = {
 	yearsOfExperience: null,
 	targetAudiences: null,
 	serviceModalities: [],
-	clinicAddress: null,
 	homeCareRadiusKm: null,
 	acceptedInsurance: null,
 	paymentMethods: null,
 	cancellationPolicy: null,
+	cancellationPolicyEnabled: false,
+	cancellationPolicyHoursBefore: null,
+	cancellationPolicyPenaltyType: "",
+	cancellationPolicyFixedFee: null,
+	cancellationPolicyPercentage: null,
+	cancellationPolicyRequiresJustification: false,
 	termsAccepted: false,
 	lgpdConsent: false,
 	professionalResponsibilityAccepted: false,
@@ -142,6 +164,12 @@ function toAcceptanceDate(accepted: boolean, currentValue?: string | null) {
 	return currentValue || new Date().toISOString();
 }
 
+function priceToCents(value?: string | null) {
+	const normalizedValue = value?.replace(",", ".").trim();
+	if (!normalizedValue) return 0;
+	return Math.round((Number(normalizedValue) || 0) * 100);
+}
+
 export default function ProviderProfileEdit() {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation();
@@ -162,6 +190,14 @@ export default function ProviderProfileEdit() {
 		formState: { isDirty },
 	} = useForm<ProfileFormData>({
 		defaultValues: emptyProfileForm,
+	});
+	const cancellationPolicyEnabled = useWatch({
+		control,
+		name: "cancellationPolicyEnabled",
+	});
+	const cancellationPolicyPenaltyType = useWatch({
+		control,
+		name: "cancellationPolicyPenaltyType",
 	});
 	const { fields: faqFields, append: appendFaq, remove: removeFaq } =
 		useFieldArray({
@@ -198,11 +234,27 @@ export default function ProviderProfileEdit() {
 				healthcareProvider?.yearsOfExperience?.toString() || null,
 			targetAudiences: joinList(healthcareProvider?.targetAudiences),
 			serviceModalities: healthcareProvider?.serviceModalities || [],
-			clinicAddress: healthcareProvider?.clinicAddress || null,
 			homeCareRadiusKm: healthcareProvider?.homeCareRadiusKm?.toString() || null,
 			acceptedInsurance: joinList(healthcareProvider?.acceptedInsurance),
 			paymentMethods: joinList(healthcareProvider?.paymentMethods),
 			cancellationPolicy: healthcareProvider?.cancellationPolicy || null,
+			cancellationPolicyEnabled: Boolean(
+				healthcareProvider?.cancellationPolicyEnabled,
+			),
+			cancellationPolicyHoursBefore:
+				healthcareProvider?.cancellationPolicyHoursBefore?.toString() || null,
+			cancellationPolicyPenaltyType:
+				healthcareProvider?.cancellationPolicyPenaltyType || "",
+			cancellationPolicyFixedFee:
+				healthcareProvider?.cancellationPolicyFixedFeeCents !== null &&
+				healthcareProvider?.cancellationPolicyFixedFeeCents !== undefined
+					? (healthcareProvider.cancellationPolicyFixedFeeCents / 100).toFixed(2)
+					: null,
+			cancellationPolicyPercentage:
+				healthcareProvider?.cancellationPolicyPercentage?.toString() || null,
+			cancellationPolicyRequiresJustification: Boolean(
+				healthcareProvider?.cancellationPolicyRequiresJustification,
+			),
 			termsAccepted: Boolean(healthcareProvider?.termsAcceptedAt),
 			lgpdConsent: Boolean(healthcareProvider?.lgpdConsentAt),
 			professionalResponsibilityAccepted: Boolean(
@@ -257,7 +309,6 @@ export default function ProviderProfileEdit() {
 						: null,
 					targetAudiences: splitList(parsed.data.targetAudiences),
 					serviceModalities: parsed.data.serviceModalities,
-					clinicAddress: parsed.data.clinicAddress?.trim() || null,
 					homeCareRadiusKm: parsed.data.homeCareRadiusKm?.trim()
 						? Number(parsed.data.homeCareRadiusKm)
 						: null,
@@ -265,6 +316,26 @@ export default function ProviderProfileEdit() {
 					paymentMethods: splitList(parsed.data.paymentMethods),
 					cancellationPolicy:
 						parsed.data.cancellationPolicy?.trim() || null,
+					cancellationPolicyEnabled: parsed.data.cancellationPolicyEnabled,
+					cancellationPolicyHoursBefore: parsed.data.cancellationPolicyEnabled
+						? Number(parsed.data.cancellationPolicyHoursBefore || 0)
+						: null,
+					cancellationPolicyPenaltyType: parsed.data.cancellationPolicyEnabled
+						? parsed.data.cancellationPolicyPenaltyType || null
+						: null,
+					cancellationPolicyFixedFeeCents:
+						parsed.data.cancellationPolicyEnabled &&
+						parsed.data.cancellationPolicyPenaltyType === "FIXED"
+							? priceToCents(parsed.data.cancellationPolicyFixedFee)
+							: null,
+					cancellationPolicyPercentage:
+						parsed.data.cancellationPolicyEnabled &&
+						parsed.data.cancellationPolicyPenaltyType === "PERCENTAGE"
+							? Number(parsed.data.cancellationPolicyPercentage || 0)
+							: null,
+					cancellationPolicyRequiresJustification:
+						parsed.data.cancellationPolicyEnabled &&
+						parsed.data.cancellationPolicyRequiresJustification,
 					termsAcceptedAt: toAcceptanceDate(
 						parsed.data.termsAccepted,
 						healthcareProvider.termsAcceptedAt,
@@ -910,13 +981,23 @@ export default function ProviderProfileEdit() {
 									</View>
 								)}
 							/>
-							<FormInput
-								control={control}
-								icon={MapPin}
-								name="clinicAddress"
-								label={t("common.clinicAddress")}
-								placeholder={t("common.addressShownToPatients")}
-							/>
+							<View style={styles.infoBox}>
+								<MapPin size={18} color={theme.colors.primary} />
+								<View style={styles.infoBoxContent}>
+									<Text style={styles.infoBoxTitle}>
+										{t("common.inPersonCareLocation")}
+									</Text>
+									<Text style={styles.infoBoxText}>
+										{t("common.inPersonCareLocationDescription")}
+									</Text>
+								</View>
+							</View>
+							<Button
+								variant="outline"
+								onPress={() => router.push("/provider-clinic" as never)}
+							>
+								{t("common.manageClinic")}
+							</Button>
 							<FormInput
 								control={control}
 								icon={MapPin}
@@ -947,6 +1028,114 @@ export default function ProviderProfileEdit() {
 								placeholder={t("common.describeCancellationPolicy")}
 								multiline
 								/>
+							<Controller
+								control={control}
+								name="cancellationPolicyEnabled"
+								render={({ field }) => (
+									<View style={styles.complianceRow}>
+										<Checkbox
+											checked={Boolean(field.value)}
+											onCheckedChange={field.onChange}
+										/>
+										<View style={styles.complianceTextContainer}>
+											<Text style={styles.complianceTitle}>
+												{t("common.applyAutomaticCancellationPolicy")}
+											</Text>
+											<Text style={styles.complianceDescription}>
+												{t("common.applyAutomaticCancellationPolicyDescription")}
+											</Text>
+										</View>
+									</View>
+								)}
+							/>
+							{cancellationPolicyEnabled ? (
+								<View style={styles.cancellationPolicyBox}>
+									<FormInput
+										control={control}
+										icon={Clock}
+										name="cancellationPolicyHoursBefore"
+										label={t("common.minimumNoticeHours")}
+										placeholder="24"
+										keyboardType="numeric"
+									/>
+									<Controller
+										control={control}
+										name="cancellationPolicyPenaltyType"
+										render={({ field }) => (
+											<View style={styles.segmentedGroup}>
+												<Button
+													variant={
+														field.value === "" ? "default" : "outline"
+													}
+													onPress={() => field.onChange("")}
+												>
+													{t("common.noAutomaticFee")}
+												</Button>
+												<Button
+													variant={
+														field.value === "FIXED" ? "default" : "outline"
+													}
+													onPress={() => field.onChange("FIXED")}
+												>
+													{t("common.fixedFee")}
+												</Button>
+												<Button
+													variant={
+														field.value === "PERCENTAGE"
+															? "default"
+															: "outline"
+													}
+													onPress={() => field.onChange("PERCENTAGE")}
+												>
+													{t("common.percentageFee")}
+												</Button>
+											</View>
+										)}
+									/>
+									{cancellationPolicyPenaltyType === "FIXED" ? (
+										<FormInput
+											control={control}
+											icon={CreditCard}
+											name="cancellationPolicyFixedFee"
+											label={t("common.fixedFeeBRL")}
+											placeholder="50,00"
+											keyboardType="numeric"
+										/>
+									) : null}
+									{cancellationPolicyPenaltyType === "PERCENTAGE" ? (
+										<FormInput
+											control={control}
+											icon={CreditCard}
+											name="cancellationPolicyPercentage"
+											label={t("common.percentageOfAppointment")}
+											placeholder="50"
+											keyboardType="numeric"
+										/>
+									) : null}
+									<Controller
+										control={control}
+										name="cancellationPolicyRequiresJustification"
+										render={({ field }) => (
+											<View style={styles.complianceRow}>
+												<Checkbox
+													checked={Boolean(field.value)}
+													onCheckedChange={field.onChange}
+												/>
+												<View style={styles.complianceTextContainer}>
+													<Text style={styles.complianceTitle}>
+														{t("common.requireCancellationJustification")}
+													</Text>
+													<Text style={styles.complianceDescription}>
+														{t(
+															"common.requireCancellationJustificationDescription",
+														)}
+													</Text>
+												</View>
+											</View>
+										)}
+									/>
+								</View>
+							) : null}
 							</View>
 							) : null}
 
@@ -1261,6 +1450,29 @@ const styles = StyleSheet.create((theme) => ({
 		color: theme.colors.mutedForeground,
 		lineHeight: 17,
 	},
+	infoBox: {
+		flexDirection: "row",
+		gap: theme.gap(1.5),
+		padding: theme.gap(2),
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		borderRadius: theme.radius.md,
+		backgroundColor: theme.colors.muted,
+	},
+	infoBoxContent: {
+		flex: 1,
+		gap: theme.gap(0.5),
+	},
+	infoBoxTitle: {
+		fontSize: 14,
+		fontWeight: "700",
+		color: theme.colors.foreground,
+	},
+	infoBoxText: {
+		fontSize: 13,
+		color: theme.colors.mutedForeground,
+		lineHeight: 18,
+	},
 	required: {
 		color: theme.colors.destructive,
 	},
@@ -1434,6 +1646,17 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 13,
 		color: theme.colors.mutedForeground,
 		lineHeight: 18,
+	},
+	cancellationPolicyBox: {
+		gap: theme.gap(2),
+		padding: theme.gap(2),
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		borderRadius: theme.radius.md,
+		backgroundColor: theme.colors.surfacePrimary,
+	},
+	segmentedGroup: {
+		gap: theme.gap(1),
 	},
 	stickyButtonContainer: {
 		position: "absolute",

@@ -92,6 +92,12 @@ export type HealthcareProvider = BaseUser & {
 	acceptedInsurance: string[];
 	paymentMethods: string[];
 	cancellationPolicy: string | null;
+	cancellationPolicyEnabled: boolean;
+	cancellationPolicyHoursBefore: number | null;
+	cancellationPolicyPenaltyType: "FIXED" | "PERCENTAGE" | null;
+	cancellationPolicyFixedFeeCents: number | null;
+	cancellationPolicyPercentage: number | null;
+	cancellationPolicyRequiresJustification: boolean;
 	clinicPhotos: string[];
 	termsAcceptedAt?: string | null;
 	lgpdConsentAt?: string | null;

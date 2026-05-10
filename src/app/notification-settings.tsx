@@ -46,6 +46,11 @@ const notificationOptions: {
 		title: "common.newAppointmentRequestNotification",
 		description: "common.newAppointmentRequestNotificationDescription",
 	},
+	{
+		type: "WAITLIST_SLOT_AVAILABLE",
+		title: "common.waitlistSlotAvailableNotification",
+		description: "common.waitlistSlotAvailableNotificationDescription",
+	},
 ];
 
 const buildPreferences = (

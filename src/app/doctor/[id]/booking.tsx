@@ -11,7 +11,7 @@ import {
 	UserPlus,
 	Users,
 } from "lucide-react-native";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import {
 	ActivityIndicator,
@@ -36,9 +36,15 @@ import {
 } from "@/constants/service-modalities";
 import { useHealthcareProvider } from "@/hooks/use-healthcare-providers";
 import { useProceduresByProvider } from "@/hooks/use-procedures";
-import { useCreateAppointment } from "@/hooks/use-appointments";
+import {
+	useCreateAppointment,
+	useCreateAppointmentWaitlistEntry,
+} from "@/hooks/use-appointments";
 import { usePatientProfiles } from "@/hooks/use-patient-profiles";
-import { useSchedulesByProvider } from "@/hooks/use-schedules";
+import {
+	useScheduleExceptionsByProvider,
+	useSchedulesByProvider,
+} from "@/hooks/use-schedules";
 import { TimeSlotSelector } from "@/components/booking-screen";
 import { getErrorMessage } from "@/services/api";
 import { z } from "zod";
@@ -160,6 +166,7 @@ export default function Booking() {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation();
 	const insets = useSafeAreaInsets();
+	const [waitlistLoadingSlot, setWaitlistLoadingSlot] = useState("");
 
 	// Setup React Hook Form
 	const { control, handleSubmit, watch, setValue } = useForm<BookingFormData>({
@@ -200,6 +207,10 @@ export default function Booking() {
 	// Fetch provider schedules
 	const { data: schedulesData, isLoading: schedulesLoading } =
 		useSchedulesByProvider(id, !!id);
+	const { data: scheduleExceptionsData } = useScheduleExceptionsByProvider(
+		id,
+		!!id,
+	);
 	const { data: patientProfilesData, isLoading: patientProfilesLoading } =
 		usePatientProfiles();
 
@@ -211,6 +222,7 @@ export default function Booking() {
 
 	// Create appointment mutation
 	const createAppointment = useCreateAppointment();
+	const createWaitlistEntry = useCreateAppointmentWaitlistEntry();
 
 	const isLoading =
 		providerLoading ||
@@ -281,6 +293,9 @@ export default function Booking() {
 		const availableDaysOfWeek = new Set(
 			activeSchedules.map((s) => s.dayOfWeek),
 		);
+		const activeScheduleExceptions =
+			scheduleExceptionsData?.exceptions.filter((exception) => exception.isActive) ||
+			[];
 
 		// Mark selected date
 		if (selectedDate) {
@@ -298,9 +313,18 @@ export default function Booking() {
 			date.setUTCDate(date.getUTCDate() + i);
 			const dayOfWeek = date.getUTCDay();
 			const dateStr = formatUtcDateForApi(date);
+			const exceptionsForDate = activeScheduleExceptions.filter(
+				(exception) => exception.date.slice(0, 10) === dateStr,
+			);
+			const hasDayOff = exceptionsForDate.some(
+				(exception) => exception.type === "DAY_OFF",
+			);
+			const hasDateSpecificAvailability = exceptionsForDate.some((exception) =>
+				["SPECIAL_HOURS", "EXTRA_SLOT"].includes(exception.type),
+			);
 
 			// If provider doesn't work on this day, mark as disabled
-			if (!availableDaysOfWeek.has(dayOfWeek)) {
+			if (hasDayOff || (!hasDateSpecificAvailability && !availableDaysOfWeek.has(dayOfWeek))) {
 				marked[dateStr] = {
 					...marked[dateStr],
 					disabled: true,
@@ -314,7 +338,7 @@ export default function Booking() {
 			minDate: formatUtcDateForApi(today),
 			maxDate: formatUtcDateForApi(max),
 		};
-	}, [activeSchedules, selectedDate, theme.colors.primary]);
+	}, [activeSchedules, scheduleExceptionsData, selectedDate, theme.colors.primary]);
 
 	const onSubmit = async (data: BookingFormData) => {
 		const parsed = bookingFormSchema.safeParse(data);
@@ -394,6 +418,29 @@ export default function Booking() {
 			]);
 		} catch (error) {
 			Alert.alert(t("common.error"), getErrorMessage(error), [{ text: "OK" }]);
+		}
+	};
+
+	const handleJoinWaitlist = async (slotStartTime: string) => {
+		if (!id || procedureIds.length === 0) return;
+
+		try {
+			setWaitlistLoadingSlot(slotStartTime);
+			await createWaitlistEntry.mutateAsync({
+				healthcareProviderId: id,
+				scheduledAt: new Date(
+					`${formattedDate}T${slotStartTime}:00`,
+				).toISOString(),
+				procedureIds,
+			});
+			Alert.alert(
+				"Fila de espera",
+				"Você entrou na fila desse horário. Se ele ficar livre, vamos avisar por push no app e por email.",
+			);
+		} catch (error) {
+			Alert.alert(t("common.error"), getErrorMessage(error), [{ text: "OK" }]);
+		} finally {
+			setWaitlistLoadingSlot("");
 		}
 	};
 
@@ -951,6 +998,8 @@ export default function Booking() {
 					healthcareProviderId={id}
 					selectedDate={selectedDate}
 					selectedProcedures={selectedProcedures}
+					onJoinWaitlist={handleJoinWaitlist}
+					waitlistLoadingSlot={waitlistLoadingSlot}
 				/>
 
 				{/* Additional Notes */}

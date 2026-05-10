@@ -19,6 +19,8 @@ interface TimeSlotSelectorProps<TFieldValues extends FieldValues> {
 	selectedDate: Date;
 	selectedProcedures: Procedure[];
 	name?: Path<TFieldValues>;
+	onJoinWaitlist?: (slotStartTime: string) => void;
+	waitlistLoadingSlot?: string;
 }
 
 export function TimeSlotSelector<TFieldValues extends FieldValues>({
@@ -27,6 +29,8 @@ export function TimeSlotSelector<TFieldValues extends FieldValues>({
 	selectedDate,
 	selectedProcedures,
 	name = "selectedTime" as Path<TFieldValues>,
+	onJoinWaitlist,
+	waitlistLoadingSlot,
 }: TimeSlotSelectorProps<TFieldValues>) {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation();
@@ -121,36 +125,54 @@ export function TimeSlotSelector<TFieldValues extends FieldValues>({
 									</View>
 								) : (
 									<View style={styles.timeSlots}>
-										{allSlots.map((slot) => (
-											<Pressable
-												key={slot.startTime}
-												onPress={() => {
-													if (slot.available) {
-														onChange(slot.startTime);
-													}
-												}}
-												disabled={!slot.available}
-												style={[
-													styles.timeSlot,
-													!slot.available && styles.timeSlotDisabled,
-													value === slot.startTime &&
-														slot.available &&
-														styles.timeSlotSelected,
-												]}
-											>
-												<Text
+										{allSlots.map((slot) => {
+											const isWaitlistLoading =
+												waitlistLoadingSlot === slot.startTime;
+
+											return (
+												<Pressable
+													key={slot.startTime}
+													onPress={() => {
+														if (slot.available) {
+															onChange(slot.startTime);
+															return;
+														}
+
+														onJoinWaitlist?.(slot.startTime);
+													}}
+													disabled={!slot.available && !onJoinWaitlist}
 													style={[
-														styles.timeSlotText,
-														!slot.available && styles.timeSlotTextDisabled,
+														styles.timeSlot,
+														!slot.available && styles.timeSlotDisabled,
+														!slot.available &&
+															onJoinWaitlist &&
+															styles.timeSlotWaitlist,
 														value === slot.startTime &&
 															slot.available &&
-															styles.timeSlotTextSelected,
+															styles.timeSlotSelected,
 													]}
 												>
-													{slot.startTime}
-												</Text>
-											</Pressable>
-										))}
+													<Text
+														style={[
+															styles.timeSlotText,
+															!slot.available && styles.timeSlotTextDisabled,
+															!slot.available &&
+																onJoinWaitlist &&
+																styles.timeSlotWaitlistText,
+															value === slot.startTime &&
+																slot.available &&
+																styles.timeSlotTextSelected,
+														]}
+													>
+														{isWaitlistLoading
+															? t("common.loading")
+															: slot.available
+																? slot.startTime
+																: `${slot.startTime}\nFila`}
+													</Text>
+												</Pressable>
+											);
+										})}
 									</View>
 								)}
 							</>
@@ -245,6 +267,10 @@ const styles = StyleSheet.create((theme) => ({
 		borderColor: theme.colors.border,
 		opacity: 0.5,
 	},
+	timeSlotWaitlist: {
+		opacity: 1,
+		backgroundColor: theme.colors.surfaceMuted,
+	},
 	timeSlotText: {
 		fontSize: 14,
 		fontWeight: "500",
@@ -255,5 +281,9 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	timeSlotTextDisabled: {
 		color: theme.colors.mutedForeground,
+	},
+	timeSlotWaitlistText: {
+		color: theme.colors.primary,
+		textAlign: "center",
 	},
 }));

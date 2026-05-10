@@ -12,8 +12,32 @@ export interface Schedule {
 	updatedAt: string;
 }
 
+export type ScheduleExceptionType =
+	| "DAY_OFF"
+	| "TIME_BLOCK"
+	| "SPECIAL_HOURS"
+	| "EXTRA_SLOT";
+
+export interface ScheduleException {
+	id: string;
+	healthcareProviderId: string;
+	healthcareProvider: HealthcareProvider;
+	date: string;
+	type: ScheduleExceptionType;
+	startTime: string | null;
+	endTime: string | null;
+	reason: string | null;
+	isActive: boolean;
+	createdAt: string;
+	updatedAt: string;
+}
+
 export interface GetSchedulesResponse {
 	schedules: Schedule[];
+}
+
+export interface GetScheduleExceptionsResponse {
+	exceptions: ScheduleException[];
 }
 
 export interface GetScheduleByIdResponse {
@@ -40,4 +64,30 @@ export interface UpdateScheduleData {
 
 export interface UpdateScheduleResponse {
 	schedule: Schedule;
+}
+
+export interface CreateScheduleExceptionData {
+	healthcareProviderId: string;
+	date: string;
+	type: ScheduleExceptionType;
+	startTime?: string | null;
+	endTime?: string | null;
+	reason?: string | null;
+}
+
+export interface CreateScheduleExceptionResponse {
+	exception: ScheduleException;
+}
+
+export interface UpdateScheduleExceptionData {
+	date?: string;
+	type?: ScheduleExceptionType;
+	startTime?: string | null;
+	endTime?: string | null;
+	reason?: string | null;
+	isActive?: boolean;
+}
+
+export interface UpdateScheduleExceptionResponse {
+	exception: ScheduleException;
 }

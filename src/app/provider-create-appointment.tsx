@@ -33,7 +33,10 @@ import { useAuth } from "@/contexts/auth";
 import { useCreateAppointment } from "@/hooks/use-appointments";
 import { usePatientProfiles } from "@/hooks/use-patient-profiles";
 import { useProceduresByProvider } from "@/hooks/use-procedures";
-import { useSchedulesByProvider } from "@/hooks/use-schedules";
+import {
+	useScheduleExceptionsByProvider,
+	useSchedulesByProvider,
+} from "@/hooks/use-schedules";
 import { getErrorMessage } from "@/services/api";
 
 const optionalTextSchema = z.string().transform((value) => {
@@ -170,6 +173,10 @@ export default function ProviderCreateAppointment() {
 		});
 	const { data: schedulesData, isLoading: schedulesLoading } =
 		useSchedulesByProvider(providerId, !!providerId);
+	const { data: scheduleExceptionsData } = useScheduleExceptionsByProvider(
+		providerId,
+		!!providerId,
+	);
 	const { data: patientProfilesData, isLoading: patientProfilesLoading } =
 		usePatientProfiles(!!providerId);
 	const createAppointment = useCreateAppointment();
@@ -197,6 +204,9 @@ export default function ProviderCreateAppointment() {
 		const availableDaysOfWeek = new Set(
 			activeSchedules.map((schedule) => schedule.dayOfWeek),
 		);
+		const activeScheduleExceptions =
+			scheduleExceptionsData?.exceptions.filter((exception) => exception.isActive) ||
+			[];
 		const marked: Record<
 			string,
 			{
@@ -219,8 +229,20 @@ export default function ProviderCreateAppointment() {
 			date.setUTCDate(date.getUTCDate() + i);
 			const dayOfWeek = date.getUTCDay();
 			const dateStr = formatUtcDateForApi(date);
+			const exceptionsForDate = activeScheduleExceptions.filter(
+				(exception) => exception.date.slice(0, 10) === dateStr,
+			);
+			const hasDayOff = exceptionsForDate.some(
+				(exception) => exception.type === "DAY_OFF",
+			);
+			const hasDateSpecificAvailability = exceptionsForDate.some((exception) =>
+				["SPECIAL_HOURS", "EXTRA_SLOT"].includes(exception.type),
+			);
 
-			if (!availableDaysOfWeek.has(dayOfWeek)) {
+			if (
+				hasDayOff ||
+				(!hasDateSpecificAvailability && !availableDaysOfWeek.has(dayOfWeek))
+			) {
 				marked[dateStr] = {
 					...marked[dateStr],
 					disabled: true,
@@ -234,7 +256,7 @@ export default function ProviderCreateAppointment() {
 			minDate: formatUtcDateForApi(today),
 			maxDate: formatUtcDateForApi(max),
 		};
-	}, [activeSchedules, selectedDate, theme.colors.primary]);
+	}, [activeSchedules, scheduleExceptionsData, selectedDate, theme.colors.primary]);
 
 	const toggleProcedure = (procedureId: string) => {
 		const nextProcedureIds = selectedProcedureIds.includes(procedureId)

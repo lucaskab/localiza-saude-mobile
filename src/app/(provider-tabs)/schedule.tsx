@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, CalendarClock, Clock, Plus, Save, Trash2 } from "lucide-react-native";
+import {
+	AlertCircle,
+	CalendarClock,
+	CalendarX,
+	Clock,
+	Plus,
+	Save,
+	Trash2,
+} from "lucide-react-native";
 import {
 	View,
 	Text,
@@ -23,9 +31,13 @@ import {
 	useCreateSchedule,
 	useUpdateSchedule,
 	useDeleteSchedule,
+	useScheduleExceptionsByProvider,
+	useCreateScheduleException,
+	useUpdateScheduleException,
+	useDeleteScheduleException,
 } from "@/hooks/use-schedules";
 import { translationKeys, type TranslationKey } from "@/i18n/key-map";
-import type { Schedule } from "@/types/schedule";
+import type { Schedule, ScheduleExceptionType } from "@/types/schedule";
 
 // Zod schemas for types only (no runtime validation with zodResolver)
 const timeSlotSchema = z.object({
@@ -51,11 +63,38 @@ type ScheduleFormData = z.infer<typeof scheduleFormSchema>;
 type TimeSlotData = z.infer<typeof timeSlotSchema>;
 type DaySchedule = z.infer<typeof dayScheduleSchema>;
 
+const scheduleExceptionTypeLabels: Record<ScheduleExceptionType, string> = {
+	DAY_OFF: "Folga, férias ou feriado",
+	TIME_BLOCK: "Bloqueio de horário",
+	SPECIAL_HOURS: "Horário especial",
+	EXTRA_SLOT: "Encaixe extra",
+};
+
+const scheduleExceptionTypes = Object.keys(
+	scheduleExceptionTypeLabels,
+) as ScheduleExceptionType[];
+
+function getTodayInputDate() {
+	return new Date().toISOString().slice(0, 10);
+}
+
+function formatScheduleExceptionDate(date: string) {
+	return new Date(date).toLocaleDateString("pt-BR", {
+		timeZone: "UTC",
+	});
+}
+
 export default function ProviderSchedule() {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation();
 	const { healthcareProvider } = useAuth();
 	const [isSaving, setIsSaving] = useState(false);
+	const [exceptionDate, setExceptionDate] = useState(getTodayInputDate());
+	const [exceptionType, setExceptionType] =
+		useState<ScheduleExceptionType>("DAY_OFF");
+	const [exceptionStartTime, setExceptionStartTime] = useState("09:00");
+	const [exceptionEndTime, setExceptionEndTime] = useState("12:00");
+	const [exceptionReason, setExceptionReason] = useState("");
 
 	// Fetch schedules
 	const {
@@ -67,11 +106,19 @@ export default function ProviderSchedule() {
 		healthcareProvider?.id || "",
 		!!healthcareProvider?.id,
 	);
+	const { data: scheduleExceptionsData, refetch: refetchExceptions } =
+		useScheduleExceptionsByProvider(
+			healthcareProvider?.id || "",
+			!!healthcareProvider?.id,
+		);
 
 	// Mutations
 	const createMutation = useCreateSchedule();
 	const updateMutation = useUpdateSchedule();
 	const deleteMutation = useDeleteSchedule();
+	const createExceptionMutation = useCreateScheduleException();
+	const updateExceptionMutation = useUpdateScheduleException();
+	const deleteExceptionMutation = useDeleteScheduleException();
 
 	const daysOfWeek: { dayOfWeek: number; label: TranslationKey }[] = [
 		{ dayOfWeek: 1, label: translationKeys.Monday },
@@ -233,6 +280,72 @@ export default function ProviderSchedule() {
 			Alert.alert(t("common.error"), t("common.failedToSaveSchedulePleaseTryAgain"));
 		} finally {
 			setIsSaving(false);
+		}
+	};
+
+	const resetExceptionForm = () => {
+		setExceptionDate(getTodayInputDate());
+		setExceptionType("DAY_OFF");
+		setExceptionStartTime("09:00");
+		setExceptionEndTime("12:00");
+		setExceptionReason("");
+	};
+
+	const handleCreateException = async () => {
+		if (!healthcareProvider?.id) return;
+
+		if (!exceptionDate) {
+			Alert.alert("Data obrigatória", "Informe a data da exceção.");
+			return;
+		}
+
+		if (
+			exceptionType !== "DAY_OFF" &&
+			(!validateTimeFormat(exceptionStartTime) ||
+				!validateTimeFormat(exceptionEndTime))
+		) {
+			Alert.alert(t("common.invalidTime"), t("common.pleaseUseHHMmFormatEG0900"));
+			return;
+		}
+
+		try {
+			await createExceptionMutation.mutateAsync({
+				healthcareProviderId: healthcareProvider.id,
+				date: exceptionDate,
+				type: exceptionType,
+				startTime: exceptionType === "DAY_OFF" ? null : exceptionStartTime,
+				endTime: exceptionType === "DAY_OFF" ? null : exceptionEndTime,
+				reason: exceptionReason.trim() || null,
+			});
+			await refetchExceptions();
+			resetExceptionForm();
+			Alert.alert("Exceção salva", "Sua agenda foi atualizada.");
+		} catch (error) {
+			console.error("Failed to save schedule exception:", error);
+			Alert.alert("Erro", "Não foi possível salvar a exceção.");
+		}
+	};
+
+	const handleToggleException = async (id: string, isActive: boolean) => {
+		try {
+			await updateExceptionMutation.mutateAsync({
+				exceptionId: id,
+				data: { isActive: !isActive },
+			});
+			await refetchExceptions();
+		} catch (error) {
+			console.error("Failed to update schedule exception:", error);
+			Alert.alert("Erro", "Não foi possível atualizar a exceção.");
+		}
+	};
+
+	const handleDeleteException = async (id: string) => {
+		try {
+			await deleteExceptionMutation.mutateAsync(id);
+			await refetchExceptions();
+		} catch (error) {
+			console.error("Failed to delete schedule exception:", error);
+			Alert.alert("Erro", "Não foi possível remover a exceção.");
 		}
 	};
 
@@ -462,6 +575,157 @@ export default function ProviderSchedule() {
 						)}
 					</View>
 				)}
+
+				<View style={styles.exceptionsSection}>
+					<View style={styles.sectionHeader}>
+						<CalendarX
+							size={22}
+							color={theme.colors.foreground}
+							strokeWidth={2}
+						/>
+						<View style={styles.sectionHeaderText}>
+							<Text style={styles.sectionTitle}>Exceções da agenda</Text>
+							<Text style={styles.sectionSubtitle}>
+								Bloqueie férias, feriados, horários específicos ou libere
+								encaixes.
+							</Text>
+						</View>
+					</View>
+
+					<View style={styles.exceptionFormCard}>
+						<Text style={styles.exceptionLabel}>Data</Text>
+						<Input
+							value={exceptionDate}
+							onChangeText={setExceptionDate}
+							placeholder="2026-05-11"
+							keyboardType="numbers-and-punctuation"
+						/>
+
+						<Text style={styles.exceptionLabel}>Tipo</Text>
+						<View style={styles.exceptionTypeGrid}>
+							{scheduleExceptionTypes.map((type) => {
+								const selected = exceptionType === type;
+
+								return (
+									<Pressable
+										key={type}
+										onPress={() => setExceptionType(type)}
+										style={[
+											styles.exceptionTypeButton,
+											selected && styles.exceptionTypeButtonSelected,
+										]}
+									>
+										<Text
+											style={[
+												styles.exceptionTypeText,
+												selected && styles.exceptionTypeTextSelected,
+											]}
+										>
+											{scheduleExceptionTypeLabels[type]}
+										</Text>
+									</Pressable>
+								);
+							})}
+						</View>
+
+						{exceptionType !== "DAY_OFF" ? (
+							<View style={styles.exceptionTimeRow}>
+								<View style={styles.exceptionTimeInput}>
+									<Text style={styles.exceptionLabel}>Início</Text>
+									<Input
+										leftIcon={Clock}
+										value={exceptionStartTime}
+										onChangeText={setExceptionStartTime}
+										placeholder="09:00"
+										keyboardType="numbers-and-punctuation"
+										maxLength={5}
+									/>
+								</View>
+								<View style={styles.exceptionTimeInput}>
+									<Text style={styles.exceptionLabel}>Fim</Text>
+									<Input
+										value={exceptionEndTime}
+										onChangeText={setExceptionEndTime}
+										placeholder="12:00"
+										keyboardType="numbers-and-punctuation"
+										maxLength={5}
+									/>
+								</View>
+							</View>
+						) : null}
+
+						<Text style={styles.exceptionLabel}>Motivo ou observação</Text>
+						<Input
+							value={exceptionReason}
+							onChangeText={setExceptionReason}
+							placeholder="Ex.: feriado municipal, congresso, encaixe urgente..."
+						/>
+
+						<Button
+							onPress={handleCreateException}
+							loading={createExceptionMutation.isPending}
+							disabled={createExceptionMutation.isPending}
+							style={styles.exceptionSaveButton}
+						>
+							Salvar exceção
+						</Button>
+					</View>
+
+					<View style={styles.exceptionList}>
+						{scheduleExceptionsData?.exceptions.length ? (
+							scheduleExceptionsData.exceptions.map((exception) => (
+								<View key={exception.id} style={styles.exceptionCard}>
+									<View style={styles.exceptionCardInfo}>
+										<Text style={styles.exceptionCardTitle}>
+											{formatScheduleExceptionDate(exception.date)}
+										</Text>
+										<Text style={styles.exceptionCardSubtitle}>
+											{scheduleExceptionTypeLabels[exception.type]}
+											{exception.startTime && exception.endTime
+												? ` · ${exception.startTime} até ${exception.endTime}`
+												: ""}
+										</Text>
+										{exception.reason ? (
+											<Text style={styles.exceptionReason}>
+												{exception.reason}
+											</Text>
+										) : null}
+									</View>
+									<View style={styles.exceptionActions}>
+										<Switch
+											value={exception.isActive}
+											onValueChange={() =>
+												handleToggleException(
+													exception.id,
+													exception.isActive,
+												)
+											}
+											trackColor={{
+												false: theme.colors.border,
+												true: theme.colors.primary,
+											}}
+											thumbColor={theme.colors.background}
+										/>
+										<Pressable
+											onPress={() => handleDeleteException(exception.id)}
+											style={styles.deleteButton}
+										>
+											<Trash2
+												size={20}
+												color={theme.colors.destructive}
+												strokeWidth={2}
+											/>
+										</Pressable>
+									</View>
+								</View>
+							))
+						) : (
+							<Text style={styles.emptyExceptions}>
+								Nenhuma exceção cadastrada.
+							</Text>
+						)}
+					</View>
+				</View>
 			</ScrollView>
 
 			{/* Sticky Save Button - Only shown when form is dirty */}
@@ -534,6 +798,120 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	scheduleList: {
 		gap: theme.gap(2),
+	},
+	exceptionsSection: {
+		marginTop: theme.gap(4),
+		gap: theme.gap(2),
+	},
+	sectionHeader: {
+		flexDirection: "row",
+		alignItems: "flex-start",
+		gap: theme.gap(1.5),
+	},
+	sectionHeaderText: {
+		flex: 1,
+	},
+	sectionTitle: {
+		fontSize: 18,
+		fontWeight: "600",
+		color: theme.colors.foreground,
+	},
+	sectionSubtitle: {
+		marginTop: theme.gap(0.5),
+		fontSize: 14,
+		lineHeight: 20,
+		color: theme.colors.mutedForeground,
+	},
+	exceptionFormCard: {
+		backgroundColor: theme.colors.surfacePrimary,
+		borderRadius: theme.radius.xl,
+		padding: theme.gap(2.5),
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		gap: theme.gap(1.5),
+	},
+	exceptionLabel: {
+		fontSize: 13,
+		fontWeight: "600",
+		color: theme.colors.foreground,
+	},
+	exceptionTypeGrid: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		gap: theme.gap(1),
+	},
+	exceptionTypeButton: {
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		backgroundColor: theme.colors.surfaceMuted,
+		borderRadius: theme.radius.full,
+		paddingHorizontal: theme.gap(1.5),
+		paddingVertical: theme.gap(1),
+	},
+	exceptionTypeButtonSelected: {
+		borderColor: theme.colors.primary,
+		backgroundColor: theme.colors.primary,
+	},
+	exceptionTypeText: {
+		fontSize: 13,
+		fontWeight: "500",
+		color: theme.colors.foreground,
+	},
+	exceptionTypeTextSelected: {
+		color: theme.colors.primaryForeground,
+	},
+	exceptionTimeRow: {
+		flexDirection: "row",
+		gap: theme.gap(1.5),
+	},
+	exceptionTimeInput: {
+		flex: 1,
+		gap: theme.gap(1),
+	},
+	exceptionSaveButton: {
+		marginTop: theme.gap(1),
+	},
+	exceptionList: {
+		gap: theme.gap(1.5),
+	},
+	exceptionCard: {
+		backgroundColor: theme.colors.surfacePrimary,
+		borderRadius: theme.radius.xl,
+		padding: theme.gap(2),
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(1.5),
+	},
+	exceptionCardInfo: {
+		flex: 1,
+	},
+	exceptionCardTitle: {
+		fontSize: 15,
+		fontWeight: "600",
+		color: theme.colors.foreground,
+	},
+	exceptionCardSubtitle: {
+		marginTop: theme.gap(0.5),
+		fontSize: 13,
+		color: theme.colors.mutedForeground,
+	},
+	exceptionReason: {
+		marginTop: theme.gap(0.5),
+		fontSize: 13,
+		color: theme.colors.mutedForeground,
+	},
+	exceptionActions: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(1),
+	},
+	emptyExceptions: {
+		fontSize: 14,
+		color: theme.colors.mutedForeground,
+		textAlign: "center",
+		paddingVertical: theme.gap(2),
 	},
 	dayCard: {
 		backgroundColor: theme.colors.surfacePrimary,

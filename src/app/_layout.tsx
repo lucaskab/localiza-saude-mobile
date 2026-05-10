@@ -17,9 +17,25 @@ function NotificationResponseHandler() {
 		) => {
 			const appointmentId =
 				response?.notification.request.content.data?.appointmentId;
+			const screen = response?.notification.request.content.data?.screen;
+			const healthcareProviderId =
+				response?.notification.request.content.data?.healthcareProviderId;
+			const procedureIds =
+				response?.notification.request.content.data?.procedureIds;
 
 			if (typeof appointmentId === "string") {
 				router.push(`/appointment/${appointmentId}` as never);
+				return;
+			}
+
+			if (
+				screen === "booking" &&
+				typeof healthcareProviderId === "string" &&
+				typeof procedureIds === "string"
+			) {
+				router.push(
+					`/doctor/${healthcareProviderId}/booking?procedures=${procedureIds}` as never,
+				);
 			}
 		};
 

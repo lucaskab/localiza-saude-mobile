@@ -431,6 +431,8 @@ export const translationKeys = {
   "Notifications when an appointment is confirmed, cancelled, or updated.": "common.appointmentStatusNotificationDescription",
   "New appointment requests": "common.newAppointmentRequestNotification",
   "Alerts for providers when a patient requests an appointment.": "common.newAppointmentRequestNotificationDescription",
+  "Waitlist slots": "common.waitlistSlotAvailableNotification",
+  "Alerts when a slot you were waiting for becomes available.": "common.waitlistSlotAvailableNotificationDescription",
   "Enable notifications on this device": "common.enablePushNotificationsOnThisDevice",
   "Notifications enabled on this device": "common.pushNotificationsEnabledOnThisDevice",
   "Allow system notifications to receive alerts even outside the app.": "common.enablePushNotificationsDescription",

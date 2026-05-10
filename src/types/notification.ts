@@ -1,7 +1,8 @@
 export type NotificationType =
 	| "APPOINTMENT_REMINDER"
 	| "APPOINTMENT_STATUS_UPDATE"
-	| "NEW_APPOINTMENT_REQUEST";
+	| "NEW_APPOINTMENT_REQUEST"
+	| "WAITLIST_SLOT_AVAILABLE";
 
 export type PushPlatform = "IOS" | "ANDROID" | "WEB" | "UNKNOWN";
 

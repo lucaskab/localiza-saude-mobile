@@ -1,6 +1,7 @@
 import type { PatientProfile, PatientProfileData } from "@/types/patient-profile";
 import type {
 	Customer,
+	BaseUser,
 	HealthcareProvider,
 	Procedure,
 	ServiceModality,
@@ -58,6 +59,12 @@ export interface Appointment {
 	totalDurationMinutes: number;
 	totalPriceCents: number;
 	notes: string | null;
+	cancellationReason: string | null;
+	cancellationFeeCents: number | null;
+	cancellationPolicyAppliedAt: string | null;
+	cancelledAt: string | null;
+	cancelledByUserId: string | null;
+	cancelledByUser: BaseUser | null;
 	createdAt: string;
 	updatedAt: string;
 	appointmentProcedures: AppointmentProcedure[];
@@ -98,6 +105,7 @@ export interface UpdateAppointmentData {
 	scheduledAt?: Date | string;
 	status?: AppointmentStatus;
 	notes?: string | null;
+	cancellationReason?: string | null;
 }
 
 export interface UpdateAppointmentResponse {
@@ -145,4 +153,36 @@ export interface GetTimeSlotsResponse {
 		endTime: string;
 	};
 	slots: TimeSlot[];
+}
+
+export type AppointmentWaitlistStatus = "ACTIVE" | "CANCELLED";
+
+export interface AppointmentWaitlistEntry {
+	id: string;
+	customerId: string;
+	customer: Customer;
+	healthcareProviderId: string;
+	healthcareProvider: HealthcareProvider;
+	desiredScheduledAt: string;
+	status: AppointmentWaitlistStatus;
+	lastNotifiedAt: string | null;
+	createdAt: string;
+	updatedAt: string;
+	procedures: Array<{
+		id: string;
+		waitlistEntryId: string;
+		procedureId: string;
+		procedure: Procedure;
+		createdAt: string;
+	}>;
+}
+
+export interface CreateAppointmentWaitlistEntryData {
+	healthcareProviderId: string;
+	scheduledAt: string;
+	procedureIds: string[];
+}
+
+export interface CreateAppointmentWaitlistEntryResponse {
+	waitlistEntry: AppointmentWaitlistEntry;
 }

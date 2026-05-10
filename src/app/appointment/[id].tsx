@@ -88,6 +88,57 @@ const formatShortDate = (isoString: string) =>
 
 const formatPrice = (priceInCents: number) => `$${(priceInCents / 100).toFixed(2)}`;
 
+function getCancellationPolicyPreview(appointment?: Appointment) {
+	if (!appointment?.healthcareProvider.cancellationPolicyEnabled) {
+		return { applies: false, feeInCents: null, requiresJustification: false };
+	}
+
+	const hoursBefore = appointment.healthcareProvider.cancellationPolicyHoursBefore;
+	if (hoursBefore === null) {
+		return { applies: false, feeInCents: null, requiresJustification: false };
+	}
+
+	const hoursUntilAppointment =
+		(new Date(appointment.scheduledAt).getTime() - Date.now()) /
+		(1000 * 60 * 60);
+	const applies = hoursUntilAppointment < hoursBefore;
+
+	if (!applies) {
+		return { applies: false, feeInCents: null, requiresJustification: false };
+	}
+
+	if (appointment.healthcareProvider.cancellationPolicyPenaltyType === "FIXED") {
+		return {
+			applies: true,
+			feeInCents: appointment.healthcareProvider.cancellationPolicyFixedFeeCents ?? 0,
+			requiresJustification:
+				appointment.healthcareProvider.cancellationPolicyRequiresJustification,
+		};
+	}
+
+	if (
+		appointment.healthcareProvider.cancellationPolicyPenaltyType === "PERCENTAGE"
+	) {
+		return {
+			applies: true,
+			feeInCents: Math.round(
+				appointment.totalPriceCents *
+					((appointment.healthcareProvider.cancellationPolicyPercentage ?? 0) /
+						100),
+			),
+			requiresJustification:
+				appointment.healthcareProvider.cancellationPolicyRequiresJustification,
+		};
+	}
+
+	return {
+		applies: true,
+		feeInCents: 0,
+		requiresJustification:
+			appointment.healthcareProvider.cancellationPolicyRequiresJustification,
+	};
+}
+
 const todayDateString = () => new Date().toISOString().split("T")[0] || "";
 
 const getStatusConfig = (status: AppointmentStatus) => {
@@ -215,6 +266,8 @@ export default function AppointmentDetails() {
 	const { t } = useTranslation();
 	const { isHealthcareProvider, isCustomer } = useAuth();
 	const [showRescheduleForm, setShowRescheduleForm] = useState(false);
+	const [showCancellationForm, setShowCancellationForm] = useState(false);
+	const [cancellationReason, setCancellationReason] = useState("");
 	const [rescheduleDate, setRescheduleDate] = useState("");
 	const [rescheduleTime, setRescheduleTime] = useState("");
 	const [rescheduleReason, setRescheduleReason] = useState("");
@@ -249,6 +302,11 @@ export default function AppointmentDetails() {
 	);
 
 	const handleStatusUpdate = async (appointmentId: string, nextStatus: AppointmentStatus) => {
+		if (nextStatus === "CANCELLED") {
+			setShowCancellationForm(true);
+			return;
+		}
+
 		try {
 			await updateAppointmentMutation.mutateAsync({
 				appointmentId,
@@ -262,6 +320,38 @@ export default function AppointmentDetails() {
 			);
 		} catch (updateError) {
 			console.error("Failed to update appointment:", updateError);
+			Alert.alert(t("common.error"), t("common.failedToUpdateAppointmentStatusPleaseTryAgain"));
+		}
+	};
+
+	const handleConfirmCancellation = async () => {
+		if (!appointment) return;
+
+		const cancellationPolicyPreview = getCancellationPolicyPreview(appointment);
+		if (
+			cancellationPolicyPreview.requiresJustification &&
+			!cancellationReason.trim()
+		) {
+			Alert.alert(
+				t("common.checkTheForm"),
+				t("common.cancellationJustificationRequired"),
+			);
+			return;
+		}
+
+		try {
+			await updateAppointmentMutation.mutateAsync({
+				appointmentId: appointment.id,
+				data: {
+					status: "CANCELLED",
+					cancellationReason: cancellationReason.trim() || null,
+				},
+			});
+			setShowCancellationForm(false);
+			setCancellationReason("");
+			Alert.alert(t("common.success"), t("common.appointmentCancelled"));
+		} catch (updateError) {
+			console.error("Failed to cancel appointment:", updateError);
 			Alert.alert(t("common.error"), t("common.failedToUpdateAppointmentStatusPleaseTryAgain"));
 		}
 	};
@@ -415,6 +505,9 @@ export default function AppointmentDetails() {
 	);
 	const canReschedule =
 		appointment.status === "SCHEDULED" || appointment.status === "CONFIRMED";
+	const canCancel =
+		appointment.status === "SCHEDULED" || appointment.status === "CONFIRMED";
+	const cancellationPolicyPreview = getCancellationPolicyPreview(appointment);
 	const availableRescheduleSlots =
 		timeSlotsData?.slots.filter((slot) => slot.available) || [];
 
@@ -564,7 +657,55 @@ export default function AppointmentDetails() {
 								</Button>
 							</View>
 						) : null}
+						{isCustomer && canCancel ? (
+							<View style={styles.actionRow}>
+								<Button
+									variant="destructive"
+									style={styles.flexButton}
+									onPress={() => setShowCancellationForm((current) => !current)}
+									disabled={updateAppointmentMutation.isPending}
+								>
+									{t("common.cancelAppointment")}
+								</Button>
+							</View>
+						) : null}
 					</View>
+
+				{appointment.status === "CANCELLED" ? (
+					<View style={styles.section}>
+						<Text style={styles.sectionTitle}>{t("common.cancellation")}</Text>
+						<View style={styles.infoCard}>
+							{appointment.cancelledAt ? (
+								<DetailRow
+									icon={Calendar}
+									label={t("common.cancelledAt")}
+									value={`${formatDate(appointment.cancelledAt)} ${formatTime(appointment.cancelledAt)}`}
+								/>
+							) : null}
+							{appointment.cancelledByUser ? (
+								<DetailRow
+									icon={UserRound}
+									label={t("common.cancelledBy")}
+									value={appointment.cancelledByUser.name}
+								/>
+							) : null}
+							{appointment.cancellationReason ? (
+								<DetailRow
+									icon={MessageCircle}
+									label={t("common.justification")}
+									value={appointment.cancellationReason}
+								/>
+							) : null}
+							{appointment.cancellationFeeCents !== null ? (
+								<DetailRow
+									icon={DollarSign}
+									label={t("common.estimatedCancellationFee")}
+									value={formatPrice(appointment.cancellationFeeCents)}
+								/>
+							) : null}
+						</View>
+					</View>
+				) : null}
 
 				{pendingRescheduleRequest ? (
 					<View style={styles.section}>
@@ -687,6 +828,62 @@ export default function AppointmentDetails() {
 									? "Enviar solicitação"
 									: "Confirmar novo horário"}
 							</Button>
+						</View>
+					</View>
+				) : null}
+
+				{showCancellationForm ? (
+					<View style={styles.section}>
+						<Text style={styles.sectionTitle}>{t("common.cancelAppointment")}</Text>
+						<View style={styles.infoCard}>
+							{cancellationPolicyPreview.applies ? (
+								<View style={styles.warningBox}>
+									<Text style={styles.warningTitle}>
+										{t("common.cancellationPolicyWillApply")}
+									</Text>
+									{cancellationPolicyPreview.feeInCents !== null ? (
+										<Text style={styles.warningText}>
+											{t("common.estimatedCancellationFee")}:{" "}
+											{formatPrice(cancellationPolicyPreview.feeInCents)}
+										</Text>
+									) : null}
+								</View>
+							) : (
+								<Text style={styles.notesText}>
+									{t("common.cancellationPolicyWillNotApply")}
+								</Text>
+							)}
+							<TextInput
+								value={cancellationReason}
+								onChangeText={setCancellationReason}
+								placeholder={
+									cancellationPolicyPreview.requiresJustification
+										? t("common.requiredJustification")
+										: t("common.optionalJustification")
+								}
+								multiline
+								style={styles.rescheduleReasonInput}
+							/>
+							<View style={styles.statusActions}>
+								<Button
+									variant="outline"
+									onPress={() => setShowCancellationForm(false)}
+								>
+									{t("common.cancel")}
+								</Button>
+								<Button
+									variant="destructive"
+									disabled={
+										updateAppointmentMutation.isPending ||
+										(cancellationPolicyPreview.requiresJustification &&
+											!cancellationReason.trim())
+									}
+									loading={updateAppointmentMutation.isPending}
+									onPress={handleConfirmCancellation}
+								>
+									{t("common.confirmCancellation")}
+								</Button>
+							</View>
 						</View>
 					</View>
 				) : null}
@@ -1251,6 +1448,24 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 14,
 		color: theme.colors.foreground,
 		textAlignVertical: "top",
+	},
+	warningBox: {
+		gap: theme.gap(0.5),
+		borderRadius: theme.radius.lg,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		backgroundColor: theme.colors.surfaceMuted,
+		padding: theme.gap(1.5),
+	},
+	warningTitle: {
+		fontSize: 14,
+		fontWeight: "700",
+		color: theme.colors.foreground,
+	},
+	warningText: {
+		fontSize: 13,
+		color: theme.colors.mutedForeground,
+		lineHeight: 18,
 	},
 	medicalRecordHeader: {
 		flexDirection: "row",

@@ -1,9 +1,14 @@
 import type {
 	GetSchedulesResponse,
+	GetScheduleExceptionsResponse,
 	CreateScheduleData,
 	CreateScheduleResponse,
 	UpdateScheduleData,
 	UpdateScheduleResponse,
+	CreateScheduleExceptionData,
+	CreateScheduleExceptionResponse,
+	UpdateScheduleExceptionData,
+	UpdateScheduleExceptionResponse,
 } from "@/types/schedule";
 import { api } from "@/services/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -109,6 +114,115 @@ export const useDeleteSchedule = () => {
 			// Invalidate all schedules queries
 			queryClient.invalidateQueries({
 				queryKey: ["schedules"],
+			});
+		},
+	});
+};
+
+export const getScheduleExceptionsByProvider = async (
+	healthcareProviderId: string,
+): Promise<GetScheduleExceptionsResponse> => {
+	const { data } = await api.get<GetScheduleExceptionsResponse>(
+		`/healthcare-providers/${healthcareProviderId}/schedule-exceptions`,
+	);
+	return data;
+};
+
+export const useScheduleExceptionsByProvider = (
+	healthcareProviderId: string,
+	enabled: boolean = true,
+) => {
+	return useQuery({
+		queryKey: ["schedule-exceptions", "provider", healthcareProviderId],
+		queryFn: () => getScheduleExceptionsByProvider(healthcareProviderId),
+		enabled: enabled && !!healthcareProviderId,
+	});
+};
+
+export const createScheduleException = async (
+	data: CreateScheduleExceptionData,
+): Promise<CreateScheduleExceptionResponse> => {
+	const { data: response } = await api.post<CreateScheduleExceptionResponse>(
+		"/healthcare-provider-schedule-exceptions",
+		data,
+	);
+	return response;
+};
+
+export const useCreateScheduleException = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: createScheduleException,
+		onSuccess: (_, variables) => {
+			queryClient.invalidateQueries({
+				queryKey: [
+					"schedule-exceptions",
+					"provider",
+					variables.healthcareProviderId,
+				],
+			});
+			queryClient.invalidateQueries({
+				queryKey: ["time-slots", variables.healthcareProviderId],
+			});
+		},
+	});
+};
+
+export const updateScheduleException = async (
+	exceptionId: string,
+	data: UpdateScheduleExceptionData,
+): Promise<UpdateScheduleExceptionResponse> => {
+	const { data: response } = await api.patch<UpdateScheduleExceptionResponse>(
+		`/healthcare-provider-schedule-exceptions/${exceptionId}`,
+		data,
+	);
+	return response;
+};
+
+export const useUpdateScheduleException = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({
+			exceptionId,
+			data,
+		}: {
+			exceptionId: string;
+			data: UpdateScheduleExceptionData;
+		}) => updateScheduleException(exceptionId, data),
+		onSuccess: (response) => {
+			queryClient.invalidateQueries({
+				queryKey: [
+					"schedule-exceptions",
+					"provider",
+					response.exception.healthcareProviderId,
+				],
+			});
+			queryClient.invalidateQueries({
+				queryKey: ["time-slots", response.exception.healthcareProviderId],
+			});
+		},
+	});
+};
+
+export const deleteScheduleException = async (
+	exceptionId: string,
+): Promise<void> => {
+	await api.delete(`/healthcare-provider-schedule-exceptions/${exceptionId}`);
+};
+
+export const useDeleteScheduleException = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: deleteScheduleException,
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: ["schedule-exceptions"],
+			});
+			queryClient.invalidateQueries({
+				queryKey: ["time-slots"],
 			});
 		},
 	});
