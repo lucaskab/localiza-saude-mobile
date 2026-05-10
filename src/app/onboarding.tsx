@@ -24,9 +24,17 @@ type OnboardingRole = "CUSTOMER" | "HEALTHCARE_PROVIDER";
 export default function Onboarding() {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation();
-	const { completeOnboarding, isHealthcareProvider, needsOnboarding } =
+	const { completeOnboarding, isHealthcareProvider, isLoading, needsOnboarding, user } =
 		useAuth();
 	const [selectedRole, setSelectedRole] = useState<OnboardingRole | null>(null);
+
+	if (isLoading) {
+		return null;
+	}
+
+	if (!user) {
+		return <Redirect href="/login" />;
+	}
 
 	if (!needsOnboarding) {
 		return (

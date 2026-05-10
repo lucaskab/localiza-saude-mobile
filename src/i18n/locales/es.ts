@@ -78,6 +78,8 @@ export const es = {
     "sendResetLink": "Enviar enlace por email",
     "passwordResetEmailSentTitle": "Revisa tu email",
     "passwordResetEmailSentDescription": "Te enviamos un enlace para restablecer tu contraseña.",
+    "verificationEmailSentTitle": "Confirma tu email",
+    "verificationEmailSentDescription": "Enviamos un enlace para activar tu cuenta. Después de la confirmación, podrás elegir tu tipo de cuenta.",
     "invalidResetToken": "Enlace de restablecimiento inválido o expirado.",
     "chooseNewPassword": "Elige una nueva contraseña para acceder a tu cuenta.",
     "newPassword": "Nueva contraseña",

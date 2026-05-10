@@ -76,6 +76,8 @@ export const ptBR = {
     sendResetLink: "Enviar link por email",
     passwordResetEmailSentTitle: "Confira seu email",
     passwordResetEmailSentDescription: "Enviamos um link para você redefinir sua senha.",
+    verificationEmailSentTitle: "Confirme seu email",
+    verificationEmailSentDescription: "Enviamos um link para ativar sua conta. Depois da confirmação, você poderá escolher seu tipo de conta.",
     invalidResetToken: "Link de redefinição inválido ou expirado.",
     chooseNewPassword: "Escolha uma nova senha para acessar sua conta.",
     newPassword: "Nova senha",

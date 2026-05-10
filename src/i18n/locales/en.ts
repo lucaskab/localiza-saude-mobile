@@ -78,6 +78,8 @@ export const en = {
     sendResetLink: "Send email link",
     passwordResetEmailSentTitle: "Check your email",
     passwordResetEmailSentDescription: "We sent you a link to reset your password.",
+    verificationEmailSentTitle: "Confirm your email",
+    verificationEmailSentDescription: "We sent a link to activate your account. After confirmation, you can choose your account type.",
     invalidResetToken: "Invalid or expired reset link.",
     chooseNewPassword: "Choose a new password to access your account.",
     newPassword: "New password",

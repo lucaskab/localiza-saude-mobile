@@ -338,13 +338,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 				name,
 				email,
 				password,
+				callbackURL: `${env.EXPO_PUBLIC_SCHEME}://onboarding`,
 			});
 
 			if (result.error) {
 				throw new Error(result.error.message || "Account creation failed.");
 			}
-
-			await refreshAuthStateFromSession();
 		} finally {
 			setIsLoading(false);
 		}

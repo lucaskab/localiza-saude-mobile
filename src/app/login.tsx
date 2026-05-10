@@ -88,6 +88,11 @@ export default function Login() {
 
 			if (authMode === "sign-up") {
 				await signUpWithEmail(name.trim(), email.trim(), password);
+				setPassword("");
+				Alert.alert(
+					t("common.verificationEmailSentTitle"),
+					t("common.verificationEmailSentDescription"),
+				);
 				return;
 			}
 
