@@ -12,6 +12,7 @@ import {
 } from "react";
 import { getCustomerByUserId } from "@/hooks/use-customer";
 import { getHealthcareProviderByUserId } from "@/hooks/use-healthcare-providers";
+import { env } from "@/constants/env";
 import { api } from "@/services/api";
 import { authClient } from "@/services/auth/better-auth";
 import {
@@ -32,8 +33,12 @@ interface AuthState {
 }
 
 interface AuthContextData {
+	signInWithEmail: (email: string, password: string) => Promise<void>;
 	signInWithGoogle: () => Promise<void>;
 	signInWithApple: () => Promise<void>;
+	signUpWithEmail: (name: string, email: string, password: string) => Promise<void>;
+	requestPasswordReset: (email: string) => Promise<void>;
+	resetPassword: (token: string, newPassword: string) => Promise<void>;
 	completeOnboarding: (
 		role: "HEALTHCARE_PROVIDER" | "CUSTOMER",
 	) => Promise<void>;
@@ -303,6 +308,70 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 		}
 	}, [refreshAuthStateFromSession]);
 
+	const signInWithEmail = async (email: string, password: string) => {
+		try {
+			setIsLoading(true);
+			const result = await authClient.signIn.email({
+				email,
+				password,
+				rememberMe: true,
+			});
+
+			if (result.error) {
+				throw new Error(result.error.message || "Email sign in failed.");
+			}
+
+			await refreshAuthStateFromSession();
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	const signUpWithEmail = async (
+		name: string,
+		email: string,
+		password: string,
+	) => {
+		try {
+			setIsLoading(true);
+			const result = await authClient.signUp.email({
+				name,
+				email,
+				password,
+			});
+
+			if (result.error) {
+				throw new Error(result.error.message || "Account creation failed.");
+			}
+
+			await refreshAuthStateFromSession();
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	const requestPasswordReset = async (email: string) => {
+		const result = await authClient.requestPasswordReset({
+			email,
+			redirectTo: `${env.EXPO_PUBLIC_SCHEME}://reset-password`,
+		});
+
+		if (result.error) {
+			throw new Error(result.error.message || "Password reset request failed.");
+		}
+	};
+
+	const resetPassword = async (token: string, newPassword: string) => {
+		const result = await authClient.resetPassword({
+			token,
+			newPassword,
+		});
+
+		if (result.error) {
+			throw new Error(result.error.message || "Password reset failed.");
+		}
+	};
+
 	const signInWithApple = useCallback(async () => {
 		try {
 			setIsLoading(true);
@@ -366,8 +435,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
 	const value = useMemo(
 		() => ({
+			signInWithEmail,
 			signInWithGoogle,
 			signInWithApple,
+			signUpWithEmail,
+			requestPasswordReset,
+			resetPassword,
 			completeOnboarding,
 			signOut,
 			isAuthenticated,
@@ -390,8 +463,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 			isCustomer,
 			isHealthcareProvider,
 			isStaff,
+			signInWithEmail,
 			signInWithGoogle,
 			signInWithApple,
+			signUpWithEmail,
+			requestPasswordReset,
+			resetPassword,
 			completeOnboarding,
 			signOut,
 		],

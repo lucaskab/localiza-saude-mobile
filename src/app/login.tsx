@@ -1,7 +1,7 @@
 import * as AppleAuthentication from "expo-apple-authentication";
 import { Heart } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Alert, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
@@ -10,12 +10,25 @@ import { useAuth } from "@/contexts/auth";
 const isAppleSignInEnabled =
 	process.env.EXPO_PUBLIC_ENABLE_APPLE_SIGN_IN === "true";
 
+type AuthMode = "sign-in" | "sign-up" | "forgot-password";
+
 export default function Login() {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation();
-	const { signInWithApple, signInWithGoogle } = useAuth();
+	const {
+		requestPasswordReset,
+		signInWithApple,
+		signInWithEmail,
+		signInWithGoogle,
+		signUpWithEmail,
+	} = useAuth();
+	const [authMode, setAuthMode] = useState<AuthMode>("sign-in");
+	const [name, setName] = useState("");
+	const [email, setEmail] = useState("");
+	const [password, setPassword] = useState("");
 	const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
 	const [isAppleSignInPending, setIsAppleSignInPending] = useState(false);
+	const [isEmailAuthPending, setIsEmailAuthPending] = useState(false);
 
 	useEffect(() => {
 		if (!isAppleSignInEnabled) {
@@ -56,6 +69,35 @@ export default function Login() {
 		}
 	};
 
+	const handleEmailAuth = async () => {
+		try {
+			setIsEmailAuthPending(true);
+
+			if (authMode === "forgot-password") {
+				await requestPasswordReset(email.trim());
+				Alert.alert(
+					t("common.passwordResetEmailSentTitle"),
+					t("common.passwordResetEmailSentDescription"),
+				);
+				return;
+			}
+
+			if (authMode === "sign-up") {
+				await signUpWithEmail(name.trim(), email.trim(), password);
+				return;
+			}
+
+			await signInWithEmail(email.trim(), password);
+		} catch (error) {
+			Alert.alert(
+				t("common.loginError"),
+				error instanceof Error ? error.message : t("common.failedToLogin"),
+			);
+		} finally {
+			setIsEmailAuthPending(false);
+		}
+	};
+
 	return (
 		<View style={styles.container}>
 			<ScrollView
@@ -82,6 +124,113 @@ export default function Login() {
 
 				{/* Login Buttons Section */}
 				<View style={styles.buttonsContainer}>
+					<View style={styles.segmentedControl}>
+						<Pressable
+							onPress={() => setAuthMode("sign-in")}
+							style={[
+								styles.segmentedOption,
+								authMode === "sign-in" && styles.segmentedOptionActive,
+							]}
+						>
+							<Text
+								style={[
+									styles.segmentedText,
+									authMode === "sign-in" && styles.segmentedTextActive,
+								]}
+							>
+								{t("common.signIn")}
+							</Text>
+						</Pressable>
+						<Pressable
+							onPress={() => setAuthMode("sign-up")}
+							style={[
+								styles.segmentedOption,
+								authMode === "sign-up" && styles.segmentedOptionActive,
+							]}
+						>
+							<Text
+								style={[
+									styles.segmentedText,
+									authMode === "sign-up" && styles.segmentedTextActive,
+								]}
+							>
+								{t("common.createAccount")}
+							</Text>
+						</Pressable>
+						<Pressable
+							onPress={() => setAuthMode("forgot-password")}
+							style={[
+								styles.segmentedOption,
+								authMode === "forgot-password" && styles.segmentedOptionActive,
+							]}
+						>
+							<Text
+								style={[
+									styles.segmentedText,
+									authMode === "forgot-password" && styles.segmentedTextActive,
+								]}
+							>
+								{t("common.resetPassword")}
+							</Text>
+						</Pressable>
+					</View>
+
+					{authMode === "sign-up" ? (
+						<TextInput
+							autoCapitalize="words"
+							autoComplete="name"
+							placeholder={t("common.name")}
+							placeholderTextColor={theme.colors.mutedForeground}
+							style={styles.input}
+							value={name}
+							onChangeText={setName}
+						/>
+					) : null}
+					<TextInput
+						autoCapitalize="none"
+						autoComplete="email"
+						keyboardType="email-address"
+						placeholder={t("common.email")}
+						placeholderTextColor={theme.colors.mutedForeground}
+						style={styles.input}
+						value={email}
+						onChangeText={setEmail}
+					/>
+					{authMode !== "forgot-password" ? (
+						<TextInput
+							autoCapitalize="none"
+							autoComplete={
+								authMode === "sign-up" ? "new-password" : "current-password"
+							}
+							placeholder={t("common.password")}
+							placeholderTextColor={theme.colors.mutedForeground}
+							secureTextEntry
+							style={styles.input}
+							value={password}
+							onChangeText={setPassword}
+						/>
+					) : null}
+
+					<Button
+						disabled={!email.trim() || isEmailAuthPending}
+						loading={isEmailAuthPending}
+						size="lg"
+						style={styles.button}
+						onPress={handleEmailAuth}
+					>
+						{authMode === "forgot-password"
+							? t("common.sendResetLink")
+							: authMode === "sign-up"
+								? t("common.createAccount")
+								: t("common.signIn")}
+					</Button>
+
+					<View style={styles.divider}>
+						<View style={styles.dividerLine} />
+						<Text style={styles.dividerText}>{t("common.or")}</Text>
+						<View style={styles.dividerLine} />
+					</View>
+
 					{/* Google Login */}
 					<Button
 						onPress={handleGoogleLogin}
@@ -118,23 +267,6 @@ export default function Login() {
 							/>
 						</View>
 					) : null}
-
-					{/* Email Login Option */}
-					{/*<Button
-						variant="ghost"
-						size="lg"
-						style={styles.button}
-						onPress={() => handleLogin("email")}
-					>
-						<View style={styles.buttonContent}>
-							<Mail size={20} color={theme.colors.foreground} strokeWidth={2} />
-							<Text
-								style={[styles.buttonText, { color: theme.colors.foreground }]}
-							>
-								Continue with Email
-							</Text>
-						</View>
-					</Button>*/}
 
 					{/* Terms */}
 					<View style={styles.termsContainer}>
@@ -205,8 +337,62 @@ const styles = StyleSheet.create((theme) => ({
 		paddingBottom: theme.gap(8),
 		gap: theme.gap(2),
 	},
+	segmentedControl: {
+		flexDirection: "row",
+		gap: theme.gap(0.75),
+		padding: theme.gap(0.75),
+		borderRadius: theme.radius.lg,
+		backgroundColor: theme.colors.muted,
+	},
+	segmentedOption: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
+		minHeight: 42,
+		borderRadius: theme.radius.md,
+		paddingHorizontal: theme.gap(0.75),
+	},
+	segmentedOptionActive: {
+		backgroundColor: theme.colors.background,
+	},
+	segmentedText: {
+		fontSize: 12,
+		fontWeight: "600",
+		color: theme.colors.mutedForeground,
+		textAlign: "center",
+	},
+	segmentedTextActive: {
+		color: theme.colors.foreground,
+	},
+	input: {
+		height: 54,
+		borderRadius: theme.radius.lg,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		paddingHorizontal: theme.gap(2),
+		fontSize: 16,
+		color: theme.colors.foreground,
+		backgroundColor: theme.colors.background,
+	},
 	button: {
 		width: "100%",
+	},
+	divider: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(1.5),
+		paddingVertical: theme.gap(1),
+	},
+	dividerLine: {
+		flex: 1,
+		height: 1,
+		backgroundColor: theme.colors.border,
+	},
+	dividerText: {
+		fontSize: 12,
+		fontWeight: "600",
+		color: theme.colors.mutedForeground,
+		textTransform: "uppercase",
 	},
 	buttonContent: {
 		flexDirection: "row",
