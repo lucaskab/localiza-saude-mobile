@@ -24,6 +24,7 @@ import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { ScreenHeader } from "@/components/screen-header";
 import { Button } from "@/components/ui/button";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth";
 import {
@@ -78,6 +79,34 @@ function getTodayInputDate() {
 	return new Date().toISOString().slice(0, 10);
 }
 
+function parseDateInputAsUtc(date: string) {
+	const [year = 0, month = 1, day = 1] = date.split("-").map(Number);
+	return new Date(Date.UTC(year, month - 1, day));
+}
+
+function formatUtcDateInput(date: Date) {
+	return date.toISOString().slice(0, 10);
+}
+
+function getDatesInRange(startDate: string, endDate: string) {
+	const start = parseDateInputAsUtc(startDate);
+	const end = parseDateInputAsUtc(endDate || startDate);
+
+	if (end < start) {
+		throw new Error("A data final precisa ser igual ou posterior à data inicial.");
+	}
+
+	const dates: string[] = [];
+	const current = new Date(start);
+
+	while (current <= end) {
+		dates.push(formatUtcDateInput(current));
+		current.setUTCDate(current.getUTCDate() + 1);
+	}
+
+	return dates;
+}
+
 function formatScheduleExceptionDate(date: string) {
 	return new Date(date).toLocaleDateString("pt-BR", {
 		timeZone: "UTC",
@@ -90,6 +119,7 @@ export default function ProviderSchedule() {
 	const { healthcareProvider } = useAuth();
 	const [isSaving, setIsSaving] = useState(false);
 	const [exceptionDate, setExceptionDate] = useState(getTodayInputDate());
+	const [exceptionEndDate, setExceptionEndDate] = useState(getTodayInputDate());
 	const [exceptionType, setExceptionType] =
 		useState<ScheduleExceptionType>("DAY_OFF");
 	const [exceptionStartTime, setExceptionStartTime] = useState("09:00");
@@ -285,6 +315,7 @@ export default function ProviderSchedule() {
 
 	const resetExceptionForm = () => {
 		setExceptionDate(getTodayInputDate());
+		setExceptionEndDate(getTodayInputDate());
 		setExceptionType("DAY_OFF");
 		setExceptionStartTime("09:00");
 		setExceptionEndTime("12:00");
@@ -294,13 +325,12 @@ export default function ProviderSchedule() {
 	const handleCreateException = async () => {
 		if (!healthcareProvider?.id) return;
 
-		if (!exceptionDate) {
-			Alert.alert("Data obrigatória", "Informe a data da exceção.");
+		if (!exceptionDate || !exceptionEndDate) {
+			Alert.alert("Período obrigatório", "Informe a data inicial e final da exceção.");
 			return;
 		}
 
 		if (
-			exceptionType !== "DAY_OFF" &&
 			(!validateTimeFormat(exceptionStartTime) ||
 				!validateTimeFormat(exceptionEndTime))
 		) {
@@ -309,20 +339,36 @@ export default function ProviderSchedule() {
 		}
 
 		try {
-			await createExceptionMutation.mutateAsync({
-				healthcareProviderId: healthcareProvider.id,
-				date: exceptionDate,
-				type: exceptionType,
-				startTime: exceptionType === "DAY_OFF" ? null : exceptionStartTime,
-				endTime: exceptionType === "DAY_OFF" ? null : exceptionEndTime,
-				reason: exceptionReason.trim() || null,
-			});
+			const dates = getDatesInRange(exceptionDate, exceptionEndDate);
+
+			if (dates.length > 180) {
+				Alert.alert("Período muito longo", "Selecione um período de até 180 dias por vez.");
+				return;
+			}
+
+			await Promise.all(
+				dates.map((date) =>
+					createExceptionMutation.mutateAsync({
+						healthcareProviderId: healthcareProvider.id,
+						date,
+						type: exceptionType,
+						startTime: exceptionStartTime,
+						endTime: exceptionEndTime,
+						reason: exceptionReason.trim() || null,
+					}),
+				),
+			);
 			await refetchExceptions();
 			resetExceptionForm();
 			Alert.alert("Exceção salva", "Sua agenda foi atualizada.");
 		} catch (error) {
 			console.error("Failed to save schedule exception:", error);
-			Alert.alert("Erro", "Não foi possível salvar a exceção.");
+			Alert.alert(
+				"Erro",
+				error instanceof Error
+					? error.message
+					: "Não foi possível salvar a exceção.",
+			);
 		}
 	};
 
@@ -593,14 +639,6 @@ export default function ProviderSchedule() {
 					</View>
 
 					<View style={styles.exceptionFormCard}>
-						<Text style={styles.exceptionLabel}>Data</Text>
-						<Input
-							value={exceptionDate}
-							onChangeText={setExceptionDate}
-							placeholder="2026-05-11"
-							keyboardType="numbers-and-punctuation"
-						/>
-
 						<Text style={styles.exceptionLabel}>Tipo</Text>
 						<View style={styles.exceptionTypeGrid}>
 							{scheduleExceptionTypes.map((type) => {
@@ -628,31 +666,48 @@ export default function ProviderSchedule() {
 							})}
 						</View>
 
-						{exceptionType !== "DAY_OFF" ? (
-							<View style={styles.exceptionTimeRow}>
-								<View style={styles.exceptionTimeInput}>
-									<Text style={styles.exceptionLabel}>Início</Text>
-									<Input
-										leftIcon={Clock}
-										value={exceptionStartTime}
-										onChangeText={setExceptionStartTime}
-										placeholder="09:00"
-										keyboardType="numbers-and-punctuation"
-										maxLength={5}
-									/>
-								</View>
-								<View style={styles.exceptionTimeInput}>
-									<Text style={styles.exceptionLabel}>Fim</Text>
-									<Input
-										value={exceptionEndTime}
-										onChangeText={setExceptionEndTime}
-										placeholder="12:00"
-										keyboardType="numbers-and-punctuation"
-										maxLength={5}
-									/>
-								</View>
+						<Text style={styles.exceptionLabel}>Período</Text>
+						<View style={styles.exceptionTimeRow}>
+							<View style={styles.exceptionTimeInput}>
+								<Text style={styles.exceptionLabel}>Data inicial</Text>
+								<DatePickerInput
+									value={exceptionDate}
+									onChange={setExceptionDate}
+								/>
 							</View>
-						) : null}
+							<View style={styles.exceptionTimeInput}>
+								<Text style={styles.exceptionLabel}>Data final</Text>
+								<DatePickerInput
+									value={exceptionEndDate}
+									minDate={exceptionDate}
+									onChange={setExceptionEndDate}
+								/>
+							</View>
+						</View>
+
+						<View style={styles.exceptionTimeRow}>
+							<View style={styles.exceptionTimeInput}>
+								<Text style={styles.exceptionLabel}>Início</Text>
+								<Input
+									leftIcon={Clock}
+									value={exceptionStartTime}
+									onChangeText={setExceptionStartTime}
+									placeholder="09:00"
+									keyboardType="numbers-and-punctuation"
+									maxLength={5}
+								/>
+							</View>
+							<View style={styles.exceptionTimeInput}>
+								<Text style={styles.exceptionLabel}>Fim</Text>
+								<Input
+									value={exceptionEndTime}
+									onChangeText={setExceptionEndTime}
+									placeholder="12:00"
+									keyboardType="numbers-and-punctuation"
+									maxLength={5}
+								/>
+							</View>
+						</View>
 
 						<Text style={styles.exceptionLabel}>Motivo ou observação</Text>
 						<Input

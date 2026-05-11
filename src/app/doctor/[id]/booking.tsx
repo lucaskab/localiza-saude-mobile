@@ -47,6 +47,7 @@ import {
 } from "@/hooks/use-schedules";
 import { TimeSlotSelector } from "@/components/booking-screen";
 import { getErrorMessage } from "@/services/api";
+import { buildUtcDateTimeISO } from "@/utils/appointments";
 import { z } from "zod";
 
 const bookingModeSchema = z.enum(["self", "existing", "new"]);
@@ -317,7 +318,9 @@ export default function Booking() {
 				(exception) => exception.date.slice(0, 10) === dateStr,
 			);
 			const hasDayOff = exceptionsForDate.some(
-				(exception) => exception.type === "DAY_OFF",
+				(exception) =>
+					exception.type === "DAY_OFF" &&
+					(!exception.startTime || !exception.endTime),
 			);
 			const hasDateSpecificAvailability = exceptionsForDate.some((exception) =>
 				["SPECIAL_HOURS", "EXTRA_SLOT"].includes(exception.type),
@@ -428,9 +431,7 @@ export default function Booking() {
 			setWaitlistLoadingSlot(slotStartTime);
 			await createWaitlistEntry.mutateAsync({
 				healthcareProviderId: id,
-				scheduledAt: new Date(
-					`${formattedDate}T${slotStartTime}:00`,
-				).toISOString(),
+				scheduledAt: buildUtcDateTimeISO(formattedDate, slotStartTime),
 				procedureIds,
 			});
 			Alert.alert(

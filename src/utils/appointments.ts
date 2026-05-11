@@ -1,5 +1,14 @@
 import type { Appointment } from "@/types/appointment";
 
+export const buildUtcDateTimeISO = (date: string, time: string) => {
+	const [year = 0, month = 1, day = 1] = date.split("-").map(Number);
+	const [hours = 0, minutes = 0] = time.split(":").map(Number);
+
+	return new Date(
+		Date.UTC(year, month - 1, day, hours, minutes, 0, 0),
+	).toISOString();
+};
+
 export const getAppointmentPatientName = (appointment: Appointment) =>
 	appointment.patientProfile?.fullName ||
 	appointment.customer?.name ||

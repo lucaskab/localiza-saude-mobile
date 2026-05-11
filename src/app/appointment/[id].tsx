@@ -50,6 +50,7 @@ import type { Appointment, AppointmentStatus } from "@/types/appointment";
 import type { MedicalRecord } from "@/types/medical-record";
 import { translationKeys, type TranslationKey } from "@/i18n/key-map";
 import {
+	buildUtcDateTimeISO,
 	getAppointmentCustomerUserId,
 	getAppointmentPatientEmail,
 	getAppointmentPatientImage,
@@ -394,9 +395,7 @@ export default function AppointmentDetails() {
 			await requestRescheduleMutation.mutateAsync({
 				appointmentId: appointment.id,
 				data: {
-					scheduledAt: new Date(
-						`${rescheduleDate}T${rescheduleTime}:00`,
-					).toISOString(),
+					scheduledAt: buildUtcDateTimeISO(rescheduleDate, rescheduleTime),
 					reason: rescheduleReason.trim() || null,
 				},
 			});

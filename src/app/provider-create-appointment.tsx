@@ -233,7 +233,9 @@ export default function ProviderCreateAppointment() {
 				(exception) => exception.date.slice(0, 10) === dateStr,
 			);
 			const hasDayOff = exceptionsForDate.some(
-				(exception) => exception.type === "DAY_OFF",
+				(exception) =>
+					exception.type === "DAY_OFF" &&
+					(!exception.startTime || !exception.endTime),
 			);
 			const hasDateSpecificAvailability = exceptionsForDate.some((exception) =>
 				["SPECIAL_HOURS", "EXTRA_SLOT"].includes(exception.type),
