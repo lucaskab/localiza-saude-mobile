@@ -10,7 +10,7 @@ import {
 import { getErrorMessage } from "@/services/api";
 import { showErrorMessageToast, showSuccessToast } from "@/services/toast";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Briefcase, Clock, DollarSign } from "lucide-react-native";
+import { Briefcase, Clock, DollarSign, Plus, Trash2 } from "lucide-react-native";
 import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -32,6 +32,7 @@ type CreateProcedureFormData = {
   description: string;
   durationInMinutes: string;
   price: string;
+  checklistItems: { text: string }[];
 };
 
 const createProcedureDefaultValues: CreateProcedureFormData = {
@@ -39,6 +40,7 @@ const createProcedureDefaultValues: CreateProcedureFormData = {
   description: "",
   durationInMinutes: "30",
   price: "",
+  checklistItems: [],
 };
 
 const createProcedureSchema = z.object({
@@ -46,6 +48,12 @@ const createProcedureSchema = z.object({
   description: z.string().trim().optional(),
   durationInMinutes: z.number().int().min(1),
   priceInCents: z.number().int().min(0),
+  checklistItems: z.array(
+    z.object({
+      text: z.string().trim().min(1),
+      position: z.number().int().min(0),
+    }),
+  ),
 });
 
 export default function ProviderProcedureCreate() {
@@ -69,9 +77,11 @@ export default function ProviderProcedureCreate() {
     updateProcedureMutation.isPending ||
     deleteProcedureMutation.isPending;
 
-  const { control, handleSubmit, reset } = useForm<CreateProcedureFormData>({
+  const { control, handleSubmit, reset, setValue, watch } =
+    useForm<CreateProcedureFormData>({
     defaultValues: createProcedureDefaultValues,
   });
+  const checklistItems = watch("checklistItems");
 
   useEffect(() => {
     if (!isEditing) {
@@ -88,8 +98,31 @@ export default function ProviderProcedureCreate() {
       description: procedureData.procedure.description || "",
       durationInMinutes: procedureData.procedure.durationInMinutes.toString(),
       price: (procedureData.procedure.priceInCents / 100).toFixed(2),
+      checklistItems: procedureData.procedure.checklistItems.map((item) => ({
+        text: item.text,
+      })),
     });
   }, [isEditing, procedureData, reset]);
+
+  const addChecklistItem = () => {
+    setValue("checklistItems", [...checklistItems, { text: "" }]);
+  };
+
+  const updateChecklistItem = (index: number, text: string) => {
+    setValue(
+      "checklistItems",
+      checklistItems.map((item, itemIndex) =>
+        itemIndex === index ? { text } : item,
+      ),
+    );
+  };
+
+  const removeChecklistItem = (index: number) => {
+    setValue(
+      "checklistItems",
+      checklistItems.filter((_, itemIndex) => itemIndex !== index),
+    );
+  };
 
   const onSubmit = async (values: CreateProcedureFormData) => {
     const providerId = healthcareProvider?.id;
@@ -110,8 +143,14 @@ export default function ProviderProcedureCreate() {
       durationInMinutes: Number.isFinite(durationInMinutes)
         ? durationInMinutes
         : 0,
-      priceInCents,
-    });
+        priceInCents,
+        checklistItems: values.checklistItems
+          .map((item, position) => ({
+            text: item.text.trim(),
+            position,
+          }))
+          .filter((item) => item.text.length > 0),
+      });
 
     if (!parsed.success) {
       Alert.alert(
@@ -127,6 +166,7 @@ export default function ProviderProcedureCreate() {
         description: parsed.data.description || null,
         priceInCents: parsed.data.priceInCents,
         durationInMinutes: parsed.data.durationInMinutes,
+        checklistItems: parsed.data.checklistItems,
       };
 
       if (isEditing && procedureId) {
@@ -314,6 +354,66 @@ export default function ProviderProcedureCreate() {
                   />
                 </View>
               </View>
+
+              <View style={styles.checklistCard}>
+                <View style={styles.checklistHeader}>
+                  <View style={styles.checklistCopy}>
+                    <Text style={styles.checklistTitle}>
+                      {t("common.preProcedureChecklist")}
+                    </Text>
+                    <Text style={styles.checklistDescription}>
+                      {t("common.preProcedureChecklistDescription")}
+                    </Text>
+                  </View>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onPress={addChecklistItem}
+                  >
+                    <View style={styles.addChecklistButtonContent}>
+                      <Plus
+                        size={16}
+                        color={theme.colors.primary}
+                        strokeWidth={2}
+                      />
+                      <Text style={styles.addChecklistButtonText}>
+                        {t("common.addChecklistItem")}
+                      </Text>
+                    </View>
+                  </Button>
+                </View>
+
+                {checklistItems.length > 0 ? (
+                  <View style={styles.checklistList}>
+                    {checklistItems.map((item, index) => (
+                      <View key={`${index}`} style={styles.checklistItemRow}>
+                        <Input
+                          value={item.text}
+                          onChangeText={(text) => updateChecklistItem(index, text)}
+                          placeholder={t("common.preProcedureChecklistPlaceholder")}
+                          containerStyle={styles.checklistInput}
+                        />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onPress={() => removeChecklistItem(index)}
+                          style={styles.removeChecklistButton}
+                        >
+                          <Trash2
+                            size={18}
+                            color={theme.colors.destructive}
+                            strokeWidth={2}
+                          />
+                        </Button>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={styles.emptyChecklistText}>
+                    {t("common.noPreProcedureChecklistItems")}
+                  </Text>
+                )}
+              </View>
             </View>
           )}
         </ScrollView>
@@ -416,6 +516,65 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: 14,
     fontWeight: "500",
     color: theme.colors.foreground,
+  },
+  checklistCard: {
+    gap: theme.gap(2),
+    padding: theme.gap(2),
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfacePrimary,
+  },
+  checklistHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: theme.gap(2),
+  },
+  checklistCopy: {
+    flex: 1,
+    gap: theme.gap(0.5),
+  },
+  checklistTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: theme.colors.foreground,
+  },
+  checklistDescription: {
+    fontSize: 12,
+    color: theme.colors.mutedForeground,
+    lineHeight: 17,
+  },
+  addChecklistButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.gap(0.75),
+  },
+  addChecklistButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.colors.primary,
+  },
+  checklistList: {
+    gap: theme.gap(1.5),
+  },
+  checklistItemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.gap(1),
+  },
+  checklistInput: {
+    flex: 1,
+  },
+  removeChecklistButton: {
+    width: 40,
+    paddingHorizontal: 0,
+  },
+  emptyChecklistText: {
+    padding: theme.gap(2),
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.secondary,
+    fontSize: 13,
+    color: theme.colors.mutedForeground,
   },
   required: {
     color: theme.colors.destructive,

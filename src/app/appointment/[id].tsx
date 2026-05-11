@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import {
 	ArrowLeft,
 	Calendar,
+	CheckCircle2,
 	Clock,
 	ClipboardPlus,
 	DollarSign,
@@ -1065,6 +1066,25 @@ export default function AppointmentDetails() {
 										{procedure.description}
 									</Text>
 								) : null}
+								{procedure.checklistItems.length > 0 ? (
+									<View style={styles.preProcedureChecklist}>
+										<Text style={styles.preProcedureChecklistTitle}>
+											{t("common.preProcedureChecklist")}
+										</Text>
+										{procedure.checklistItems.map((item) => (
+											<View key={item.id} style={styles.preProcedureChecklistItem}>
+												<CheckCircle2
+													size={15}
+													color={theme.colors.primary}
+													strokeWidth={2}
+												/>
+												<Text style={styles.preProcedureChecklistText}>
+													{item.text}
+												</Text>
+											</View>
+										))}
+									</View>
+								) : null}
 							</View>
 						))}
 					</View>
@@ -1376,6 +1396,29 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 14,
 		lineHeight: 20,
 		color: theme.colors.foreground,
+	},
+	preProcedureChecklist: {
+		marginTop: theme.gap(1),
+		gap: theme.gap(1),
+		padding: theme.gap(1.5),
+		borderRadius: theme.radius.md,
+		backgroundColor: theme.colors.secondary,
+	},
+	preProcedureChecklistTitle: {
+		fontSize: 13,
+		fontWeight: "700",
+		color: theme.colors.foreground,
+	},
+	preProcedureChecklistItem: {
+		flexDirection: "row",
+		alignItems: "flex-start",
+		gap: theme.gap(1),
+	},
+	preProcedureChecklistText: {
+		flex: 1,
+		fontSize: 13,
+		lineHeight: 18,
+		color: theme.colors.mutedForeground,
 	},
 	notesHeader: {
 		flexDirection: "row",

@@ -21,6 +21,16 @@ export interface Procedure {
 	healthcareProviderId: string;
 	createdAt: string;
 	updatedAt: string;
+	checklistItems: ProcedureChecklistItem[];
+}
+
+export interface ProcedureChecklistItem {
+	id: string;
+	procedureId: string;
+	text: string;
+	position: number;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface HealthcareProviderFaq {

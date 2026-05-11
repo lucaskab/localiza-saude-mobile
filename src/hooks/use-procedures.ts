@@ -74,6 +74,12 @@ interface CreateProcedureData {
 	priceInCents: number;
 	durationInMinutes: number;
 	healthcareProviderId: string;
+	checklistItems?: ProcedureChecklistItemInput[];
+}
+
+interface ProcedureChecklistItemInput {
+	text: string;
+	position?: number;
 }
 
 export const createProcedure = async (
@@ -107,6 +113,7 @@ interface UpdateProcedureData {
 	description?: string | null;
 	priceInCents?: number;
 	durationInMinutes?: number;
+	checklistItems?: ProcedureChecklistItemInput[];
 }
 
 export const updateProcedure = async (

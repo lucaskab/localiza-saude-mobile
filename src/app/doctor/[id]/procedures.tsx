@@ -217,6 +217,28 @@ export default function SelectProcedures() {
 																})}
 															</Text>
 														</View>
+														{isSelected && procedure.checklistItems.length > 0 ? (
+															<View style={styles.preProcedureChecklist}>
+																<Text style={styles.preProcedureChecklistTitle}>
+																	{t("common.preProcedureChecklist")}
+																</Text>
+																{procedure.checklistItems.map((item) => (
+																	<View
+																		key={item.id}
+																		style={styles.preProcedureChecklistItem}
+																	>
+																		<CheckCircle2
+																			size={14}
+																			color={theme.colors.primary}
+																			strokeWidth={2}
+																		/>
+																		<Text style={styles.preProcedureChecklistText}>
+																			{item.text}
+																		</Text>
+																	</View>
+																))}
+															</View>
+														) : null}
 													</View>
 												</View>
 											</Pressable>
@@ -443,6 +465,29 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	procedureDurationText: {
 		fontSize: 14,
+		color: theme.colors.mutedForeground,
+	},
+	preProcedureChecklist: {
+		marginTop: theme.gap(1.5),
+		gap: theme.gap(1),
+		padding: theme.gap(1.5),
+		borderRadius: theme.radius.md,
+		backgroundColor: theme.colors.surfacePrimary,
+	},
+	preProcedureChecklistTitle: {
+		fontSize: 13,
+		fontWeight: "700",
+		color: theme.colors.foreground,
+	},
+	preProcedureChecklistItem: {
+		flexDirection: "row",
+		alignItems: "flex-start",
+		gap: theme.gap(1),
+	},
+	preProcedureChecklistText: {
+		flex: 1,
+		fontSize: 13,
+		lineHeight: 18,
 		color: theme.colors.mutedForeground,
 	},
 	bottomBar: {
