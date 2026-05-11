@@ -82,7 +82,7 @@ export interface CreateAppointmentData {
 	procedureIds: string[];
 	serviceModality?: ServiceModality;
 	notes?: string | null;
-	patient?: CreateAppointmentPatient;
+	customer?: CreateAppointmentPatient;
 }
 
 export interface GetAppointmentsResponse {

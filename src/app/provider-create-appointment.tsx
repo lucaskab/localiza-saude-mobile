@@ -324,7 +324,7 @@ export default function ProviderCreateAppointment() {
 				scheduledAt: appointmentDate.toISOString(),
 				procedureIds: formData.selectedProcedureIds,
 				notes: formData.notes,
-				patient,
+				customer: patient,
 			});
 
 			Alert.alert(t("common.scheduled"), t("common.theAppointmentWasCreatedSuccessfully"), [

@@ -406,7 +406,7 @@ export default function Booking() {
 				procedureIds,
 				serviceModality: formData.selectedServiceModality,
 				notes: formData.notes,
-				patient,
+				customer: patient,
 			});
 
 			// Show success message
