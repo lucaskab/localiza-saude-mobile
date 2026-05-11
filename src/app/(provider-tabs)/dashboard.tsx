@@ -10,7 +10,6 @@ import {
 } from "lucide-react-native";
 import {
 	ActivityIndicator,
-	Alert,
 	Image,
 	Pressable,
 	RefreshControl,
@@ -34,6 +33,7 @@ import {
 } from "@/utils/appointments";
 import { formatAverageRating } from "@/utils/ratings";
 import { translationKeys, type TranslationKey } from "@/i18n/key-map";
+import { showErrorToast, showSuccessToast } from "@/services/toast";
 
 export default function ProviderDashboard() {
 	const { theme } = useUnistyles();
@@ -149,12 +149,10 @@ export default function ProviderDashboard() {
 					status: "IN_PROGRESS",
 				},
 			});
-			Alert.alert(t("common.success"), t("common.visitStartedSuccessfully"));
+			showSuccessToast("common.visitStartedSuccessfully");
 		} catch (error) {
 			console.error("Failed to start visit:", error);
-			Alert.alert(t("common.error"), t("common.failedToStartVisitPleaseTryAgain"), [
-				{ text: "OK" },
-			]);
+			showErrorToast("common.failedToStartVisitPleaseTryAgain");
 		}
 	};
 
@@ -167,12 +165,10 @@ export default function ProviderDashboard() {
 					status: "COMPLETED",
 				},
 			});
-			Alert.alert(t("common.success"), t("common.visitCompletedSuccessfully"));
+			showSuccessToast("common.visitCompletedSuccessfully");
 		} catch (error) {
 			console.error("Failed to complete visit:", error);
-			Alert.alert(t("common.error"), t("common.failedToCompleteVisitPleaseTryAgain"), [
-				{ text: "OK" },
-			]);
+			showErrorToast("common.failedToCompleteVisitPleaseTryAgain");
 		}
 	};
 

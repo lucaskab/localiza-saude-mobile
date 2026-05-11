@@ -38,6 +38,7 @@ import {
 	useDeleteScheduleException,
 } from "@/hooks/use-schedules";
 import { translationKeys, type TranslationKey } from "@/i18n/key-map";
+import { showErrorToast, showSuccessToast } from "@/services/toast";
 import type { Schedule, ScheduleExceptionType } from "@/types/schedule";
 
 // Zod schemas for types only (no runtime validation with zodResolver)
@@ -304,10 +305,10 @@ export default function ProviderSchedule() {
 
 			// Refetch data and reset form
 			await refetch();
-			Alert.alert(t("common.success"), t("common.scheduleSavedSuccessfully"));
+			showSuccessToast("common.scheduleSavedSuccessfully");
 		} catch (error) {
 			console.error("Failed to save schedule:", error);
-			Alert.alert(t("common.error"), t("common.failedToSaveSchedulePleaseTryAgain"));
+			showErrorToast("common.failedToSaveSchedulePleaseTryAgain");
 		} finally {
 			setIsSaving(false);
 		}
@@ -326,7 +327,7 @@ export default function ProviderSchedule() {
 		if (!healthcareProvider?.id) return;
 
 		if (!exceptionDate || !exceptionEndDate) {
-			Alert.alert("Período obrigatório", "Informe a data inicial e final da exceção.");
+			showErrorToast("common.scheduleExceptionPeriodRequired");
 			return;
 		}
 
@@ -342,7 +343,7 @@ export default function ProviderSchedule() {
 			const dates = getDatesInRange(exceptionDate, exceptionEndDate);
 
 			if (dates.length > 180) {
-				Alert.alert("Período muito longo", "Selecione um período de até 180 dias por vez.");
+				showErrorToast("common.scheduleExceptionPeriodTooLong");
 				return;
 			}
 
@@ -360,15 +361,10 @@ export default function ProviderSchedule() {
 			);
 			await refetchExceptions();
 			resetExceptionForm();
-			Alert.alert("Exceção salva", "Sua agenda foi atualizada.");
+			showSuccessToast("common.scheduleExceptionSaved");
 		} catch (error) {
 			console.error("Failed to save schedule exception:", error);
-			Alert.alert(
-				"Erro",
-				error instanceof Error
-					? error.message
-					: "Não foi possível salvar a exceção.",
-			);
+			showErrorToast("common.scheduleExceptionSaveFailed");
 		}
 	};
 
@@ -381,7 +377,7 @@ export default function ProviderSchedule() {
 			await refetchExceptions();
 		} catch (error) {
 			console.error("Failed to update schedule exception:", error);
-			Alert.alert("Erro", "Não foi possível atualizar a exceção.");
+			showErrorToast("common.failedToUpdateScheduleException");
 		}
 	};
 
@@ -391,7 +387,7 @@ export default function ProviderSchedule() {
 			await refetchExceptions();
 		} catch (error) {
 			console.error("Failed to delete schedule exception:", error);
-			Alert.alert("Erro", "Não foi possível remover a exceção.");
+			showErrorToast("common.failedToRemoveScheduleException");
 		}
 	};
 

@@ -49,6 +49,7 @@ import { useAppointmentMedicalRecord } from "@/hooks/use-medical-record";
 import type { Appointment, AppointmentStatus } from "@/types/appointment";
 import type { MedicalRecord } from "@/types/medical-record";
 import { translationKeys, type TranslationKey } from "@/i18n/key-map";
+import { showErrorToast, showSuccessToast } from "@/services/toast";
 import {
 	buildUtcDateTimeISO,
 	getAppointmentCustomerUserId,
@@ -313,15 +314,12 @@ export default function AppointmentDetails() {
 				appointmentId,
 				data: { status: nextStatus },
 			});
-			Alert.alert(
-				t("common.success"),
-				t("common.appointmentUpdatedToStatus", {
-					status: t(getStatusConfig(nextStatus).label),
-				}),
-			);
+			showSuccessToast("common.appointmentUpdatedToStatus", {
+				status: t(getStatusConfig(nextStatus).label),
+			});
 		} catch (updateError) {
 			console.error("Failed to update appointment:", updateError);
-			Alert.alert(t("common.error"), t("common.failedToUpdateAppointmentStatusPleaseTryAgain"));
+			showErrorToast("common.failedToUpdateAppointmentStatusPleaseTryAgain");
 		}
 	};
 
@@ -350,10 +348,10 @@ export default function AppointmentDetails() {
 			});
 			setShowCancellationForm(false);
 			setCancellationReason("");
-			Alert.alert(t("common.success"), t("common.appointmentCancelled"));
+			showSuccessToast("common.appointmentCancelled");
 		} catch (updateError) {
 			console.error("Failed to cancel appointment:", updateError);
-			Alert.alert(t("common.error"), t("common.failedToUpdateAppointmentStatusPleaseTryAgain"));
+			showErrorToast("common.failedToUpdateAppointmentStatusPleaseTryAgain");
 		}
 	};
 
@@ -404,15 +402,10 @@ export default function AppointmentDetails() {
 			setRescheduleDate("");
 			setRescheduleTime("");
 			setRescheduleReason("");
-			Alert.alert(
-				t("common.success"),
-				isHealthcareProvider
-					? "Solicitação de reagendamento enviada."
-					: "Consulta reagendada com sucesso.",
-			);
+			showSuccessToast("common.appointmentRescheduleRequested");
 		} catch (rescheduleError) {
 			console.error("Failed to reschedule appointment:", rescheduleError);
-			Alert.alert(t("common.error"), "Não foi possível reagendar a consulta.");
+			showErrorToast("common.failedToRescheduleAppointment");
 		}
 	};
 
@@ -430,16 +423,10 @@ export default function AppointmentDetails() {
 				requestId,
 				data: { action },
 			});
-			Alert.alert(
-				t("common.success"),
-				action === "ACCEPT" ? "Novo horário aceito." : "Solicitação recusada.",
-			);
+			showSuccessToast("common.appointmentRescheduleResponded");
 		} catch (respondError) {
 			console.error("Failed to respond to reschedule request:", respondError);
-			Alert.alert(
-				t("common.error"),
-				"Não foi possível responder à solicitação.",
-			);
+			showErrorToast("common.failedToCompleteActionPleaseTryAgain");
 		}
 	};
 

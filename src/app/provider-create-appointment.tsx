@@ -38,6 +38,7 @@ import {
 	useSchedulesByProvider,
 } from "@/hooks/use-schedules";
 import { getErrorMessage } from "@/services/api";
+import { showErrorMessageToast, showSuccessToast } from "@/services/toast";
 
 const optionalTextSchema = z.string().transform((value) => {
 	const trimmed = value.trim();
@@ -329,14 +330,10 @@ export default function ProviderCreateAppointment() {
 				customer: patient,
 			});
 
-			Alert.alert(t("common.scheduled"), t("common.theAppointmentWasCreatedSuccessfully"), [
-				{
-					text: "OK",
-					onPress: () => router.replace("/(provider-tabs)/appointments"),
-				},
-			]);
+			showSuccessToast("common.theAppointmentWasCreatedSuccessfully");
+			router.replace("/(provider-tabs)/appointments");
 		} catch (error) {
-			Alert.alert(t("common.error"), getErrorMessage(error));
+			showErrorMessageToast(getErrorMessage(error));
 		}
 	};
 

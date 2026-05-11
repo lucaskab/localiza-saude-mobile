@@ -1,7 +1,6 @@
 import { useEffect, useMemo } from "react";
 import {
 	ActivityIndicator,
-	Alert,
 	KeyboardAvoidingView,
 	Platform,
 	Pressable,
@@ -36,6 +35,7 @@ import {
 	useUpsertMyMedicalRecord,
 } from "@/hooks/use-medical-record";
 import { getErrorMessage } from "@/services/api";
+import { showErrorMessageToast, showSuccessToast } from "@/services/toast";
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
 
@@ -159,9 +159,9 @@ export default function MedicalRecordScreen() {
 			const payload: MedicalRecordPayload = medicalRecordFormSchema.parse(values);
 
 			await upsertMutation.mutateAsync(payload);
-			Alert.alert(t("common.saved"), t("common.yourMedicalRecordWasUpdatedSuccessfully"));
+			showSuccessToast("common.yourMedicalRecordWasUpdatedSuccessfully");
 		} catch (saveError) {
-			Alert.alert(t("common.error"), getErrorMessage(saveError));
+			showErrorMessageToast(getErrorMessage(saveError));
 		}
 	};
 

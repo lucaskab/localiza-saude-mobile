@@ -47,6 +47,7 @@ import {
 } from "@/hooks/use-schedules";
 import { TimeSlotSelector } from "@/components/booking-screen";
 import { getErrorMessage } from "@/services/api";
+import { showErrorMessageToast, showSuccessToast } from "@/services/toast";
 import { buildUtcDateTimeISO } from "@/utils/appointments";
 import { z } from "zod";
 
@@ -412,15 +413,10 @@ export default function Booking() {
 				customer: patient,
 			});
 
-			// Show success message
-			Alert.alert(t("common.success"), t("common.yourAppointmentHasBeenBookedSuccessfully"), [
-				{
-					text: "OK",
-					onPress: () => router.push("/(bottom-tabs)/appointments"),
-				},
-			]);
+			showSuccessToast("common.yourAppointmentHasBeenBookedSuccessfully");
+			router.push("/(bottom-tabs)/appointments");
 		} catch (error) {
-			Alert.alert(t("common.error"), getErrorMessage(error), [{ text: "OK" }]);
+			showErrorMessageToast(getErrorMessage(error));
 		}
 	};
 
@@ -434,12 +430,9 @@ export default function Booking() {
 				scheduledAt: buildUtcDateTimeISO(formattedDate, slotStartTime),
 				procedureIds,
 			});
-			Alert.alert(
-				"Fila de espera",
-				"Você entrou na fila desse horário. Se ele ficar livre, vamos avisar por push no app e por email.",
-			);
+			showSuccessToast("common.waitlistJoined");
 		} catch (error) {
-			Alert.alert(t("common.error"), getErrorMessage(error), [{ text: "OK" }]);
+			showErrorMessageToast(getErrorMessage(error));
 		} finally {
 			setWaitlistLoadingSlot("");
 		}

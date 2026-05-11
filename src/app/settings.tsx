@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { useAppInfo, useCreateSupportRequest } from "@/hooks/use-settings";
 import type { TranslationKey } from "@/i18n";
 import { getErrorMessage } from "@/services/api";
+import { showErrorMessageToast, showSuccessToast } from "@/services/toast";
 import type { SupportRequestType } from "@/types/settings";
 
 type SettingsAction = {
@@ -166,12 +167,9 @@ export default function SettingsScreen() {
 			});
 
 			setSelectedAction(null);
-			Alert.alert(
-				t("common.requestSubmitted"),
-				t("common.requestSubmittedDescription"),
-			);
+			showSuccessToast("common.requestSubmittedDescription");
 		} catch (error) {
-			Alert.alert(t("common.error"), getErrorMessage(error));
+			showErrorMessageToast(getErrorMessage(error));
 		}
 	};
 

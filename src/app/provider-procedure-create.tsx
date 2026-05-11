@@ -8,6 +8,7 @@ import {
   useUpdateProcedure,
 } from "@/hooks/use-procedures";
 import { getErrorMessage } from "@/services/api";
+import { showErrorMessageToast, showSuccessToast } from "@/services/toast";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Briefcase, Clock, DollarSign } from "lucide-react-native";
 import { useEffect } from "react";
@@ -140,9 +141,10 @@ export default function ProviderProcedureCreate() {
         });
       }
 
+      showSuccessToast("common.procedureSavedSuccessfully");
       router.back();
     } catch (error) {
-      Alert.alert(t("common.error"), getErrorMessage(error));
+      showErrorMessageToast(getErrorMessage(error));
     }
   };
 
@@ -165,9 +167,10 @@ export default function ProviderProcedureCreate() {
           onPress: async () => {
             try {
               await deleteProcedureMutation.mutateAsync(procedureId);
+              showSuccessToast("common.procedureDeletedSuccessfully");
               router.back();
             } catch (error) {
-              Alert.alert(t("common.error"), getErrorMessage(error));
+              showErrorMessageToast(getErrorMessage(error));
             }
           },
         },

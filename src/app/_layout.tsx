@@ -4,6 +4,7 @@ import { Stack } from "expo-router";
 import { useRouter } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { QueryClientProvider } from "@tanstack/react-query";
+import Toast from "react-native-toast-message";
 import { AuthProvider } from "@/contexts/auth";
 import "@/i18n";
 import { queryClient } from "@/services/query-client";
@@ -98,6 +99,7 @@ export default function Layout() {
 	return (
 		<GestureHandlerRootView style={{ flex: 1 }}>
 			<RootNavigator />
+			<Toast />
 		</GestureHandlerRootView>
 	);
 }

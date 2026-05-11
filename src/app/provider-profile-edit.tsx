@@ -57,6 +57,7 @@ import {
 	useUploadClinicPhoto,
 	useUploadLicenseDocument,
 } from "@/hooks/use-procedures";
+import { showErrorToast, showSuccessToast } from "@/services/toast";
 
 const profileFormSchema = z.object({
 	displayName: z.string().nullable(),
@@ -357,10 +358,10 @@ export default function ProviderProfileEdit() {
 				},
 			});
 			reset(parsed.data);
-			Alert.alert(t("common.success"), t("common.profileSavedSuccessfully"));
+			showSuccessToast("common.profileSavedSuccessfully");
 		} catch (error) {
 			console.error("Failed to save profile:", error);
-			Alert.alert(t("common.error"), t("common.failedToSaveProfilePleaseTryAgain"));
+			showErrorToast("common.failedToSaveProfilePleaseTryAgain");
 		} finally {
 			setIsSaving(false);
 		}
@@ -393,10 +394,10 @@ export default function ProviderProfileEdit() {
 				},
 			});
 			setHasLicenseDocument(true);
-			Alert.alert(t("common.success"), t("common.documentUploadedSecurely"));
+			showSuccessToast("common.documentUploadedSecurely");
 		} catch (error) {
 			console.error("Failed to upload professional document:", error);
-			Alert.alert(t("common.error"), t("common.failedToUploadDocument"));
+			showErrorToast("common.failedToUploadDocument");
 		}
 	};
 
@@ -408,10 +409,10 @@ export default function ProviderProfileEdit() {
 		try {
 			await deleteLicenseDocumentMutation.mutateAsync(healthcareProvider.id);
 			setHasLicenseDocument(false);
-			Alert.alert(t("common.success"), t("common.documentRemoved"));
+			showSuccessToast("common.documentRemoved");
 		} catch (error) {
 			console.error("Failed to delete professional document:", error);
-			Alert.alert(t("common.error"), t("common.failedToRemoveDocument"));
+			showErrorToast("common.failedToRemoveDocument");
 		}
 	};
 
@@ -451,10 +452,10 @@ export default function ProviderProfileEdit() {
 					type: asset.mimeType || "image/jpeg",
 				},
 			});
-			Alert.alert(t("common.success"), t("common.clinicPhotoUploaded"));
+			showSuccessToast("common.clinicPhotoUploaded");
 		} catch (error) {
 			console.error("Failed to upload clinic photo:", error);
-			Alert.alert(t("common.error"), t("common.failedToUploadClinicPhoto"));
+			showErrorToast("common.failedToUploadClinicPhoto");
 		}
 	};
 
@@ -468,10 +469,10 @@ export default function ProviderProfileEdit() {
 				providerId: healthcareProvider.id,
 				index,
 			});
-			Alert.alert(t("common.success"), t("common.clinicPhotoRemoved"));
+			showSuccessToast("common.clinicPhotoRemoved");
 		} catch (error) {
 			console.error("Failed to delete clinic photo:", error);
-			Alert.alert(t("common.error"), t("common.failedToRemoveClinicPhoto"));
+			showErrorToast("common.failedToRemoveClinicPhoto");
 		}
 	};
 
