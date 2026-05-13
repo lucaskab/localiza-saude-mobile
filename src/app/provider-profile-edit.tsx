@@ -45,11 +45,13 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { Input } from "@/components/ui/input";
+import { SelectInput } from "@/components/ui/select-input";
 import {
 	SERVICE_MODALITY_VALUES,
 	serviceModalityOptions,
 } from "@/constants/service-modalities";
 import { useAuth } from "@/contexts/auth";
+import { useProfessionalCouncils } from "@/hooks/use-professional-councils";
 import {
 	useDeleteClinicPhoto,
 	useDeleteLicenseDocument,
@@ -68,7 +70,7 @@ const profileFormSchema = z.object({
 	specialty: z.string(),
 	professionalCategory: z.string().nullable(),
 	professionalId: z.string().nullable(),
-	licenseCouncil: z.string().nullable(),
+	professionalCouncilId: z.string().nullable(),
 	licenseState: z.string().nullable(),
 	bio: z.string().nullable(),
 	approach: z.string().nullable(),
@@ -122,7 +124,7 @@ const emptyProfileForm: ProfileFormData = {
 	specialty: "",
 	professionalCategory: null,
 	professionalId: null,
-	licenseCouncil: null,
+	professionalCouncilId: null,
 	licenseState: null,
 	bio: null,
 	approach: null,
@@ -183,6 +185,13 @@ export default function ProviderProfileEdit() {
 	const deleteLicenseDocumentMutation = useDeleteLicenseDocument();
 	const uploadClinicPhotoMutation = useUploadClinicPhoto();
 	const deleteClinicPhotoMutation = useDeleteClinicPhoto();
+	const { data: professionalCouncilsData } = useProfessionalCouncils();
+	const professionalCouncilOptions =
+		professionalCouncilsData?.professionalCouncils.map((council) => ({
+			value: council.id,
+			label: `${council.acronym} - ${council.profession}`,
+			description: council.name,
+		})) || [];
 
 	const {
 		control,
@@ -225,7 +234,7 @@ export default function ProviderProfileEdit() {
 			specialty: healthcareProvider?.specialty || "",
 			professionalCategory: healthcareProvider?.professionalCategory || null,
 			professionalId: healthcareProvider?.professionalId || null,
-			licenseCouncil: healthcareProvider?.licenseCouncil || null,
+			professionalCouncilId: healthcareProvider?.professionalCouncilId || null,
 			licenseState: healthcareProvider?.licenseState || null,
 			bio: healthcareProvider?.bio || null,
 			approach: healthcareProvider?.approach || null,
@@ -299,7 +308,7 @@ export default function ProviderProfileEdit() {
 					professionalCategory:
 						parsed.data.professionalCategory?.trim() || null,
 					professionalId: parsed.data.professionalId?.trim() || null,
-					licenseCouncil: parsed.data.licenseCouncil?.trim() || null,
+					professionalCouncilId: parsed.data.professionalCouncilId || null,
 					licenseState: parsed.data.licenseState?.trim() || null,
 					bio: parsed.data.bio?.trim() || null,
 					approach: parsed.data.approach?.trim() || null,
@@ -657,12 +666,25 @@ export default function ProviderProfileEdit() {
 									</View>
 								)}
 							/>
-							<FormInput
+							<Controller
 								control={control}
-								icon={ShieldCheck}
-								name="licenseCouncil"
-								label={`${t("common.professionalCouncil")} *`}
-								placeholder={t("common.eGCRMCRPCRN")}
+								name="professionalCouncilId"
+								render={({ field }) => (
+									<View style={styles.fieldGroup}>
+										<Text style={styles.fieldLabel}>
+											{t("common.professionalCouncil")}{" "}
+											<Text style={styles.required}>*</Text>
+										</Text>
+										<SelectInput
+											leftIcon={ShieldCheck}
+											value={field.value}
+											onChange={field.onChange}
+											options={professionalCouncilOptions}
+											placeholder={t("common.selectProfessionalCouncil")}
+											title={t("common.professionalCouncil")}
+										/>
+									</View>
+								)}
 							/>
 							<FormInput
 								control={control}

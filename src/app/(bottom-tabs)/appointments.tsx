@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
 import { useAppointmentsByCustomer } from "@/hooks/use-appointments";
 import { useGetOrCreateConversation } from "@/hooks/use-conversations";
+import { canDisplayProviderPrices } from "@/lib/provider-pricing";
 import type { Appointment } from "@/types/appointment";
 import { getAppointmentPatientName } from "@/utils/appointments";
 
@@ -359,7 +360,9 @@ export default function Appointments() {
 												strokeWidth={2}
 											/>
 											<Text style={styles.detailText}>
-												{formatPrice(appointment.totalPriceCents)}
+												{canDisplayProviderPrices(appointment.healthcareProvider)
+													? formatPrice(appointment.totalPriceCents)
+													: t("common.priceOnRequest")}
 											</Text>
 										</View>
 									</View>

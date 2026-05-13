@@ -171,6 +171,8 @@ export const ptBR = {
     eGDraAnaSouza: "ex.: Dra. Ana Souza",
     eGHealthcareProfession: "Médico, psicólogo, nutricionista...",
     eGCRMCRPCRN: "ex.: CRM, CRP, CRN",
+    selectProfessionalCouncil: "Selecione o conselho",
+    priceOnRequest: "Valor sob consulta",
     error: "Erro",
     errorLoadingAppointments: "Erro ao carregar consultas",
     excellent: "Excelente",

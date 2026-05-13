@@ -187,7 +187,7 @@ interface UpdateHealthcareProviderData {
 	specialty?: string | null;
 	professionalCategory?: string | null;
 	professionalId?: string | null;
-	licenseCouncil?: string | null;
+	professionalCouncilId?: string | null;
 	licenseState?: string | null;
 	bio?: string | null;
 	approach?: string | null;

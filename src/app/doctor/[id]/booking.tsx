@@ -45,6 +45,7 @@ import {
 	useScheduleExceptionsByProvider,
 	useSchedulesByProvider,
 } from "@/hooks/use-schedules";
+import { canDisplayProviderPrices } from "@/lib/provider-pricing";
 import { TimeSlotSelector } from "@/components/booking-screen";
 import { getErrorMessage } from "@/services/api";
 import { showErrorMessageToast, showSuccessToast } from "@/services/toast";
@@ -233,6 +234,7 @@ export default function Booking() {
 		patientProfilesLoading;
 
 	const provider = providerData?.healthcareProvider;
+	const canShowPrices = canDisplayProviderPrices(provider);
 	const procedures = proceduresData?.procedures || [];
 	const selectedProcedures = procedures.filter((p) =>
 		procedureIds.includes(p.id),
@@ -511,7 +513,11 @@ export default function Booking() {
 								/>
 								<Text style={styles.statText}>{totalDuration} min</Text>
 							</View>
-							<Text style={styles.priceText}>${totalPrice.toFixed(2)}</Text>
+							<Text style={styles.priceText}>
+								{canShowPrices
+									? `$${totalPrice.toFixed(2)}`
+									: t("common.priceOnRequest")}
+							</Text>
 						</View>
 					</View>
 				</View>

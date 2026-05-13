@@ -43,6 +43,18 @@ export interface HealthcareProviderFaq {
 	updatedAt?: string;
 }
 
+export interface ProfessionalCouncil {
+	id: string;
+	acronym: string;
+	name: string;
+	profession: string;
+	allowsPriceDisplay: boolean;
+	priceDisplayNote?: string | null;
+	active: boolean;
+	createdAt: string;
+	updatedAt: string;
+}
+
 export interface BaseUser {
 	id: string;
 	name: string;
@@ -74,7 +86,8 @@ export type HealthcareProvider = BaseUser & {
 	specialty: string | null;
 	professionalCategory: string | null;
 	professionalId: string | null;
-	licenseCouncil: string | null;
+	professionalCouncilId: string | null;
+	professionalCouncil?: ProfessionalCouncil | null;
 	licenseState: string | null;
 	licenseDocumentFileName?: string | null;
 	licenseDocumentMimeType?: string | null;

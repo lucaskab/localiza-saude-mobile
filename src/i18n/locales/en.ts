@@ -173,6 +173,8 @@ export const en = {
     eGDraAnaSouza: "e.g., Dr. Ana Souza",
     eGHealthcareProfession: "Physician, psychologist, nutritionist...",
     eGCRMCRPCRN: "e.g., CRM, CRP, CRN",
+    selectProfessionalCouncil: "Select professional council",
+    priceOnRequest: "Price on request",
     error: "Error",
     errorLoadingAppointments: "Error loading appointments",
     excellent: "Excellent",

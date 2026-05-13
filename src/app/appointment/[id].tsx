@@ -47,6 +47,7 @@ import {
 } from "@/hooks/use-appointments";
 import { useGetOrCreateConversation } from "@/hooks/use-conversations";
 import { useAppointmentMedicalRecord } from "@/hooks/use-medical-record";
+import { canDisplayProviderPrices } from "@/lib/provider-pricing";
 import type { Appointment, AppointmentStatus } from "@/types/appointment";
 import type { MedicalRecord } from "@/types/medical-record";
 import { translationKeys, type TranslationKey } from "@/i18n/key-map";
@@ -454,6 +455,8 @@ export default function AppointmentDetails() {
 	}
 
 	const statusConfig = getStatusConfig(appointment.status);
+	const canShowPrices =
+		isHealthcareProvider || canDisplayProviderPrices(appointment.healthcareProvider);
 	const procedures = appointment.appointmentProcedures.map((ap) => ap.procedure);
 	const medicalRecord = medicalRecordData?.medicalRecord;
 	const medicalRecordFields = getMedicalRecordFields(medicalRecord);
@@ -559,7 +562,11 @@ export default function AppointmentDetails() {
 						<DetailRow
 							icon={DollarSign}
 							label={t("common.totalPrice")}
-							value={formatPrice(appointment.totalPriceCents)}
+							value={
+								canShowPrices
+									? formatPrice(appointment.totalPriceCents)
+									: t("common.priceOnRequest")
+							}
 						/>
 						<DetailRow
 							icon={HeartPulse}
@@ -683,7 +690,7 @@ export default function AppointmentDetails() {
 									value={appointment.cancellationReason}
 								/>
 							) : null}
-							{appointment.cancellationFeeCents !== null ? (
+						{canShowPrices && appointment.cancellationFeeCents !== null ? (
 								<DetailRow
 									icon={DollarSign}
 									label={t("common.estimatedCancellationFee")}
@@ -828,7 +835,7 @@ export default function AppointmentDetails() {
 									<Text style={styles.warningTitle}>
 										{t("common.cancellationPolicyWillApply")}
 									</Text>
-									{cancellationPolicyPreview.feeInCents !== null ? (
+									{canShowPrices && cancellationPolicyPreview.feeInCents !== null ? (
 										<Text style={styles.warningText}>
 											{t("common.estimatedCancellationFee")}:{" "}
 											{formatPrice(cancellationPolicyPreview.feeInCents)}
@@ -1055,7 +1062,9 @@ export default function AppointmentDetails() {
 								<View style={styles.procedureHeader}>
 									<Text style={styles.procedureName}>{procedure.name}</Text>
 									<Text style={styles.procedurePrice}>
-										{formatPrice(procedure.priceInCents)}
+										{canShowPrices
+											? formatPrice(procedure.priceInCents)
+											: t("common.priceOnRequest")}
 									</Text>
 								</View>
 								<Text style={styles.procedureMeta}>

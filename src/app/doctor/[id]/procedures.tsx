@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useHealthcareProvider } from "@/hooks/use-healthcare-providers";
 import { useProceduresByProvider } from "@/hooks/use-procedures";
+import { canDisplayProviderPrices } from "@/lib/provider-pricing";
 import type { Procedure } from "@/types/healthcare-provider";
 
 interface ProceduresFormData {
@@ -84,6 +85,7 @@ export default function SelectProcedures() {
 
 	const provider = providerData.healthcareProvider;
 	const procedures = proceduresData?.procedures || provider.procedures || [];
+	const canShowPrices = canDisplayProviderPrices(provider);
 
 	const getSelectedProceduresData = (): Procedure[] => {
 		return procedures.filter((p) => selectedProcedures.includes(p.id));
@@ -195,7 +197,9 @@ export default function SelectProcedures() {
 																{procedure.name}
 															</Text>
 															<Text style={styles.procedurePrice}>
-																${(procedure.priceInCents / 100).toFixed(2)}
+																{canShowPrices
+																	? `$${(procedure.priceInCents / 100).toFixed(2)}`
+																	: t("common.priceOnRequest")}
 															</Text>
 														</View>
 														<Text
@@ -287,7 +291,11 @@ export default function SelectProcedures() {
 									})}
 								</Text>
 							</View>
-							<Text style={styles.summaryPrice}>${totalPrice.toFixed(2)}</Text>
+							<Text style={styles.summaryPrice}>
+								{canShowPrices
+									? `$${totalPrice.toFixed(2)}`
+									: t("common.priceOnRequest")}
+							</Text>
 						</View>
 					</View>
 					<Button

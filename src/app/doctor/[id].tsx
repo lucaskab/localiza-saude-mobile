@@ -40,6 +40,7 @@ import {
 	useRatingsByProvider,
 	useUpdateRating,
 } from "@/hooks/use-ratings";
+import { canDisplayProviderPrices } from "@/lib/provider-pricing";
 import { getErrorMessage } from "@/services/api";
 import type { Rating } from "@/types/rating";
 import { translationKeys, type TranslationKey } from "@/i18n/key-map";
@@ -201,6 +202,7 @@ export default function DoctorDetails() {
 
 	// Calculate stats
 	const totalProcedures = provider.procedures.length;
+	const canShowPrices = canDisplayProviderPrices(provider);
 	const lowestPrice =
 		totalProcedures > 0
 			? Math.min(...provider.procedures.map((p) => p.priceInCents)) / 100
@@ -288,7 +290,7 @@ export default function DoctorDetails() {
 								<Text style={styles.professionalId}>
 									{t("common.licenseProfessionalId", {
 										professionalId: [
-											provider.licenseCouncil,
+											provider.professionalCouncil?.acronym,
 											provider.professionalId,
 											provider.licenseState,
 										]
@@ -385,7 +387,9 @@ export default function DoctorDetails() {
 						/>
 						<Text style={styles.statsCardLabel}>{t("common.from")}</Text>
 						<Text style={styles.statsCardValue}>
-							{lowestPrice > 0 ? `$${lowestPrice}` : t("common.nA")}
+							{canShowPrices && lowestPrice > 0
+								? `$${lowestPrice}`
+								: t("common.priceOnRequest")}
 						</Text>
 					</View>
 					<View style={styles.statsCard}>
@@ -537,7 +541,9 @@ export default function DoctorDetails() {
 									<View style={styles.procedureHeader}>
 										<Text style={styles.procedureName}>{procedure.name}</Text>
 										<Text style={styles.procedurePrice}>
-											${(procedure.priceInCents / 100).toFixed(2)}
+											{canShowPrices
+												? `$${(procedure.priceInCents / 100).toFixed(2)}`
+												: t("common.priceOnRequest")}
 										</Text>
 									</View>
 									{procedure.description && (
