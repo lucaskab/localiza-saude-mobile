@@ -123,6 +123,7 @@ export type HealthcareProvider = BaseUser & {
 	cancellationPolicyPercentage: number | null;
 	cancellationPolicyRequiresJustification: boolean;
 	clinicPhotos: string[];
+	birthdayGreetingEmailEnabled: boolean;
 	termsAcceptedAt?: string | null;
 	lgpdConsentAt?: string | null;
 	professionalResponsibilityAcceptedAt?: string | null;

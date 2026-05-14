@@ -92,6 +92,7 @@ const profileFormSchema = z.object({
 	cancellationPolicyFixedFee: z.string().nullable(),
 	cancellationPolicyPercentage: z.string().nullable(),
 	cancellationPolicyRequiresJustification: z.boolean(),
+	birthdayGreetingEmailEnabled: z.boolean(),
 	termsAccepted: z.boolean(),
 	lgpdConsent: z.boolean(),
 	professionalResponsibilityAccepted: z.boolean(),
@@ -112,6 +113,7 @@ type ProfileTextField = Exclude<
 	| "serviceModalities"
 	| "cancellationPolicyEnabled"
 	| "cancellationPolicyRequiresJustification"
+	| "birthdayGreetingEmailEnabled"
 	| "faqs"
 >;
 
@@ -143,6 +145,7 @@ const emptyProfileForm: ProfileFormData = {
 	cancellationPolicyFixedFee: null,
 	cancellationPolicyPercentage: null,
 	cancellationPolicyRequiresJustification: false,
+	birthdayGreetingEmailEnabled: false,
 	termsAccepted: false,
 	lgpdConsent: false,
 	professionalResponsibilityAccepted: false,
@@ -265,6 +268,9 @@ export default function ProviderProfileEdit() {
 			cancellationPolicyRequiresJustification: Boolean(
 				healthcareProvider?.cancellationPolicyRequiresJustification,
 			),
+			birthdayGreetingEmailEnabled: Boolean(
+				healthcareProvider?.birthdayGreetingEmailEnabled,
+			),
 			termsAccepted: Boolean(healthcareProvider?.termsAcceptedAt),
 			lgpdConsent: Boolean(healthcareProvider?.lgpdConsentAt),
 			professionalResponsibilityAccepted: Boolean(
@@ -346,6 +352,8 @@ export default function ProviderProfileEdit() {
 					cancellationPolicyRequiresJustification:
 						parsed.data.cancellationPolicyEnabled &&
 						parsed.data.cancellationPolicyRequiresJustification,
+					birthdayGreetingEmailEnabled:
+						parsed.data.birthdayGreetingEmailEnabled,
 					termsAcceptedAt: toAcceptanceDate(
 						parsed.data.termsAccepted,
 						healthcareProvider.termsAcceptedAt,
@@ -1021,6 +1029,26 @@ export default function ProviderProfileEdit() {
 							>
 								{t("common.manageClinic")}
 							</Button>
+							<Controller
+								control={control}
+								name="birthdayGreetingEmailEnabled"
+								render={({ field }) => (
+									<View style={styles.complianceRow}>
+										<Checkbox
+											checked={Boolean(field.value)}
+											onCheckedChange={field.onChange}
+										/>
+										<View style={styles.complianceTextContainer}>
+											<Text style={styles.complianceTitle}>
+												{t("common.birthdayGreetingEmailEnabled")}
+											</Text>
+											<Text style={styles.complianceDescription}>
+												{t("common.birthdayGreetingEmailDescription")}
+											</Text>
+										</View>
+									</View>
+								)}
+							/>
 							<FormInput
 								control={control}
 								icon={MapPin}

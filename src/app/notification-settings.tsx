@@ -1,5 +1,5 @@
-import { Bell, BellRing } from "lucide-react-native";
-import { useMemo, useState } from "react";
+import { Bell, BellRing, Mail, Smartphone } from "lucide-react-native";
+import { useState } from "react";
 import {
 	ActivityIndicator,
 	Alert,
@@ -53,25 +53,35 @@ const notificationOptions: {
 	},
 ];
 
+const defaultPreference = (type: NotificationType): NotificationPreference => ({
+	type,
+	pushEnabled: true,
+	emailEnabled: false,
+});
+
 const buildPreferences = (
 	preferences: NotificationPreference[],
 	type: NotificationType,
+	channel: "pushEnabled" | "emailEnabled",
 	enabled: boolean,
 ) => {
-	const preferenceMap = new Map(
-		notificationOptions.map((option) => [option.type, true]),
-	);
+	return notificationOptions.map((option) => {
+		const currentPreference =
+			preferences.find((preference) => preference.type === option.type) ||
+			defaultPreference(option.type);
 
-	for (const preference of preferences) {
-		preferenceMap.set(preference.type, preference.enabled);
-	}
-
-	preferenceMap.set(type, enabled);
-
-	return notificationOptions.map((option) => ({
-		type: option.type,
-		enabled: preferenceMap.get(option.type) ?? true,
-	}));
+		return {
+			type: option.type,
+			pushEnabled:
+				option.type === type && channel === "pushEnabled"
+					? enabled
+					: currentPreference.pushEnabled,
+			emailEnabled:
+				option.type === type && channel === "emailEnabled"
+					? enabled
+					: currentPreference.emailEnabled,
+		};
+	});
 };
 
 export default function NotificationSettings() {
@@ -90,16 +100,23 @@ export default function NotificationSettings() {
 	} = useNotificationPreferences();
 	const updatePreferences = useUpdateNotificationPreferences();
 
-	const preferences = useMemo(() => data?.preferences ?? [], [data?.preferences]);
+	const preferences = data?.preferences ?? [];
 
-	const isPreferenceEnabled = (type: NotificationType) => {
-		return preferences.find((preference) => preference.type === type)?.enabled ?? true;
+	const getPreference = (type: NotificationType) => {
+		return (
+			preferences.find((preference) => preference.type === type) ||
+			defaultPreference(type)
+		);
 	};
 
-	const handleToggle = async (type: NotificationType, enabled: boolean) => {
+	const handleToggle = async (
+		type: NotificationType,
+		channel: "pushEnabled" | "emailEnabled",
+		enabled: boolean,
+	) => {
 		try {
 			await updatePreferences.mutateAsync({
-				preferences: buildPreferences(preferences, type, enabled),
+				preferences: buildPreferences(preferences, type, channel, enabled),
 			});
 		} catch (error) {
 			Alert.alert(t("common.error"), getErrorMessage(error));
@@ -197,7 +214,9 @@ export default function NotificationSettings() {
 				{!isLoading && !isError ? (
 					<View style={styles.menuList}>
 						{notificationOptions.map((option) => {
-							const enabled = isPreferenceEnabled(option.type);
+							const preference = getPreference(option.type);
+							const enabled =
+								preference.pushEnabled || preference.emailEnabled;
 
 							return (
 								<View
@@ -227,16 +246,64 @@ export default function NotificationSettings() {
 											{t(option.description)}
 										</Text>
 									</View>
-									<Switch
-										value={enabled}
-										disabled={updatePreferences.isPending}
-										trackColor={{
-											false: theme.colors.secondary,
-											true: theme.colors.primary,
-										}}
-										thumbColor={theme.colors.primaryForeground}
-										onValueChange={(value) => handleToggle(option.type, value)}
-									/>
+									<View style={styles.channelList}>
+										<View style={styles.channelItem}>
+											<View style={styles.channelLabelRow}>
+												<Smartphone
+													size={14}
+													color={theme.colors.primary}
+													strokeWidth={2}
+												/>
+												<Text style={styles.channelLabel}>
+													{t("common.push")}
+												</Text>
+											</View>
+											<Switch
+												value={preference.pushEnabled}
+												disabled={updatePreferences.isPending}
+												trackColor={{
+													false: theme.colors.secondary,
+													true: theme.colors.primary,
+												}}
+												thumbColor={theme.colors.primaryForeground}
+												onValueChange={(value) =>
+													handleToggle(
+														option.type,
+														"pushEnabled",
+														value,
+													)
+												}
+											/>
+										</View>
+										<View style={styles.channelItem}>
+											<View style={styles.channelLabelRow}>
+												<Mail
+													size={14}
+													color={theme.colors.primary}
+													strokeWidth={2}
+												/>
+												<Text style={styles.channelLabel}>
+													{t("common.email")}
+												</Text>
+											</View>
+											<Switch
+												value={preference.emailEnabled}
+												disabled={updatePreferences.isPending}
+												trackColor={{
+													false: theme.colors.secondary,
+													true: theme.colors.primary,
+												}}
+												thumbColor={theme.colors.primaryForeground}
+												onValueChange={(value) =>
+													handleToggle(
+														option.type,
+														"emailEnabled",
+														value,
+													)
+												}
+											/>
+										</View>
+									</View>
 								</View>
 							);
 						})}
@@ -330,6 +397,30 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	menuContent: {
 		flex: 1,
+	},
+	channelList: {
+		gap: theme.gap(1),
+		minWidth: 132,
+	},
+	channelItem: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		gap: theme.gap(1.5),
+		paddingHorizontal: theme.gap(1.5),
+		paddingVertical: theme.gap(1),
+		borderRadius: theme.radius.md,
+		backgroundColor: theme.colors.secondary,
+	},
+	channelLabelRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(1),
+	},
+	channelLabel: {
+		fontSize: 12,
+		fontWeight: "600",
+		color: theme.colors.foreground,
 	},
 	menuLabel: {
 		fontSize: 14,

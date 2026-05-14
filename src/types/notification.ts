@@ -8,7 +8,8 @@ export type PushPlatform = "IOS" | "ANDROID" | "WEB" | "UNKNOWN";
 
 export interface NotificationPreference {
 	type: NotificationType;
-	enabled: boolean;
+	pushEnabled: boolean;
+	emailEnabled: boolean;
 }
 
 export interface GetNotificationPreferencesResponse {

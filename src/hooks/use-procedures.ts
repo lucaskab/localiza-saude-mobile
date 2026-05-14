@@ -208,6 +208,7 @@ interface UpdateHealthcareProviderData {
 	cancellationPolicyFixedFeeCents?: number | null;
 	cancellationPolicyPercentage?: number | null;
 	cancellationPolicyRequiresJustification?: boolean;
+	birthdayGreetingEmailEnabled?: boolean;
 	termsAcceptedAt?: string | null;
 	lgpdConsentAt?: string | null;
 	professionalResponsibilityAcceptedAt?: string | null;
