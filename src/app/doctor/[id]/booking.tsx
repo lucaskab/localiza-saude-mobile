@@ -30,6 +30,12 @@ import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
+	buildRecurrencePayload,
+	createEmptyRecurrence,
+	RecurrenceFields,
+	type RecurrenceFormValue,
+} from "@/components/appointments/recurrence-fields";
+import {
 	SERVICE_MODALITIES,
 	SERVICE_MODALITY_VALUES,
 	serviceModalityOptions,
@@ -163,6 +169,8 @@ const formatUtcDateForDisplay = (date: Date) =>
 		timeZone: "UTC",
 	});
 
+const todayDateString = () => formatUtcDateForApi(new Date());
+
 export default function Booking() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const router = useRouter();
@@ -170,6 +178,9 @@ export default function Booking() {
 	const { t } = useTranslation();
 	const insets = useSafeAreaInsets();
 	const [waitlistLoadingSlot, setWaitlistLoadingSlot] = useState("");
+	const [recurrence, setRecurrence] = useState<RecurrenceFormValue>(
+		createEmptyRecurrence(todayDateString(), ""),
+	);
 
 	// Setup React Hook Form
 	const { control, handleSubmit, watch, setValue } = useForm<BookingFormData>({
@@ -235,6 +246,7 @@ export default function Booking() {
 
 	const provider = providerData?.healthcareProvider;
 	const canShowPrices = canDisplayProviderPrices(provider);
+	const bookingAvailabilityDays = provider?.bookingAvailabilityDays ?? 60;
 	const procedures = proceduresData?.procedures || [];
 	const selectedProcedures = procedures.filter((p) =>
 		procedureIds.includes(p.id),
@@ -280,9 +292,8 @@ export default function Booking() {
 	const { markedDates, minDate, maxDate } = useMemo(() => {
 		const today = parseCalendarDateAsUtc(formatUtcDateForApi(new Date()));
 
-		// Max date is 3 months from now
 		const max = new Date();
-		max.setMonth(max.getMonth() + 3);
+		max.setUTCDate(max.getUTCDate() + bookingAvailabilityDays);
 
 		const marked: {
 			[key: string]: {
@@ -310,9 +321,7 @@ export default function Booking() {
 			};
 		}
 
-		// Mark dates based on provider schedule
-		// Generate next 90 days
-		for (let i = 0; i < 90; i++) {
+		for (let i = 0; i <= bookingAvailabilityDays; i++) {
 			const date = new Date(today);
 			date.setUTCDate(date.getUTCDate() + i);
 			const dayOfWeek = date.getUTCDay();
@@ -344,7 +353,29 @@ export default function Booking() {
 			minDate: formatUtcDateForApi(today),
 			maxDate: formatUtcDateForApi(max),
 		};
-	}, [activeSchedules, scheduleExceptionsData, selectedDate, theme.colors.primary]);
+	}, [
+		activeSchedules,
+		bookingAvailabilityDays,
+		scheduleExceptionsData,
+		selectedDate,
+		theme.colors.primary,
+	]);
+
+	useEffect(() => {
+		setRecurrence((current) => ({
+			...current,
+			weeklySlots: current.weeklySlots.length
+				? current.weeklySlots.map((slot, index) =>
+						index === 0
+							? {
+									dayOfWeek: String(selectedDate.getUTCDay()),
+									startTime: selectedTime,
+								}
+							: slot,
+					)
+				: current.weeklySlots,
+		}));
+	}, [selectedDate, selectedTime]);
 
 	const onSubmit = async (data: BookingFormData) => {
 		const parsed = bookingFormSchema.safeParse(data);
@@ -360,20 +391,6 @@ export default function Booking() {
 
 		try {
 			const formData = parsed.data;
-			// Parse time (e.g., "2:00 PM" -> hours and minutes)
-			const [time, period] = formData.selectedTime.split(" ");
-			const [hours, minutes] = time.split(":").map(Number);
-			const hour24 =
-				period === "PM" && hours !== 12
-					? hours + 12
-					: period === "AM" && hours === 12
-						? 0
-						: hours;
-
-			// Create datetime
-			const appointmentDate = new Date(formData.selectedDate);
-			appointmentDate.setUTCHours(hour24, minutes, 0, 0);
-
 			const patient =
 				formData.bookingFor === "self"
 					? ({ type: "SELF" } as const)
@@ -408,11 +425,15 @@ export default function Booking() {
 
 			await createAppointment.mutateAsync({
 				healthcareProviderId: id,
-				scheduledAt: appointmentDate.toISOString(),
+				scheduledAt: buildUtcDateTimeISO(
+					formatUtcDateForApi(formData.selectedDate),
+					formData.selectedTime,
+				),
 				procedureIds,
 				serviceModality: formData.selectedServiceModality,
 				notes: formData.notes,
 				customer: patient,
+				recurrence: buildRecurrencePayload(recurrence),
 			});
 
 			showSuccessToast("common.yourAppointmentHasBeenBookedSuccessfully");
@@ -540,6 +561,19 @@ export default function Booking() {
 						</View>
 					</View>
 				)}
+
+				<View style={styles.section}>
+					<Text style={styles.sectionTitle}>{t("common.recurringAppointment")}</Text>
+					<Text style={styles.sectionSubtitle}>
+						{t("common.reserveRecurringTimesForThisProvider")}
+					</Text>
+					<RecurrenceFields
+						baseDate={formattedDate}
+						baseTime={selectedTime}
+						value={recurrence}
+						onChange={setRecurrence}
+					/>
+				</View>
 
 				{/* Patient */}
 				<View style={styles.section}>

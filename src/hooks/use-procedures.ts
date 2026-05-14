@@ -200,6 +200,7 @@ interface UpdateHealthcareProviderData {
 	homeCareRadiusKm?: number | null;
 	acceptedInsurance?: string[];
 	paymentMethods?: string[];
+	bookingAvailabilityDays?: number | null;
 	cancellationPolicy?: string | null;
 	cancellationPolicyEnabled?: boolean;
 	cancellationPolicyHoursBefore?: number | null;

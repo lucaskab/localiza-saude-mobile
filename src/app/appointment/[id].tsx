@@ -36,14 +36,21 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
+import {
+	buildRecurrencePayload,
+	RecurrenceFields,
+	type RecurrenceFormValue,
+} from "@/components/appointments/recurrence-fields";
 import { getServiceModalityLabelKey } from "@/constants/service-modalities";
 import { useAuth } from "@/contexts/auth";
 import {
 	useAppointment,
+	useDeleteAppointmentRecurringSeries,
 	useRequestAppointmentReschedule,
 	useRespondAppointmentReschedule,
 	useTimeSlots,
 	useUpdateAppointment,
+	useUpdateAppointmentRecurringSeries,
 } from "@/hooks/use-appointments";
 import { useGetOrCreateConversation } from "@/hooks/use-conversations";
 import { useAppointmentMedicalRecord } from "@/hooks/use-medical-record";
@@ -144,6 +151,16 @@ function getCancellationPolicyPreview(appointment?: Appointment) {
 }
 
 const todayDateString = () => new Date().toISOString().split("T")[0] || "";
+
+const getBookingWindowMaxDate = (bookingAvailabilityDays?: number | null) => {
+	const days = Math.min(Math.max(bookingAvailabilityDays ?? 60, 1), 365);
+	const date = new Date();
+	date.setUTCDate(date.getUTCDate() + days);
+	return date.toISOString().split("T")[0] || "";
+};
+
+const weekDayLabel = (dayOfWeek: number) =>
+	["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][dayOfWeek] || "Dia";
 
 const getStatusConfig = (status: AppointmentStatus) => {
 	switch (status) {
@@ -271,18 +288,30 @@ export default function AppointmentDetails() {
 	const { isHealthcareProvider, isCustomer } = useAuth();
 	const [showRescheduleForm, setShowRescheduleForm] = useState(false);
 	const [showCancellationForm, setShowCancellationForm] = useState(false);
+	const [showRecurringEditor, setShowRecurringEditor] = useState(false);
 	const [cancellationReason, setCancellationReason] = useState("");
 	const [rescheduleDate, setRescheduleDate] = useState("");
 	const [rescheduleTime, setRescheduleTime] = useState("");
 	const [rescheduleReason, setRescheduleReason] = useState("");
+	const [recurringForm, setRecurringForm] = useState<RecurrenceFormValue>({
+		enabled: true,
+		isIndefinite: false,
+		endsOn: "",
+		weeklySlots: [],
+	});
 
 	const { data: appointmentData, isLoading, error } = useAppointment(id || "", !!id);
 	const updateAppointmentMutation = useUpdateAppointment();
 	const requestRescheduleMutation = useRequestAppointmentReschedule();
 	const respondRescheduleMutation = useRespondAppointmentReschedule();
+	const updateRecurringSeriesMutation = useUpdateAppointmentRecurringSeries();
+	const deleteRecurringSeriesMutation = useDeleteAppointmentRecurringSeries();
 	const createConversationMutation = useGetOrCreateConversation();
 
 	const appointment = appointmentData?.appointment;
+	const bookingWindowMaxDate = getBookingWindowMaxDate(
+		appointment?.healthcareProvider.bookingAvailabilityDays,
+	);
 	const rescheduleProcedureIds =
 		appointment?.appointmentProcedures.map((item) => item.procedureId) || [];
 	const { data: timeSlotsData, isLoading: isLoadingTimeSlots } = useTimeSlots({
@@ -408,6 +437,57 @@ export default function AppointmentDetails() {
 		} catch (rescheduleError) {
 			console.error("Failed to reschedule appointment:", rescheduleError);
 			showErrorToast("common.failedToRescheduleAppointment");
+		}
+	};
+
+	const handleOpenRecurringEditor = () => {
+		if (!appointment?.recurringSeries) return;
+
+		setRecurringForm({
+			enabled: true,
+			isIndefinite: appointment.recurringSeries.isIndefinite,
+			endsOn: appointment.recurringSeries.endsOn?.slice(0, 10) || "",
+			weeklySlots: appointment.recurringSeries.weeklySlots.map((slot) => ({
+				dayOfWeek: String(slot.dayOfWeek),
+				startTime: slot.startTime,
+			})),
+		});
+		setShowRecurringEditor((current) => !current);
+	};
+
+	const handleSaveRecurringSeries = async () => {
+		if (!appointment?.recurringSeries) return;
+
+		const recurrence = buildRecurrencePayload(recurringForm);
+		if (!recurrence) return;
+
+		try {
+			await updateRecurringSeriesMutation.mutateAsync({
+				seriesId: appointment.recurringSeries.id,
+				data: {
+					notes: appointment.notes,
+					recurrence,
+				},
+			});
+			setShowRecurringEditor(false);
+			showSuccessToast("common.scheduleSavedSuccessfully");
+		} catch (error) {
+			console.error("Failed to update recurring series:", error);
+			showErrorToast("common.failedToSaveSchedulePleaseTryAgain");
+		}
+	};
+
+	const handleCancelRecurringSeries = async () => {
+		if (!appointment?.recurringSeries) return;
+
+		try {
+			await deleteRecurringSeriesMutation.mutateAsync(
+				appointment.recurringSeries.id,
+			);
+			showSuccessToast("common.appointmentCancelled");
+		} catch (error) {
+			console.error("Failed to cancel recurring series:", error);
+			showErrorToast("common.failedToUpdateAppointmentStatusPleaseTryAgain");
 		}
 	};
 
@@ -751,6 +831,58 @@ export default function AppointmentDetails() {
 					</View>
 				) : null}
 
+				{appointment.recurringSeries ? (
+					<View style={styles.section}>
+						<Text style={styles.sectionTitle}>Recorrência</Text>
+						<View style={styles.infoCard}>
+							<Text style={styles.notesText}>
+								{appointment.recurringSeries.isIndefinite
+									? "Essa consulta faz parte de uma recorrência sem data para encerrar."
+									: `Essa consulta faz parte de uma recorrência até ${formatShortDate(
+											appointment.recurringSeries.endsOn || appointment.scheduledAt,
+										)}.`}
+							</Text>
+							<View style={styles.slotGrid}>
+								{appointment.recurringSeries.weeklySlots.map((slot) => (
+									<View key={slot.id} style={styles.timeSlot}>
+										<Text style={styles.timeSlotText}>
+											{weekDayLabel(slot.dayOfWeek)} · {slot.startTime}
+										</Text>
+									</View>
+								))}
+							</View>
+							<View style={styles.statusActions}>
+								<Button variant="outline" onPress={handleOpenRecurringEditor}>
+									Editar recorrência
+								</Button>
+								<Button
+									variant="destructive"
+									loading={deleteRecurringSeriesMutation.isPending}
+									onPress={handleCancelRecurringSeries}
+								>
+									Encerrar recorrência
+								</Button>
+							</View>
+							{showRecurringEditor ? (
+								<View style={styles.recurringEditor}>
+									<RecurrenceFields
+										baseDate={appointment.scheduledAt.slice(0, 10)}
+										baseTime={appointment.scheduledAt.slice(11, 16)}
+										value={recurringForm}
+										onChange={setRecurringForm}
+									/>
+									<Button
+										loading={updateRecurringSeriesMutation.isPending}
+										onPress={handleSaveRecurringSeries}
+									>
+										Salvar recorrência
+									</Button>
+								</View>
+							) : null}
+						</View>
+					</View>
+				) : null}
+
 				{showRescheduleForm ? (
 					<View style={styles.section}>
 						<Text style={styles.sectionTitle}>Escolher novo horário</Text>
@@ -758,6 +890,7 @@ export default function AppointmentDetails() {
 							<DatePickerInput
 								value={rescheduleDate}
 								minDate={todayDateString()}
+								maxDate={bookingWindowMaxDate}
 								onChange={(dateString) => {
 									setRescheduleDate(dateString);
 									setRescheduleTime("");
@@ -1446,6 +1579,9 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	rescheduleSlots: {
 		gap: theme.gap(1.5),
+	},
+	recurringEditor: {
+		gap: theme.gap(2),
 	},
 	slotGrid: {
 		flexDirection: "row",

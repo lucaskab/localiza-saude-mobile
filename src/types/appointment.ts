@@ -41,6 +41,34 @@ export interface AppointmentRescheduleRequest {
 	updatedAt: string;
 }
 
+export interface AppointmentRecurringWeeklySlot {
+	id: string;
+	seriesId: string;
+	dayOfWeek: number;
+	startTime: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface AppointmentRecurringSeries {
+	id: string;
+	customerId: string | null;
+	patientProfileId: string | null;
+	healthcareProviderId: string;
+	createdByUserId: string;
+	serviceModality: ServiceModality;
+	notes: string | null;
+	startsOn: string;
+	endsOn: string | null;
+	isIndefinite: boolean;
+	isActive: boolean;
+	generatedUntil: string | null;
+	cancelledAt: string | null;
+	createdAt: string;
+	updatedAt: string;
+	weeklySlots: AppointmentRecurringWeeklySlot[];
+}
+
 export interface Appointment {
 	id: string;
 	customerId: string | null;
@@ -65,6 +93,11 @@ export interface Appointment {
 	cancelledAt: string | null;
 	cancelledByUserId: string | null;
 	cancelledByUser: BaseUser | null;
+	recurringSeriesId: string | null;
+	recurringSeries: AppointmentRecurringSeries | null;
+	recurringRuleId: string | null;
+	recurringRule: AppointmentRecurringWeeklySlot | null;
+	recurringGeneratedAt: string | null;
 	createdAt: string;
 	updatedAt: string;
 	appointmentProcedures: AppointmentProcedure[];
@@ -76,6 +109,15 @@ export type CreateAppointmentPatient =
 	| { type: "EXISTING_PROFILE"; patientProfileId: string }
 	| { type: "NEW_PROFILE"; profile: PatientProfileData };
 
+export interface AppointmentRecurrenceData {
+	isIndefinite: boolean;
+	endsOn?: string | null;
+	weeklySlots: Array<{
+		dayOfWeek: number;
+		startTime: string;
+	}>;
+}
+
 export interface CreateAppointmentData {
 	healthcareProviderId?: string;
 	scheduledAt: Date | string;
@@ -83,6 +125,7 @@ export interface CreateAppointmentData {
 	serviceModality?: ServiceModality;
 	notes?: string | null;
 	customer?: CreateAppointmentPatient;
+	recurrence?: AppointmentRecurrenceData;
 }
 
 export interface GetAppointmentsResponse {
@@ -110,6 +153,15 @@ export interface UpdateAppointmentData {
 
 export interface UpdateAppointmentResponse {
 	appointment: Appointment;
+}
+
+export interface UpdateAppointmentRecurringSeriesData {
+	notes?: string | null;
+	recurrence: AppointmentRecurrenceData;
+}
+
+export interface UpdateAppointmentRecurringSeriesResponse {
+	recurringSeries: AppointmentRecurringSeries;
 }
 
 export interface RequestAppointmentRescheduleData {

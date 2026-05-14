@@ -12,6 +12,8 @@ import type {
 	RespondAppointmentRescheduleData,
 	CreateAppointmentWaitlistEntryData,
 	CreateAppointmentWaitlistEntryResponse,
+	UpdateAppointmentRecurringSeriesData,
+	UpdateAppointmentRecurringSeriesResponse,
 } from "@/types/appointment";
 import { api } from "@/services/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -404,6 +406,54 @@ export const useDeleteAppointment = () => {
 			queryClient.invalidateQueries({ queryKey: ["timeSlots"] });
 			queryClient.invalidateQueries({ queryKey: ["categories"] });
 			queryClient.invalidateQueries({ queryKey: ["healthcare-providers"] });
+		},
+	});
+};
+
+export const updateAppointmentRecurringSeries = async (
+	seriesId: string,
+	data: UpdateAppointmentRecurringSeriesData,
+): Promise<UpdateAppointmentRecurringSeriesResponse> => {
+	const { data: response } =
+		await api.patch<UpdateAppointmentRecurringSeriesResponse>(
+			`/appointment-recurring-series/${seriesId}`,
+			data,
+		);
+	return response;
+};
+
+export const useUpdateAppointmentRecurringSeries = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({
+			seriesId,
+			data,
+		}: {
+			seriesId: string;
+			data: UpdateAppointmentRecurringSeriesData;
+		}) => updateAppointmentRecurringSeries(seriesId, data),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["appointments"] });
+			queryClient.invalidateQueries({ queryKey: ["appointment"] });
+			queryClient.invalidateQueries({ queryKey: ["timeSlots"] });
+		},
+	});
+};
+
+export const deleteAppointmentRecurringSeries = async (seriesId: string) => {
+	await api.delete(`/appointment-recurring-series/${seriesId}`);
+};
+
+export const useDeleteAppointmentRecurringSeries = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: deleteAppointmentRecurringSeries,
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["appointments"] });
+			queryClient.invalidateQueries({ queryKey: ["appointment"] });
+			queryClient.invalidateQueries({ queryKey: ["timeSlots"] });
 		},
 	});
 };

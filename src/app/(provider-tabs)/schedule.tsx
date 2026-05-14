@@ -37,6 +37,7 @@ import {
 	useUpdateScheduleException,
 	useDeleteScheduleException,
 } from "@/hooks/use-schedules";
+import { useUpdateHealthcareProvider } from "@/hooks/use-procedures";
 import { translationKeys, type TranslationKey } from "@/i18n/key-map";
 import { showErrorToast, showSuccessToast } from "@/services/toast";
 import type { Schedule, ScheduleExceptionType } from "@/types/schedule";
@@ -123,6 +124,9 @@ export default function ProviderSchedule() {
 	const [exceptionEndDate, setExceptionEndDate] = useState(getTodayInputDate());
 	const [exceptionType, setExceptionType] =
 		useState<ScheduleExceptionType>("DAY_OFF");
+	const [bookingAvailabilityDays, setBookingAvailabilityDays] = useState(
+		String(healthcareProvider?.bookingAvailabilityDays ?? 60),
+	);
 	const [exceptionStartTime, setExceptionStartTime] = useState("09:00");
 	const [exceptionEndTime, setExceptionEndTime] = useState("12:00");
 	const [exceptionReason, setExceptionReason] = useState("");
@@ -150,6 +154,7 @@ export default function ProviderSchedule() {
 	const createExceptionMutation = useCreateScheduleException();
 	const updateExceptionMutation = useUpdateScheduleException();
 	const deleteExceptionMutation = useDeleteScheduleException();
+	const updateHealthcareProviderMutation = useUpdateHealthcareProvider();
 
 	const daysOfWeek: { dayOfWeek: number; label: TranslationKey }[] = [
 		{ dayOfWeek: 1, label: translationKeys.Monday },
@@ -321,6 +326,23 @@ export default function ProviderSchedule() {
 		setExceptionStartTime("09:00");
 		setExceptionEndTime("12:00");
 		setExceptionReason("");
+	};
+
+	const saveBookingWindow = async () => {
+		if (!healthcareProvider?.id) return;
+
+		try {
+			await updateHealthcareProviderMutation.mutateAsync({
+				providerId: healthcareProvider.id,
+				data: {
+					bookingAvailabilityDays: Number(bookingAvailabilityDays || 60),
+				},
+			});
+			showSuccessToast("common.scheduleSavedSuccessfully");
+		} catch (error) {
+			console.error("Failed to save booking window:", error);
+			showErrorToast("common.failedToSaveSchedulePleaseTryAgain");
+		}
 	};
 
 	const handleCreateException = async () => {
@@ -593,6 +615,32 @@ export default function ProviderSchedule() {
 					</Text>
 				</View>
 
+				<View style={styles.bookingWindowCard}>
+					<Text style={styles.sectionTitle}>
+						{t("common.bookingWindow")}
+					</Text>
+					<Text style={styles.sectionSubtitle}>
+						{t("common.chooseHowManyDaysAheadYourCalendarShouldStayOpen")}
+					</Text>
+					<View style={styles.bookingWindowRow}>
+						<View style={styles.bookingWindowInputWrap}>
+							<Input
+								value={bookingAvailabilityDays}
+								onChangeText={setBookingAvailabilityDays}
+								placeholder="60"
+								keyboardType="number-pad"
+							/>
+						</View>
+						<Button
+							onPress={saveBookingWindow}
+							loading={updateHealthcareProviderMutation.isPending}
+							style={styles.bookingWindowButton}
+						>
+							{t("common.save")}
+						</Button>
+					</View>
+				</View>
+
 				{isLoading ? (
 					<View style={styles.loadingContainer}>
 						<ActivityIndicator size="large" color={theme.colors.primary} />
@@ -825,6 +873,26 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 14,
 		color: theme.colors.mutedForeground,
 		lineHeight: 20,
+	},
+	bookingWindowCard: {
+		marginBottom: theme.gap(3),
+		backgroundColor: theme.colors.surfacePrimary,
+		padding: theme.gap(2.5),
+		borderRadius: theme.radius.xl,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		gap: theme.gap(1.5),
+	},
+	bookingWindowRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: theme.gap(1.5),
+	},
+	bookingWindowInputWrap: {
+		flex: 1,
+	},
+	bookingWindowButton: {
+		minWidth: 96,
 	},
 	loadingContainer: {
 		paddingVertical: theme.gap(8),
