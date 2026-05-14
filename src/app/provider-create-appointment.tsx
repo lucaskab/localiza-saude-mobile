@@ -10,7 +10,7 @@ import {
 	User,
 	Users,
 } from "lucide-react-native";
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
 	ActivityIndicator,
@@ -24,6 +24,12 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { z } from "zod";
+import {
+	buildRecurrencePayload,
+	createEmptyRecurrence,
+	RecurrenceFields,
+	type RecurrenceFormValue,
+} from "@/components/appointments/recurrence-fields";
 import { TimeSlotSelector } from "@/components/booking-screen";
 import { Button } from "@/components/ui/button";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
@@ -126,6 +132,82 @@ const formatUtcDateForDisplay = (date: Date) =>
 		timeZone: "UTC",
 	});
 
+function buildCalendarState({
+	activeSchedules,
+	bookingAvailabilityDays,
+	scheduleExceptions,
+	selectedDate,
+	selectedColor,
+}: {
+	activeSchedules: Array<{ dayOfWeek: number }>;
+	bookingAvailabilityDays: number;
+	scheduleExceptions: Array<{
+		date: string;
+		type: string;
+		isActive: boolean;
+		startTime: string | null;
+		endTime: string | null;
+	}>;
+	selectedDate: Date;
+	selectedColor: string;
+}) {
+	const today = parseCalendarDateAsUtc(formatUtcDateForApi(new Date()));
+	const max = new Date(today);
+	max.setUTCDate(max.getUTCDate() + bookingAvailabilityDays);
+	const availableDaysOfWeek = new Set(
+		activeSchedules.map((schedule) => schedule.dayOfWeek),
+	);
+	const marked: Record<
+		string,
+		{
+			selected?: boolean;
+			selectedColor?: string;
+			disabled?: boolean;
+			disableTouchEvent?: boolean;
+		}
+	> = {};
+
+	marked[formatUtcDateForApi(selectedDate)] = {
+		selected: true,
+		selectedColor,
+	};
+
+	for (let i = 0; i <= bookingAvailabilityDays; i++) {
+		const date = new Date(today);
+		date.setUTCDate(date.getUTCDate() + i);
+		const dayOfWeek = date.getUTCDay();
+		const dateStr = formatUtcDateForApi(date);
+		const exceptionsForDate = scheduleExceptions.filter(
+			(exception) => exception.date.slice(0, 10) === dateStr,
+		);
+		const hasDayOff = exceptionsForDate.some(
+			(exception) =>
+				exception.type === "DAY_OFF" &&
+				(!exception.startTime || !exception.endTime),
+		);
+		const hasDateSpecificAvailability = exceptionsForDate.some((exception) =>
+			["SPECIAL_HOURS", "EXTRA_SLOT"].includes(exception.type),
+		);
+
+		if (
+			hasDayOff ||
+			(!hasDateSpecificAvailability && !availableDaysOfWeek.has(dayOfWeek))
+		) {
+			marked[dateStr] = {
+				...marked[dateStr],
+				disabled: true,
+				disableTouchEvent: true,
+			};
+		}
+	}
+
+	return {
+		markedDates: marked,
+		minDate: formatUtcDateForApi(today),
+		maxDate: formatUtcDateForApi(max),
+	};
+}
+
 export default function ProviderCreateAppointment() {
 	const router = useRouter();
 	const insets = useSafeAreaInsets();
@@ -133,6 +215,9 @@ export default function ProviderCreateAppointment() {
 	const { t } = useTranslation();
 	const { healthcareProvider } = useAuth();
 	const providerId = healthcareProvider?.id || "";
+	const [recurrence, setRecurrence] = useState<RecurrenceFormValue>(
+		createEmptyRecurrence(formatUtcDateForApi(new Date()), ""),
+	);
 
 	const { control, handleSubmit, watch, setValue } =
 		useForm<ProviderAppointmentFormData>({
@@ -192,74 +277,36 @@ export default function ProviderCreateAppointment() {
 	);
 	const activeSchedules =
 		schedulesData?.schedules.filter((schedule) => schedule.isActive) || [];
-	const formattedDate = useMemo(
-		() => formatUtcDateForApi(selectedDate),
-		[selectedDate],
-	);
-	const todayDate = useMemo(() => formatUtcDateForApi(new Date()), []);
+	const formattedDate = formatUtcDateForApi(selectedDate);
+	const todayDate = formatUtcDateForApi(new Date());
+	const bookingAvailabilityDays =
+		healthcareProvider?.bookingAvailabilityDays ?? 60;
+	const activeScheduleExceptions =
+		scheduleExceptionsData?.exceptions.filter((exception) => exception.isActive) ||
+		[];
+	const { markedDates, minDate, maxDate } = buildCalendarState({
+		activeSchedules,
+		bookingAvailabilityDays,
+		scheduleExceptions: activeScheduleExceptions,
+		selectedDate,
+		selectedColor: theme.colors.primary,
+	});
 
-	const { markedDates, minDate, maxDate } = useMemo(() => {
-		const today = parseCalendarDateAsUtc(formatUtcDateForApi(new Date()));
-		const max = new Date();
-		max.setMonth(max.getMonth() + 3);
-		const availableDaysOfWeek = new Set(
-			activeSchedules.map((schedule) => schedule.dayOfWeek),
-		);
-		const activeScheduleExceptions =
-			scheduleExceptionsData?.exceptions.filter((exception) => exception.isActive) ||
-			[];
-		const marked: Record<
-			string,
-			{
-				selected?: boolean;
-				selectedColor?: string;
-				disabled?: boolean;
-				disableTouchEvent?: boolean;
-			}
-		> = {};
-
-		if (selectedDate) {
-			marked[formatUtcDateForApi(selectedDate)] = {
-				selected: true,
-				selectedColor: theme.colors.primary,
-			};
-		}
-
-		for (let i = 0; i < 90; i++) {
-			const date = new Date(today);
-			date.setUTCDate(date.getUTCDate() + i);
-			const dayOfWeek = date.getUTCDay();
-			const dateStr = formatUtcDateForApi(date);
-			const exceptionsForDate = activeScheduleExceptions.filter(
-				(exception) => exception.date.slice(0, 10) === dateStr,
-			);
-			const hasDayOff = exceptionsForDate.some(
-				(exception) =>
-					exception.type === "DAY_OFF" &&
-					(!exception.startTime || !exception.endTime),
-			);
-			const hasDateSpecificAvailability = exceptionsForDate.some((exception) =>
-				["SPECIAL_HOURS", "EXTRA_SLOT"].includes(exception.type),
-			);
-
-			if (
-				hasDayOff ||
-				(!hasDateSpecificAvailability && !availableDaysOfWeek.has(dayOfWeek))
-			) {
-				marked[dateStr] = {
-					...marked[dateStr],
-					disabled: true,
-					disableTouchEvent: true,
-				};
-			}
-		}
-
-		return {
-			markedDates: marked,
-			minDate: formatUtcDateForApi(today),
-			maxDate: formatUtcDateForApi(max),
-		};
-	}, [activeSchedules, scheduleExceptionsData, selectedDate, theme.colors.primary]);
+	useEffect(() => {
+		setRecurrence((current) => ({
+			...current,
+			weeklySlots: current.weeklySlots.length
+				? current.weeklySlots.map((slot, index) =>
+						index === 0
+							? {
+									dayOfWeek: String(selectedDate.getUTCDay()),
+									startTime: selectedTime,
+								}
+							: slot,
+					)
+				: current.weeklySlots,
+		}));
+	}, [selectedDate, selectedTime]);
 
 	const toggleProcedure = (procedureId: string) => {
 		const nextProcedureIds = selectedProcedureIds.includes(procedureId)
@@ -328,6 +375,7 @@ export default function ProviderCreateAppointment() {
 				procedureIds: formData.selectedProcedureIds,
 				notes: formData.notes,
 				customer: patient,
+				recurrence: buildRecurrencePayload(recurrence),
 			});
 
 			showSuccessToast("common.theAppointmentWasCreatedSuccessfully");
@@ -780,6 +828,18 @@ export default function ProviderCreateAppointment() {
 							selectedDate={selectedDate}
 							selectedProcedures={selectedProcedures}
 						/>
+
+						<View style={styles.section}>
+							<Text style={styles.sectionTitle}>
+								{t("common.recurringAppointment")}
+							</Text>
+							<RecurrenceFields
+								baseDate={formattedDate}
+								baseTime={selectedTime}
+								value={recurrence}
+								onChange={setRecurrence}
+							/>
+						</View>
 
 						<View style={styles.section}>
 							<Text style={styles.sectionTitle}>{t("common.appointmentNotes2")}</Text>
