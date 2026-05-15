@@ -115,6 +115,8 @@ export type HealthcareProvider = BaseUser & {
 	acceptedInsurance: string[];
 	paymentMethods: string[];
 	bookingAvailabilityDays?: number | null;
+	appointmentConfirmationReminderHoursBefore?: number | null;
+	appointmentReminderHoursBefore?: number | null;
 	cancellationPolicy: string | null;
 	cancellationPolicyEnabled: boolean;
 	cancellationPolicyHoursBefore: number | null;

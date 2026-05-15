@@ -2,13 +2,6 @@ import { useRouter } from "expo-router";
 import {
 	ArrowLeft,
 	Calendar as CalendarIcon,
-	HeartPulse,
-	Mail,
-	Phone,
-	Plus,
-	ShieldPlus,
-	User,
-	Users,
 } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -23,17 +16,26 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { z } from "zod";
 import {
-	buildRecurrencePayload,
 	createEmptyRecurrence,
 	RecurrenceFields,
 	type RecurrenceFormValue,
 } from "@/components/appointments/recurrence-fields";
 import { TimeSlotSelector } from "@/components/booking-screen";
+import {
+	buildCalendarState,
+	buildCreateAppointmentPayload,
+	formatUtcDateForApi,
+	formatUtcDateForDisplay,
+	parseCalendarDateAsUtc,
+	providerAppointmentDefaultValues,
+	providerAppointmentSchema,
+	type ProviderAppointmentFormData,
+} from "@/components/provider-appointments/form";
+import { PatientSection } from "@/components/provider-appointments/patient-section";
+import { ProceduresSection } from "@/components/provider-appointments/procedures-section";
 import { Button } from "@/components/ui/button";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/auth";
 import { useCreateAppointment } from "@/hooks/use-appointments";
@@ -45,168 +47,6 @@ import {
 } from "@/hooks/use-schedules";
 import { getErrorMessage } from "@/services/api";
 import { showErrorMessageToast, showSuccessToast } from "@/services/toast";
-
-const optionalTextSchema = z.string().transform((value) => {
-	const trimmed = value.trim();
-	return trimmed.length > 0 ? trimmed : null;
-});
-
-const optionalDateSchema = z.string().transform((value, context) => {
-	const trimmed = value.trim();
-
-	if (!trimmed) {
-		return null;
-	}
-
-	if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-		context.addIssue({
-			code: "custom",
-			message: "Use YYYY-MM-DD for date of birth",
-		});
-		return z.NEVER;
-	}
-
-	return trimmed;
-});
-
-const providerAppointmentSchema = z
-	.object({
-		selectedDate: z.date(),
-		selectedTime: z.string().min(1, "Choose an available time"),
-		selectedProcedureIds: z.array(z.string()).min(1, "Choose a procedure"),
-		patientMode: z.enum(["existing", "new"]),
-		existingPatientProfileId: z.string(),
-		patientFullName: z.string(),
-		patientDateOfBirth: optionalDateSchema,
-		patientCpf: optionalTextSchema,
-		patientPhone: optionalTextSchema,
-		patientEmail: optionalTextSchema,
-		patientGender: optionalTextSchema,
-		patientNotes: optionalTextSchema,
-		patientBloodType: optionalTextSchema,
-		patientMedications: optionalTextSchema,
-		patientAllergies: optionalTextSchema,
-		patientChronicPain: optionalTextSchema,
-		patientPreExistingConditions: optionalTextSchema,
-		patientEmergencyContactName: optionalTextSchema,
-		patientEmergencyContactPhone: optionalTextSchema,
-		notes: optionalTextSchema,
-	})
-	.superRefine((value, context) => {
-		if (value.patientMode === "existing" && !value.existingPatientProfileId) {
-			context.addIssue({
-				code: "custom",
-				path: ["existingPatientProfileId"],
-				message: "Choose a patient profile",
-			});
-		}
-
-		if (value.patientMode === "new" && !value.patientFullName.trim()) {
-			context.addIssue({
-				code: "custom",
-				path: ["patientFullName"],
-				message: "Patient name is required",
-			});
-		}
-	});
-
-type ProviderAppointmentFormData = z.input<typeof providerAppointmentSchema>;
-
-const formatUtcDateForApi = (date: Date) => {
-	const year = date.getUTCFullYear();
-	const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-	const day = String(date.getUTCDate()).padStart(2, "0");
-	return `${year}-${month}-${day}`;
-};
-
-const parseCalendarDateAsUtc = (dateString: string) => {
-	const [year, month, day] = dateString.split("-").map(Number);
-	return new Date(Date.UTC(year, (month || 1) - 1, day || 1));
-};
-
-const formatUtcDateForDisplay = (date: Date) =>
-	date.toLocaleDateString("en-US", {
-		weekday: "long",
-		month: "long",
-		day: "numeric",
-		timeZone: "UTC",
-	});
-
-function buildCalendarState({
-	activeSchedules,
-	bookingAvailabilityDays,
-	scheduleExceptions,
-	selectedDate,
-	selectedColor,
-}: {
-	activeSchedules: Array<{ dayOfWeek: number }>;
-	bookingAvailabilityDays: number;
-	scheduleExceptions: Array<{
-		date: string;
-		type: string;
-		isActive: boolean;
-		startTime: string | null;
-		endTime: string | null;
-	}>;
-	selectedDate: Date;
-	selectedColor: string;
-}) {
-	const today = parseCalendarDateAsUtc(formatUtcDateForApi(new Date()));
-	const max = new Date(today);
-	max.setUTCDate(max.getUTCDate() + bookingAvailabilityDays);
-	const availableDaysOfWeek = new Set(
-		activeSchedules.map((schedule) => schedule.dayOfWeek),
-	);
-	const marked: Record<
-		string,
-		{
-			selected?: boolean;
-			selectedColor?: string;
-			disabled?: boolean;
-			disableTouchEvent?: boolean;
-		}
-	> = {};
-
-	marked[formatUtcDateForApi(selectedDate)] = {
-		selected: true,
-		selectedColor,
-	};
-
-	for (let i = 0; i <= bookingAvailabilityDays; i++) {
-		const date = new Date(today);
-		date.setUTCDate(date.getUTCDate() + i);
-		const dayOfWeek = date.getUTCDay();
-		const dateStr = formatUtcDateForApi(date);
-		const exceptionsForDate = scheduleExceptions.filter(
-			(exception) => exception.date.slice(0, 10) === dateStr,
-		);
-		const hasDayOff = exceptionsForDate.some(
-			(exception) =>
-				exception.type === "DAY_OFF" &&
-				(!exception.startTime || !exception.endTime),
-		);
-		const hasDateSpecificAvailability = exceptionsForDate.some((exception) =>
-			["SPECIAL_HOURS", "EXTRA_SLOT"].includes(exception.type),
-		);
-
-		if (
-			hasDayOff ||
-			(!hasDateSpecificAvailability && !availableDaysOfWeek.has(dayOfWeek))
-		) {
-			marked[dateStr] = {
-				...marked[dateStr],
-				disabled: true,
-				disableTouchEvent: true,
-			};
-		}
-	}
-
-	return {
-		markedDates: marked,
-		minDate: formatUtcDateForApi(today),
-		maxDate: formatUtcDateForApi(max),
-	};
-}
 
 export default function ProviderCreateAppointment() {
 	const router = useRouter();
@@ -221,28 +61,7 @@ export default function ProviderCreateAppointment() {
 
 	const { control, handleSubmit, watch, setValue } =
 		useForm<ProviderAppointmentFormData>({
-			defaultValues: {
-				selectedDate: parseCalendarDateAsUtc(formatUtcDateForApi(new Date())),
-				selectedTime: "",
-				selectedProcedureIds: [],
-				patientMode: "new",
-				existingPatientProfileId: "",
-				patientFullName: "",
-				patientDateOfBirth: "",
-				patientCpf: "",
-				patientPhone: "",
-				patientEmail: "",
-				patientGender: "",
-				patientNotes: "",
-				patientBloodType: "",
-				patientMedications: "",
-				patientAllergies: "",
-				patientChronicPain: "",
-				patientPreExistingConditions: "",
-				patientEmergencyContactName: "",
-				patientEmergencyContactPhone: "",
-				notes: "",
-			},
+			defaultValues: providerAppointmentDefaultValues,
 		});
 
 	const selectedDate = watch("selectedDate");
@@ -329,54 +148,13 @@ export default function ProviderCreateAppointment() {
 		}
 
 		try {
-			const formData = parsed.data;
-			const [time, period] = formData.selectedTime.split(" ");
-			const [hours, minutes] = time.split(":").map(Number);
-			const hour24 =
-				period === "PM" && hours !== 12
-					? hours + 12
-					: period === "AM" && hours === 12
-						? 0
-						: hours;
-			const appointmentDate = new Date(formData.selectedDate);
-			appointmentDate.setUTCHours(hour24, minutes, 0, 0);
-
-			const patient =
-				formData.patientMode === "existing"
-					? ({
-							type: "EXISTING_PROFILE",
-							patientProfileId: formData.existingPatientProfileId,
-						} as const)
-					: ({
-							type: "NEW_PROFILE",
-							profile: {
-								fullName: formData.patientFullName.trim(),
-								dateOfBirth: formData.patientDateOfBirth,
-								cpf: formData.patientCpf,
-								phone: formData.patientPhone,
-								email: formData.patientEmail,
-								gender: formData.patientGender,
-								notes: formData.patientNotes,
-								bloodType: formData.patientBloodType,
-								medications: formData.patientMedications,
-								allergies: formData.patientAllergies,
-								chronicPain: formData.patientChronicPain,
-								preExistingConditions:
-									formData.patientPreExistingConditions,
-								emergencyContactName: formData.patientEmergencyContactName,
-								emergencyContactPhone:
-									formData.patientEmergencyContactPhone,
-							},
-						} as const);
-
-			await createAppointment.mutateAsync({
-				healthcareProviderId: providerId,
-				scheduledAt: appointmentDate.toISOString(),
-				procedureIds: formData.selectedProcedureIds,
-				notes: formData.notes,
-				customer: patient,
-				recurrence: buildRecurrencePayload(recurrence),
-			});
+			await createAppointment.mutateAsync(
+				buildCreateAppointmentPayload({
+					values: parsed.data,
+					providerId,
+					recurrence,
+				}),
+			);
 
 			showSuccessToast("common.theAppointmentWasCreatedSuccessfully");
 			router.replace("/(provider-tabs)/appointments");
@@ -437,361 +215,32 @@ export default function ProviderCreateAppointment() {
 					</View>
 				) : (
 					<>
-						<View style={styles.section}>
-							<View style={styles.sectionHeader}>
-								<Users
-									size={20}
-									color={theme.colors.primary}
-									strokeWidth={2}
-								/>
-								<Text style={styles.sectionTitle}>{t("common.patient")}</Text>
-							</View>
-
-							<View style={styles.modeGrid}>
-								<Pressable
-									style={[
-										styles.modeButton,
-										patientMode === "new" && styles.modeButtonActive,
-									]}
-									onPress={() => setValue("patientMode", "new")}
-								>
-									<Plus
-										size={18}
-										color={
-											patientMode === "new"
-												? theme.colors.primaryForeground
-												: theme.colors.foreground
-										}
-									/>
-									<Text
-										style={[
-											styles.modeButtonText,
-											patientMode === "new" &&
-												styles.modeButtonTextActive,
-										]}
-									>
-										{t("common.new")}
-									</Text>
-								</Pressable>
-								<Pressable
-									style={[
-										styles.modeButton,
-										patientMode === "existing" && styles.modeButtonActive,
-									]}
-									onPress={() => {
-										setValue("patientMode", "existing");
-										if (!existingPatientProfileId && patientProfiles[0]) {
-											setValue(
-												"existingPatientProfileId",
-												patientProfiles[0].id,
-											);
-										}
-									}}
-								>
-									<Users
-										size={18}
-										color={
-											patientMode === "existing"
-												? theme.colors.primaryForeground
-												: theme.colors.foreground
-										}
-									/>
-									<Text
-										style={[
-											styles.modeButtonText,
-											patientMode === "existing" &&
-												styles.modeButtonTextActive,
-										]}
-									>
-										{t("common.saved")}
-									</Text>
-								</Pressable>
-							</View>
-
-							{patientMode === "existing" ? (
-								<View style={styles.patientProfilesList}>
-									{patientProfiles.length === 0 ? (
-										<Text style={styles.emptyText}>
-											{t("common.noSavedPatientProfilesYet")}
-										</Text>
-									) : (
-										patientProfiles.map((profile) => {
-											const selected =
-												profile.id === existingPatientProfileId;
-
-											return (
-												<Pressable
-													key={profile.id}
-													style={[
-														styles.patientProfileOption,
-														selected &&
-															styles.patientProfileOptionActive,
-													]}
-													onPress={() =>
-														setValue(
-															"existingPatientProfileId",
-															profile.id,
-														)
-													}
-												>
-													<View style={styles.patientProfileInitial}>
-														<Text style={styles.patientProfileInitialText}>
-															{profile.fullName.charAt(0).toUpperCase()}
-														</Text>
-													</View>
-													<View style={styles.patientProfileInfo}>
-														<Text style={styles.patientProfileName}>
-															{profile.fullName}
-														</Text>
-														<Text style={styles.patientProfileMeta}>
-															{[profile.phone, profile.email]
-																.filter(Boolean)
-																.join(" • ") || t("common.patientProfile2")}
-														</Text>
-													</View>
-												</Pressable>
-											);
-										})
-									)}
-								</View>
-							) : null}
-
-							{patientMode === "new" ? (
-								<View style={styles.patientForm}>
-									<Controller
-										control={control}
-										name="patientFullName"
-										render={({ field: { value, onChange } }) => (
-											<Input
-												leftIcon={User}
-												placeholder={t("common.fullName")}
-												value={value}
-												onChangeText={onChange}
-											/>
-										)}
-									/>
-									<View style={styles.fieldRow}>
-										<Controller
-											control={control}
-											name="patientDateOfBirth"
-											render={({ field: { value, onChange } }) => (
-												<DatePickerInput
-													placeholder="common.birthDate"
-													title="common.selectBirthDate"
-													value={value}
-													onChange={onChange}
-													containerStyle={styles.fieldHalf}
-													maxDate={todayDate}
-													allowClear
-												/>
-											)}
-										/>
-										<Controller
-											control={control}
-											name="patientGender"
-											render={({ field: { value, onChange } }) => (
-												<Input
-													placeholder={t("common.gender")}
-													value={value}
-													onChangeText={onChange}
-													containerStyle={styles.fieldHalf}
-												/>
-											)}
-										/>
-									</View>
-									<View style={styles.fieldRow}>
-										<Controller
-											control={control}
-											name="patientPhone"
-											render={({ field: { value, onChange } }) => (
-												<Input
-													leftIcon={Phone}
-													placeholder={t("common.phone")}
-													value={value}
-													onChangeText={onChange}
-													keyboardType="phone-pad"
-													containerStyle={styles.fieldHalf}
-												/>
-											)}
-										/>
-										<Controller
-											control={control}
-											name="patientEmail"
-											render={({ field: { value, onChange } }) => (
-												<Input
-													leftIcon={Mail}
-													placeholder={t("common.email")}
-													value={value}
-													onChangeText={onChange}
-													autoCapitalize="none"
-													keyboardType="email-address"
-													containerStyle={styles.fieldHalf}
-												/>
-											)}
-										/>
-									</View>
-									<Controller
-										control={control}
-										name="patientCpf"
-										render={({ field: { value, onChange } }) => (
-											<Input
-												placeholder={t("common.cPF")}
-												value={value}
-												onChangeText={onChange}
-											/>
-										)}
-									/>
-									<Text style={styles.fieldGroupTitle}>{t("common.healthContext")}</Text>
-									<View style={styles.fieldRow}>
-										<Controller
-											control={control}
-											name="patientBloodType"
-											render={({ field: { value, onChange } }) => (
-												<Input
-													leftIcon={ShieldPlus}
-													placeholder={t("common.bloodType")}
-													value={value}
-													onChangeText={onChange}
-													containerStyle={styles.fieldHalf}
-												/>
-											)}
-										/>
-										<Controller
-											control={control}
-											name="patientMedications"
-											render={({ field: { value, onChange } }) => (
-												<Input
-													placeholder={t("common.medications")}
-													value={value}
-													onChangeText={onChange}
-													containerStyle={styles.fieldHalf}
-												/>
-											)}
-										/>
-									</View>
-									<Controller
-										control={control}
-										name="patientAllergies"
-										render={({ field: { value, onChange } }) => (
-											<Input
-												leftIcon={HeartPulse}
-												placeholder={t("common.allergies")}
-												value={value}
-												onChangeText={onChange}
-											/>
-										)}
-									/>
-									<Controller
-										control={control}
-										name="patientChronicPain"
-										render={({ field: { value, onChange } }) => (
-											<Input
-												leftIcon={HeartPulse}
-												placeholder={t("common.chronicPain2")}
-												value={value}
-												onChangeText={onChange}
-											/>
-										)}
-									/>
-									<Controller
-										control={control}
-										name="patientPreExistingConditions"
-										render={({ field: { value, onChange } }) => (
-											<Textarea
-												placeholder={t("common.preExistingConditionsSurgeriesFamilyHistory")}
-												value={value}
-												onChangeText={onChange}
-											/>
-										)}
-									/>
-									<View style={styles.fieldRow}>
-										<Controller
-											control={control}
-											name="patientEmergencyContactName"
-											render={({ field: { value, onChange } }) => (
-												<Input
-													placeholder={t("common.emergencyContact")}
-													value={value}
-													onChangeText={onChange}
-													containerStyle={styles.fieldHalf}
-												/>
-											)}
-										/>
-										<Controller
-											control={control}
-											name="patientEmergencyContactPhone"
-											render={({ field: { value, onChange } }) => (
-												<Input
-													placeholder={t("common.emergencyPhone")}
-													value={value}
-													onChangeText={onChange}
-													keyboardType="phone-pad"
-													containerStyle={styles.fieldHalf}
-												/>
-											)}
-										/>
-									</View>
-									<Controller
-										control={control}
-										name="patientNotes"
-										render={({ field: { value, onChange } }) => (
-											<Textarea
-												placeholder={t("common.additionalPatientNotes")}
-												value={value}
-												onChangeText={onChange}
-											/>
-										)}
-									/>
-								</View>
-							) : null}
-						</View>
-
-						<View style={styles.section}>
-							<View style={styles.sectionHeader}>
-								<ShieldPlus
-									size={20}
-									color={theme.colors.primary}
-									strokeWidth={2}
-								/>
-								<Text style={styles.sectionTitle}>{t("common.procedures")}</Text>
-							</View>
-							<View style={styles.procedureGrid}>
-								{procedures.map((procedure) => {
-									const selected = selectedProcedureIds.includes(
-										procedure.id,
+						<PatientSection
+							control={control}
+							patientMode={patientMode}
+							existingPatientProfileId={existingPatientProfileId}
+							patientProfiles={patientProfiles}
+							todayDate={todayDate}
+							onSelectNewMode={() => setValue("patientMode", "new")}
+							onSelectExistingMode={() => {
+								setValue("patientMode", "existing");
+								if (!existingPatientProfileId && patientProfiles[0]) {
+									setValue(
+										"existingPatientProfileId",
+										patientProfiles[0].id,
 									);
+								}
+							}}
+							onSelectExistingProfile={(profileId) =>
+								setValue("existingPatientProfileId", profileId)
+							}
+						/>
 
-									return (
-										<Pressable
-											key={procedure.id}
-											style={[
-												styles.procedureOption,
-												selected && styles.procedureOptionActive,
-											]}
-											onPress={() => toggleProcedure(procedure.id)}
-										>
-											<Text
-												style={[
-													styles.procedureName,
-													selected && styles.procedureNameActive,
-												]}
-											>
-												{procedure.name}
-											</Text>
-											<Text
-												style={[
-													styles.procedureMeta,
-													selected && styles.procedureMetaActive,
-												]}
-											>
-												{procedure.durationInMinutes} min • $
-												{(procedure.priceInCents / 100).toFixed(2)}
-											</Text>
-										</Pressable>
-									);
-								})}
-							</View>
-						</View>
+						<ProceduresSection
+							procedures={procedures}
+							selectedProcedureIds={selectedProcedureIds}
+							onToggleProcedure={toggleProcedure}
+						/>
 
 						<View style={styles.section}>
 							<View style={styles.sectionHeader}>
@@ -954,123 +403,6 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 18,
 		fontWeight: "700",
 		color: theme.colors.foreground,
-	},
-	modeGrid: {
-		flexDirection: "row",
-		gap: theme.gap(1),
-	},
-	modeButton: {
-		flex: 1,
-		minHeight: 48,
-		borderRadius: theme.radius.lg,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		backgroundColor: theme.colors.background,
-		alignItems: "center",
-		justifyContent: "center",
-		gap: theme.gap(0.5),
-	},
-	modeButtonActive: {
-		backgroundColor: theme.colors.primary,
-		borderColor: theme.colors.primary,
-	},
-	modeButtonText: {
-		fontSize: 12,
-		fontWeight: "700",
-		color: theme.colors.foreground,
-	},
-	modeButtonTextActive: {
-		color: theme.colors.primaryForeground,
-	},
-	patientProfilesList: {
-		gap: theme.gap(1.5),
-	},
-	patientProfileOption: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.gap(1.5),
-		padding: theme.gap(1.5),
-		borderRadius: theme.radius.lg,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		backgroundColor: theme.colors.background,
-	},
-	patientProfileOptionActive: {
-		borderColor: theme.colors.primary,
-		backgroundColor: `${theme.colors.primary}12`,
-	},
-	patientProfileInitial: {
-		width: 38,
-		height: 38,
-		borderRadius: 19,
-		alignItems: "center",
-		justifyContent: "center",
-		backgroundColor: theme.colors.primary,
-	},
-	patientProfileInitialText: {
-		fontSize: 16,
-		fontWeight: "700",
-		color: theme.colors.primaryForeground,
-	},
-	patientProfileInfo: {
-		flex: 1,
-	},
-	patientProfileName: {
-		fontSize: 15,
-		fontWeight: "700",
-		color: theme.colors.foreground,
-	},
-	patientProfileMeta: {
-		fontSize: 13,
-		color: theme.colors.mutedForeground,
-		marginTop: theme.gap(0.25),
-	},
-	patientForm: {
-		gap: theme.gap(1.5),
-	},
-	fieldRow: {
-		flexDirection: "row",
-		gap: theme.gap(1),
-	},
-	fieldHalf: {
-		flex: 1,
-	},
-	fieldGroupTitle: {
-		fontSize: 13,
-		fontWeight: "700",
-		color: theme.colors.foreground,
-		textTransform: "uppercase",
-		marginTop: theme.gap(1),
-	},
-	procedureGrid: {
-		gap: theme.gap(1),
-	},
-	procedureOption: {
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		backgroundColor: theme.colors.background,
-		borderRadius: theme.radius.lg,
-		padding: theme.gap(2),
-	},
-	procedureOptionActive: {
-		backgroundColor: theme.colors.primary,
-		borderColor: theme.colors.primary,
-	},
-	procedureName: {
-		fontSize: 15,
-		fontWeight: "700",
-		color: theme.colors.foreground,
-	},
-	procedureNameActive: {
-		color: theme.colors.primaryForeground,
-	},
-	procedureMeta: {
-		marginTop: theme.gap(0.5),
-		fontSize: 13,
-		color: theme.colors.mutedForeground,
-	},
-	procedureMetaActive: {
-		color: theme.colors.primaryForeground,
 	},
 	summaryCard: {
 		backgroundColor: `${theme.colors.primary}14`,

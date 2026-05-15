@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import {
 	AlertCircle,
 	Briefcase,
-	Clock,
-	CreditCard,
 	FileText,
 	GraduationCap,
 	Image as ImageIcon,
@@ -14,7 +12,6 @@ import {
 	ShieldCheck,
 	Trash2,
 	Upload,
-	type LucideIcon,
 	User,
 	X,
 } from "lucide-react-native";
@@ -31,25 +28,28 @@ import {
 } from "react-native";
 import {
 	Controller,
-	type Control,
 	useFieldArray,
 	useForm,
-	useWatch,
 } from "react-hook-form";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
-import { z } from "zod";
+import { ComplianceCheckbox } from "@/components/provider-profile/compliance-checkbox";
+import { FormInput } from "@/components/provider-profile/form-input";
+import { ProviderOperationStep } from "@/components/provider-profile/operation-step";
+import {
+	buildProfileUpdatePayload,
+	emptyProfileForm,
+	getProfileFormDefaults,
+	type ProfileFormData,
+	profileFormSchema,
+} from "@/components/provider-profile/profile-form";
+import { StepIndicator } from "@/components/provider-profile/step-indicator";
 import { ScreenHeader } from "@/components/screen-header";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { Input } from "@/components/ui/input";
 import { SelectInput } from "@/components/ui/select-input";
-import {
-	SERVICE_MODALITY_VALUES,
-	serviceModalityOptions,
-} from "@/constants/service-modalities";
 import { useAuth } from "@/contexts/auth";
 import { useProfessionalCouncils } from "@/hooks/use-professional-councils";
 import {
@@ -60,121 +60,6 @@ import {
 	useUploadLicenseDocument,
 } from "@/hooks/use-procedures";
 import { showErrorToast, showSuccessToast } from "@/services/toast";
-
-const profileFormSchema = z.object({
-	displayName: z.string().nullable(),
-	document: z.string().nullable(),
-	birthDate: z.string().nullable(),
-	gender: z.string().nullable(),
-	languages: z.string().nullable(),
-	specialty: z.string(),
-	professionalCategory: z.string().nullable(),
-	professionalId: z.string().nullable(),
-	professionalCouncilId: z.string().nullable(),
-	licenseState: z.string().nullable(),
-	bio: z.string().nullable(),
-	approach: z.string().nullable(),
-	education: z.string().nullable(),
-	certifications: z.string().nullable(),
-	yearsOfExperience: z.string().nullable(),
-	targetAudiences: z.string().nullable(),
-	serviceModalities: z
-		.array(z.enum(SERVICE_MODALITY_VALUES)),
-	homeCareRadiusKm: z.string().nullable(),
-	acceptedInsurance: z.string().nullable(),
-	paymentMethods: z.string().nullable(),
-	cancellationPolicy: z.string().nullable(),
-	cancellationPolicyEnabled: z.boolean(),
-	cancellationPolicyHoursBefore: z.string().nullable(),
-	cancellationPolicyPenaltyType: z
-		.enum(["", "FIXED", "PERCENTAGE"])
-		.default(""),
-	cancellationPolicyFixedFee: z.string().nullable(),
-	cancellationPolicyPercentage: z.string().nullable(),
-	cancellationPolicyRequiresJustification: z.boolean(),
-	birthdayGreetingEmailEnabled: z.boolean(),
-	termsAccepted: z.boolean(),
-	lgpdConsent: z.boolean(),
-	professionalResponsibilityAccepted: z.boolean(),
-	faqs: z.array(
-		z.object({
-			question: z.string(),
-			answer: z.string(),
-		}),
-	),
-});
-
-type ProfileFormData = z.infer<typeof profileFormSchema>;
-type ProfileTextField = Exclude<
-	keyof ProfileFormData,
-	| "termsAccepted"
-	| "lgpdConsent"
-	| "professionalResponsibilityAccepted"
-	| "serviceModalities"
-	| "cancellationPolicyEnabled"
-	| "cancellationPolicyRequiresJustification"
-	| "birthdayGreetingEmailEnabled"
-	| "faqs"
->;
-
-const emptyProfileForm: ProfileFormData = {
-	displayName: null,
-	document: null,
-	birthDate: null,
-	gender: null,
-	languages: null,
-	specialty: "",
-	professionalCategory: null,
-	professionalId: null,
-	professionalCouncilId: null,
-	licenseState: null,
-	bio: null,
-	approach: null,
-	education: null,
-	certifications: null,
-	yearsOfExperience: null,
-	targetAudiences: null,
-	serviceModalities: [],
-	homeCareRadiusKm: null,
-	acceptedInsurance: null,
-	paymentMethods: null,
-	cancellationPolicy: null,
-	cancellationPolicyEnabled: false,
-	cancellationPolicyHoursBefore: null,
-	cancellationPolicyPenaltyType: "",
-	cancellationPolicyFixedFee: null,
-	cancellationPolicyPercentage: null,
-	cancellationPolicyRequiresJustification: false,
-	birthdayGreetingEmailEnabled: false,
-	termsAccepted: false,
-	lgpdConsent: false,
-	professionalResponsibilityAccepted: false,
-	faqs: [],
-};
-
-function joinList(value?: string[] | null) {
-	return value?.join(", ") || null;
-}
-
-function splitList(value?: string | null) {
-	return (
-		value
-			?.split(",")
-			.map((item) => item.trim())
-			.filter(Boolean) || []
-	);
-}
-
-function toAcceptanceDate(accepted: boolean, currentValue?: string | null) {
-	if (!accepted) return null;
-	return currentValue || new Date().toISOString();
-}
-
-function priceToCents(value?: string | null) {
-	const normalizedValue = value?.replace(",", ".").trim();
-	if (!normalizedValue) return 0;
-	return Math.round((Number(normalizedValue) || 0) * 100);
-}
 
 export default function ProviderProfileEdit() {
 	const { theme } = useUnistyles();
@@ -204,14 +89,6 @@ export default function ProviderProfileEdit() {
 	} = useForm<ProfileFormData>({
 		defaultValues: emptyProfileForm,
 	});
-	const cancellationPolicyEnabled = useWatch({
-		control,
-		name: "cancellationPolicyEnabled",
-	});
-	const cancellationPolicyPenaltyType = useWatch({
-		control,
-		name: "cancellationPolicyPenaltyType",
-	});
 	const { fields: faqFields, append: appendFaq, remove: removeFaq } =
 		useFieldArray({
 			control,
@@ -228,60 +105,7 @@ export default function ProviderProfileEdit() {
 
 	useEffect(() => {
 		setHasLicenseDocument(Boolean(healthcareProvider?.licenseDocumentFileName));
-		reset({
-			displayName: healthcareProvider?.displayName || null,
-			document: healthcareProvider?.document || null,
-			birthDate: healthcareProvider?.birthDate?.slice(0, 10) || null,
-			gender: healthcareProvider?.gender || null,
-			languages: joinList(healthcareProvider?.languages),
-			specialty: healthcareProvider?.specialty || "",
-			professionalCategory: healthcareProvider?.professionalCategory || null,
-			professionalId: healthcareProvider?.professionalId || null,
-			professionalCouncilId: healthcareProvider?.professionalCouncilId || null,
-			licenseState: healthcareProvider?.licenseState || null,
-			bio: healthcareProvider?.bio || null,
-			approach: healthcareProvider?.approach || null,
-			education: healthcareProvider?.education || null,
-			certifications: healthcareProvider?.certifications || null,
-			yearsOfExperience:
-				healthcareProvider?.yearsOfExperience?.toString() || null,
-			targetAudiences: joinList(healthcareProvider?.targetAudiences),
-			serviceModalities: healthcareProvider?.serviceModalities || [],
-			homeCareRadiusKm: healthcareProvider?.homeCareRadiusKm?.toString() || null,
-			acceptedInsurance: joinList(healthcareProvider?.acceptedInsurance),
-			paymentMethods: joinList(healthcareProvider?.paymentMethods),
-			cancellationPolicy: healthcareProvider?.cancellationPolicy || null,
-			cancellationPolicyEnabled: Boolean(
-				healthcareProvider?.cancellationPolicyEnabled,
-			),
-			cancellationPolicyHoursBefore:
-				healthcareProvider?.cancellationPolicyHoursBefore?.toString() || null,
-			cancellationPolicyPenaltyType:
-				healthcareProvider?.cancellationPolicyPenaltyType || "",
-			cancellationPolicyFixedFee:
-				healthcareProvider?.cancellationPolicyFixedFeeCents !== null &&
-				healthcareProvider?.cancellationPolicyFixedFeeCents !== undefined
-					? (healthcareProvider.cancellationPolicyFixedFeeCents / 100).toFixed(2)
-					: null,
-			cancellationPolicyPercentage:
-				healthcareProvider?.cancellationPolicyPercentage?.toString() || null,
-			cancellationPolicyRequiresJustification: Boolean(
-				healthcareProvider?.cancellationPolicyRequiresJustification,
-			),
-			birthdayGreetingEmailEnabled: Boolean(
-				healthcareProvider?.birthdayGreetingEmailEnabled,
-			),
-			termsAccepted: Boolean(healthcareProvider?.termsAcceptedAt),
-			lgpdConsent: Boolean(healthcareProvider?.lgpdConsentAt),
-			professionalResponsibilityAccepted: Boolean(
-				healthcareProvider?.professionalResponsibilityAcceptedAt,
-			),
-			faqs:
-				healthcareProvider?.faqs?.map((faq) => ({
-					question: faq.question,
-					answer: faq.answer,
-				})) || [],
-		});
+		reset(getProfileFormDefaults(healthcareProvider));
 	}, [healthcareProvider, reset]);
 
 	const onSubmit = async (data: ProfileFormData) => {
@@ -304,75 +128,7 @@ export default function ProviderProfileEdit() {
 		try {
 			await updateProviderMutation.mutateAsync({
 				providerId: healthcareProvider.id,
-				data: {
-					displayName: parsed.data.displayName?.trim() || null,
-					document: parsed.data.document?.trim() || null,
-					birthDate: parsed.data.birthDate?.trim() || null,
-					gender: parsed.data.gender?.trim() || null,
-					languages: splitList(parsed.data.languages),
-					specialty: parsed.data.specialty.trim(),
-					professionalCategory:
-						parsed.data.professionalCategory?.trim() || null,
-					professionalId: parsed.data.professionalId?.trim() || null,
-					professionalCouncilId: parsed.data.professionalCouncilId || null,
-					licenseState: parsed.data.licenseState?.trim() || null,
-					bio: parsed.data.bio?.trim() || null,
-					approach: parsed.data.approach?.trim() || null,
-					education: parsed.data.education?.trim() || null,
-					certifications: parsed.data.certifications?.trim() || null,
-					yearsOfExperience: parsed.data.yearsOfExperience?.trim()
-						? Number(parsed.data.yearsOfExperience)
-						: null,
-					targetAudiences: splitList(parsed.data.targetAudiences),
-					serviceModalities: parsed.data.serviceModalities,
-					homeCareRadiusKm: parsed.data.homeCareRadiusKm?.trim()
-						? Number(parsed.data.homeCareRadiusKm)
-						: null,
-					acceptedInsurance: splitList(parsed.data.acceptedInsurance),
-					paymentMethods: splitList(parsed.data.paymentMethods),
-					cancellationPolicy:
-						parsed.data.cancellationPolicy?.trim() || null,
-					cancellationPolicyEnabled: parsed.data.cancellationPolicyEnabled,
-					cancellationPolicyHoursBefore: parsed.data.cancellationPolicyEnabled
-						? Number(parsed.data.cancellationPolicyHoursBefore || 0)
-						: null,
-					cancellationPolicyPenaltyType: parsed.data.cancellationPolicyEnabled
-						? parsed.data.cancellationPolicyPenaltyType || null
-						: null,
-					cancellationPolicyFixedFeeCents:
-						parsed.data.cancellationPolicyEnabled &&
-						parsed.data.cancellationPolicyPenaltyType === "FIXED"
-							? priceToCents(parsed.data.cancellationPolicyFixedFee)
-							: null,
-					cancellationPolicyPercentage:
-						parsed.data.cancellationPolicyEnabled &&
-						parsed.data.cancellationPolicyPenaltyType === "PERCENTAGE"
-							? Number(parsed.data.cancellationPolicyPercentage || 0)
-							: null,
-					cancellationPolicyRequiresJustification:
-						parsed.data.cancellationPolicyEnabled &&
-						parsed.data.cancellationPolicyRequiresJustification,
-					birthdayGreetingEmailEnabled:
-						parsed.data.birthdayGreetingEmailEnabled,
-					termsAcceptedAt: toAcceptanceDate(
-						parsed.data.termsAccepted,
-						healthcareProvider.termsAcceptedAt,
-					),
-					lgpdConsentAt: toAcceptanceDate(
-						parsed.data.lgpdConsent,
-						healthcareProvider.lgpdConsentAt,
-					),
-					professionalResponsibilityAcceptedAt: toAcceptanceDate(
-						parsed.data.professionalResponsibilityAccepted,
-						healthcareProvider.professionalResponsibilityAcceptedAt,
-					),
-					faqs: parsed.data.faqs
-						.map((faq) => ({
-							question: faq.question.trim(),
-							answer: faq.answer.trim(),
-						}))
-						.filter((faq) => faq.question && faq.answer),
-				},
+				data: buildProfileUpdatePayload(parsed.data, healthcareProvider),
 			});
 			reset(parsed.data);
 			showSuccessToast("common.profileSavedSuccessfully");
@@ -964,230 +720,10 @@ export default function ProviderProfileEdit() {
 							) : null}
 
 							{currentStep === 3 ? (
-							<View style={styles.card}>
-							<Text style={styles.sectionSubtitle}>
-								{t("common.attendanceAndOperation")}
-							</Text>
-							<Controller
-								control={control}
-								name="serviceModalities"
-								render={({ field: { value, onChange } }) => (
-									<View style={styles.fieldGroup}>
-										<Text style={styles.fieldLabel}>
-											{t("common.serviceModalities")}
-										</Text>
-										<View style={styles.checkboxList}>
-											{serviceModalityOptions.map((option) => {
-												const checked = value.includes(option.value);
-
-												return (
-													<View
-														key={option.value}
-														style={styles.checkboxOption}
-													>
-														<Checkbox
-															checked={checked}
-															onCheckedChange={(nextChecked) => {
-																onChange(
-																	nextChecked
-																		? [...value, option.value]
-																		: value.filter(
-																				(item) => item !== option.value,
-																			),
-																);
-															}}
-														/>
-														<View style={styles.checkboxTextContent}>
-															<Text style={styles.checkboxTitle}>
-																{t(option.labelKey)}
-															</Text>
-															<Text style={styles.checkboxDescription}>
-																{t(option.descriptionKey)}
-															</Text>
-														</View>
-													</View>
-												);
-											})}
-										</View>
-									</View>
-								)}
-							/>
-							<View style={styles.infoBox}>
-								<MapPin size={18} color={theme.colors.primary} />
-								<View style={styles.infoBoxContent}>
-									<Text style={styles.infoBoxTitle}>
-										{t("common.inPersonCareLocation")}
-									</Text>
-									<Text style={styles.infoBoxText}>
-										{t("common.inPersonCareLocationDescription")}
-									</Text>
-								</View>
-							</View>
-							<Button
-								variant="outline"
-								onPress={() => router.push("/provider-clinic" as never)}
-							>
-								{t("common.manageClinic")}
-							</Button>
-							<Controller
-								control={control}
-								name="birthdayGreetingEmailEnabled"
-								render={({ field }) => (
-									<View style={styles.complianceRow}>
-										<Checkbox
-											checked={Boolean(field.value)}
-											onCheckedChange={field.onChange}
-										/>
-										<View style={styles.complianceTextContainer}>
-											<Text style={styles.complianceTitle}>
-												{t("common.birthdayGreetingEmailEnabled")}
-											</Text>
-											<Text style={styles.complianceDescription}>
-												{t("common.birthdayGreetingEmailDescription")}
-											</Text>
-										</View>
-									</View>
-								)}
-							/>
-							<FormInput
-								control={control}
-								icon={MapPin}
-								name="homeCareRadiusKm"
-								label={t("common.homeCareRadiusKm")}
-								placeholder="10"
-								keyboardType="numeric"
-							/>
-							<FormInput
-								control={control}
-								icon={ShieldCheck}
-								name="acceptedInsurance"
-								label={t("common.acceptedInsurance")}
-								placeholder={t("common.commaSeparatedExamplesInsurance")}
-							/>
-							<FormInput
-								control={control}
-								icon={CreditCard}
-								name="paymentMethods"
-								label={t("common.paymentMethods")}
-								placeholder={t("common.commaSeparatedExamplesPayments")}
-							/>
-							<FormInput
-								control={control}
-								icon={FileText}
-								name="cancellationPolicy"
-								label={t("common.cancellationPolicy")}
-								placeholder={t("common.describeCancellationPolicy")}
-								multiline
+								<ProviderOperationStep
+									control={control}
+									onManageClinic={() => router.push("/provider-clinic" as never)}
 								/>
-							<Controller
-								control={control}
-								name="cancellationPolicyEnabled"
-								render={({ field }) => (
-									<View style={styles.complianceRow}>
-										<Checkbox
-											checked={Boolean(field.value)}
-											onCheckedChange={field.onChange}
-										/>
-										<View style={styles.complianceTextContainer}>
-											<Text style={styles.complianceTitle}>
-												{t("common.applyAutomaticCancellationPolicy")}
-											</Text>
-											<Text style={styles.complianceDescription}>
-												{t("common.applyAutomaticCancellationPolicyDescription")}
-											</Text>
-										</View>
-									</View>
-								)}
-							/>
-							{cancellationPolicyEnabled ? (
-								<View style={styles.cancellationPolicyBox}>
-									<FormInput
-										control={control}
-										icon={Clock}
-										name="cancellationPolicyHoursBefore"
-										label={t("common.minimumNoticeHours")}
-										placeholder="24"
-										keyboardType="numeric"
-									/>
-									<Controller
-										control={control}
-										name="cancellationPolicyPenaltyType"
-										render={({ field }) => (
-											<View style={styles.segmentedGroup}>
-												<Button
-													variant={
-														field.value === "" ? "default" : "outline"
-													}
-													onPress={() => field.onChange("")}
-												>
-													{t("common.noAutomaticFee")}
-												</Button>
-												<Button
-													variant={
-														field.value === "FIXED" ? "default" : "outline"
-													}
-													onPress={() => field.onChange("FIXED")}
-												>
-													{t("common.fixedFee")}
-												</Button>
-												<Button
-													variant={
-														field.value === "PERCENTAGE"
-															? "default"
-															: "outline"
-													}
-													onPress={() => field.onChange("PERCENTAGE")}
-												>
-													{t("common.percentageFee")}
-												</Button>
-											</View>
-										)}
-									/>
-									{cancellationPolicyPenaltyType === "FIXED" ? (
-										<FormInput
-											control={control}
-											icon={CreditCard}
-											name="cancellationPolicyFixedFee"
-											label={t("common.fixedFeeBRL")}
-											placeholder="50,00"
-											keyboardType="numeric"
-										/>
-									) : null}
-									{cancellationPolicyPenaltyType === "PERCENTAGE" ? (
-										<FormInput
-											control={control}
-											icon={CreditCard}
-											name="cancellationPolicyPercentage"
-											label={t("common.percentageOfAppointment")}
-											placeholder="50"
-											keyboardType="numeric"
-										/>
-									) : null}
-									<Controller
-										control={control}
-										name="cancellationPolicyRequiresJustification"
-										render={({ field }) => (
-											<View style={styles.complianceRow}>
-												<Checkbox
-													checked={Boolean(field.value)}
-													onCheckedChange={field.onChange}
-												/>
-												<View style={styles.complianceTextContainer}>
-													<Text style={styles.complianceTitle}>
-														{t("common.requireCancellationJustification")}
-													</Text>
-													<Text style={styles.complianceDescription}>
-														{t(
-															"common.requireCancellationJustificationDescription",
-														)}
-													</Text>
-												</View>
-											</View>
-										)}
-									/>
-								</View>
-							) : null}
-							</View>
 							) : null}
 
 							{currentStep === 4 ? (
@@ -1266,122 +802,6 @@ export default function ProviderProfileEdit() {
 	);
 }
 
-function ComplianceCheckbox({
-	control,
-	name,
-	title,
-	description,
-}: {
-	control: Control<ProfileFormData>;
-	name:
-		| "termsAccepted"
-		| "lgpdConsent"
-		| "professionalResponsibilityAccepted";
-	title: string;
-	description: string;
-}) {
-	return (
-		<Controller
-			control={control}
-			name={name}
-			render={({ field }) => (
-				<View style={styles.complianceRow}>
-					<Checkbox
-						checked={Boolean(field.value)}
-						onCheckedChange={field.onChange}
-					/>
-					<View style={styles.complianceTextContainer}>
-						<Text style={styles.complianceTitle}>{title}</Text>
-						<Text style={styles.complianceDescription}>{description}</Text>
-					</View>
-				</View>
-			)}
-		/>
-	);
-}
-
-function StepIndicator({
-	currentStep,
-	steps,
-}: {
-	currentStep: number;
-	steps: string[];
-}) {
-	return (
-		<ScrollView
-			horizontal
-			showsHorizontalScrollIndicator={false}
-			contentContainerStyle={styles.stepIndicatorList}
-		>
-			{steps.map((step, index) => (
-				<View
-					key={step}
-					style={[
-						styles.stepIndicatorItem,
-						index === currentStep && styles.stepIndicatorItemActive,
-						index < currentStep && styles.stepIndicatorItemCompleted,
-					]}
-				>
-					<Text
-						style={[
-							styles.stepIndicatorMeta,
-							index === currentStep && styles.stepIndicatorTextActive,
-						]}
-					>
-						{index + 1}
-					</Text>
-					<Text
-						style={[
-							styles.stepIndicatorText,
-							index === currentStep && styles.stepIndicatorTextActive,
-						]}
-					>
-						{step}
-					</Text>
-				</View>
-			))}
-		</ScrollView>
-	);
-}
-
-function FormInput({
-	control,
-	icon,
-	label,
-	name,
-	placeholder,
-	multiline,
-	keyboardType,
-}: {
-	control: Control<ProfileFormData>;
-	icon?: LucideIcon;
-	label: string;
-	name: ProfileTextField;
-	placeholder?: string;
-	multiline?: boolean;
-	keyboardType?: "default" | "numeric";
-}) {
-	return (
-		<Controller
-			control={control}
-			name={name}
-			render={({ field }) => (
-				<View style={styles.fieldGroup}>
-					<Text style={styles.fieldLabel}>{label}</Text>
-					<Input
-						leftIcon={icon}
-						value={field.value || ""}
-						onChangeText={field.onChange}
-						placeholder={placeholder}
-						multiline={multiline}
-						keyboardType={keyboardType}
-					/>
-				</View>
-			)}
-		/>
-	);
-}
-
 const styles = StyleSheet.create((theme) => ({
 	container: {
 		flex: 1,
@@ -1397,40 +817,6 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	screenHeader: {
 		marginBottom: theme.gap(2),
-	},
-	stepIndicatorList: {
-		gap: theme.gap(1),
-		paddingBottom: theme.gap(2),
-	},
-	stepIndicatorItem: {
-		minWidth: 132,
-		borderRadius: theme.radius.lg,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		backgroundColor: theme.colors.secondary,
-		paddingHorizontal: theme.gap(1.5),
-		paddingVertical: theme.gap(1),
-	},
-	stepIndicatorItemActive: {
-		borderColor: theme.colors.primary,
-		backgroundColor: `${theme.colors.primary}14`,
-	},
-	stepIndicatorItemCompleted: {
-		borderColor: `${theme.colors.primary}66`,
-	},
-	stepIndicatorMeta: {
-		fontSize: 11,
-		fontWeight: "700",
-		color: theme.colors.mutedForeground,
-	},
-	stepIndicatorText: {
-		marginTop: theme.gap(0.25),
-		fontSize: 12,
-		fontWeight: "700",
-		color: theme.colors.secondaryForeground,
-	},
-	stepIndicatorTextActive: {
-		color: theme.colors.primary,
 	},
 	errorContainer: {
 		paddingVertical: theme.gap(8),
@@ -1473,56 +859,6 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 14,
 		fontWeight: "500",
 		color: theme.colors.foreground,
-	},
-	checkboxList: {
-		gap: theme.gap(1.25),
-	},
-	checkboxOption: {
-		flexDirection: "row",
-		alignItems: "flex-start",
-		gap: theme.gap(1.5),
-		padding: theme.gap(1.75),
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.background,
-	},
-	checkboxTextContent: {
-		flex: 1,
-		gap: theme.gap(0.5),
-	},
-	checkboxTitle: {
-		fontSize: 14,
-		fontWeight: "600",
-		color: theme.colors.foreground,
-	},
-	checkboxDescription: {
-		fontSize: 12,
-		color: theme.colors.mutedForeground,
-		lineHeight: 17,
-	},
-	infoBox: {
-		flexDirection: "row",
-		gap: theme.gap(1.5),
-		padding: theme.gap(2),
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.muted,
-	},
-	infoBoxContent: {
-		flex: 1,
-		gap: theme.gap(0.5),
-	},
-	infoBoxTitle: {
-		fontSize: 14,
-		fontWeight: "700",
-		color: theme.colors.foreground,
-	},
-	infoBoxText: {
-		fontSize: 13,
-		color: theme.colors.mutedForeground,
-		lineHeight: 18,
 	},
 	required: {
 		color: theme.colors.destructive,
@@ -1673,41 +1009,6 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 15,
 		fontWeight: "600",
 		color: theme.colors.foreground,
-	},
-	complianceRow: {
-		flexDirection: "row",
-		alignItems: "flex-start",
-		gap: theme.gap(2),
-		padding: theme.gap(2),
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.muted,
-	},
-	complianceTextContainer: {
-		flex: 1,
-		gap: theme.gap(0.5),
-	},
-	complianceTitle: {
-		fontSize: 14,
-		fontWeight: "600",
-		color: theme.colors.foreground,
-	},
-	complianceDescription: {
-		fontSize: 13,
-		color: theme.colors.mutedForeground,
-		lineHeight: 18,
-	},
-	cancellationPolicyBox: {
-		gap: theme.gap(2),
-		padding: theme.gap(2),
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.surfacePrimary,
-	},
-	segmentedGroup: {
-		gap: theme.gap(1),
 	},
 	stickyButtonContainer: {
 		position: "absolute",

@@ -1,88 +1,33 @@
-import { Bell, BellRing, Mail, Smartphone } from "lucide-react-native";
+import { Bell, BellRing } from "lucide-react-native";
 import { useState } from "react";
 import {
 	ActivityIndicator,
 	Alert,
-	Pressable,
 	ScrollView,
-	Switch,
 	Text,
 	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { NotificationOptionCard } from "@/components/notification-settings/notification-option-card";
+import {
+	buildUpdatedNotificationPreferences,
+	defaultNotificationPreference,
+	notificationOptions,
+} from "@/components/notification-settings/notification-options";
 import { ScreenHeader } from "@/components/screen-header";
 import { Button } from "@/components/ui/button";
 import {
 	useNotificationPreferences,
 	useUpdateNotificationPreferences,
 } from "@/hooks/use-notifications";
-import type { TranslationKey } from "@/i18n";
 import { getErrorMessage } from "@/services/api";
 import {
 	hasRegisteredPushToken,
 	syncPushTokenWithBackend,
 } from "@/services/push-notifications";
-import type { NotificationPreference, NotificationType } from "@/types/notification";
-
-const notificationOptions: {
-	type: NotificationType;
-	title: TranslationKey;
-	description: TranslationKey;
-}[] = [
-	{
-		type: "APPOINTMENT_REMINDER",
-		title: "common.appointmentReminderNotification",
-		description: "common.appointmentReminderNotificationDescription",
-	},
-	{
-		type: "APPOINTMENT_STATUS_UPDATE",
-		title: "common.appointmentStatusNotification",
-		description: "common.appointmentStatusNotificationDescription",
-	},
-	{
-		type: "NEW_APPOINTMENT_REQUEST",
-		title: "common.newAppointmentRequestNotification",
-		description: "common.newAppointmentRequestNotificationDescription",
-	},
-	{
-		type: "WAITLIST_SLOT_AVAILABLE",
-		title: "common.waitlistSlotAvailableNotification",
-		description: "common.waitlistSlotAvailableNotificationDescription",
-	},
-];
-
-const defaultPreference = (type: NotificationType): NotificationPreference => ({
-	type,
-	pushEnabled: true,
-	emailEnabled: false,
-});
-
-const buildPreferences = (
-	preferences: NotificationPreference[],
-	type: NotificationType,
-	channel: "pushEnabled" | "emailEnabled",
-	enabled: boolean,
-) => {
-	return notificationOptions.map((option) => {
-		const currentPreference =
-			preferences.find((preference) => preference.type === option.type) ||
-			defaultPreference(option.type);
-
-		return {
-			type: option.type,
-			pushEnabled:
-				option.type === type && channel === "pushEnabled"
-					? enabled
-					: currentPreference.pushEnabled,
-			emailEnabled:
-				option.type === type && channel === "emailEnabled"
-					? enabled
-					: currentPreference.emailEnabled,
-		};
-	});
-};
+import type { NotificationType } from "@/types/notification";
 
 export default function NotificationSettings() {
 	const { theme } = useUnistyles();
@@ -105,7 +50,7 @@ export default function NotificationSettings() {
 	const getPreference = (type: NotificationType) => {
 		return (
 			preferences.find((preference) => preference.type === type) ||
-			defaultPreference(type)
+			defaultNotificationPreference(type)
 		);
 	};
 
@@ -116,7 +61,12 @@ export default function NotificationSettings() {
 	) => {
 		try {
 			await updatePreferences.mutateAsync({
-				preferences: buildPreferences(preferences, type, channel, enabled),
+				preferences: buildUpdatedNotificationPreferences(
+					preferences,
+					type,
+					channel,
+					enabled,
+				),
 			});
 		} catch (error) {
 			Alert.alert(t("common.error"), getErrorMessage(error));
@@ -214,97 +164,16 @@ export default function NotificationSettings() {
 				{!isLoading && !isError ? (
 					<View style={styles.menuList}>
 						{notificationOptions.map((option) => {
-							const preference = getPreference(option.type);
-							const enabled =
-								preference.pushEnabled || preference.emailEnabled;
-
 							return (
-								<View
+								<NotificationOptionCard
 									key={option.type}
-									testID={`notification-option-${option.type}`}
-									style={styles.menuItem}
-								>
-									<View
-										style={[
-											styles.menuIconContainer,
-											enabled && styles.menuIconContainerSelected,
-										]}
-									>
-										<Bell
-											size={20}
-											color={
-												enabled
-													? theme.colors.primaryForeground
-													: theme.colors.primary
-											}
-											strokeWidth={2}
-										/>
-									</View>
-									<View style={styles.menuContent}>
-										<Text style={styles.menuLabel}>{t(option.title)}</Text>
-										<Text style={styles.menuDescription}>
-											{t(option.description)}
-										</Text>
-									</View>
-									<View style={styles.channelList}>
-										<View style={styles.channelItem}>
-											<View style={styles.channelLabelRow}>
-												<Smartphone
-													size={14}
-													color={theme.colors.primary}
-													strokeWidth={2}
-												/>
-												<Text style={styles.channelLabel}>
-													{t("common.push")}
-												</Text>
-											</View>
-											<Switch
-												value={preference.pushEnabled}
-												disabled={updatePreferences.isPending}
-												trackColor={{
-													false: theme.colors.secondary,
-													true: theme.colors.primary,
-												}}
-												thumbColor={theme.colors.primaryForeground}
-												onValueChange={(value) =>
-													handleToggle(
-														option.type,
-														"pushEnabled",
-														value,
-													)
-												}
-											/>
-										</View>
-										<View style={styles.channelItem}>
-											<View style={styles.channelLabelRow}>
-												<Mail
-													size={14}
-													color={theme.colors.primary}
-													strokeWidth={2}
-												/>
-												<Text style={styles.channelLabel}>
-													{t("common.email")}
-												</Text>
-											</View>
-											<Switch
-												value={preference.emailEnabled}
-												disabled={updatePreferences.isPending}
-												trackColor={{
-													false: theme.colors.secondary,
-													true: theme.colors.primary,
-												}}
-												thumbColor={theme.colors.primaryForeground}
-												onValueChange={(value) =>
-													handleToggle(
-														option.type,
-														"emailEnabled",
-														value,
-													)
-												}
-											/>
-										</View>
-									</View>
-								</View>
+									type={option.type}
+									title={option.title}
+									description={option.description}
+									preference={getPreference(option.type)}
+									disabled={updatePreferences.isPending}
+									onToggle={handleToggle}
+								/>
 							);
 						})}
 					</View>
@@ -373,64 +242,5 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	menuList: {
 		gap: theme.gap(1),
-	},
-	menuItem: {
-		backgroundColor: theme.colors.surfacePrimary,
-		borderRadius: theme.radius.lg,
-		padding: theme.gap(2),
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.gap(2),
-	},
-	menuIconContainer: {
-		width: 40,
-		height: 40,
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.secondary,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	menuIconContainerSelected: {
-		backgroundColor: theme.colors.primary,
-	},
-	menuContent: {
-		flex: 1,
-	},
-	channelList: {
-		gap: theme.gap(1),
-		minWidth: 132,
-	},
-	channelItem: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		gap: theme.gap(1.5),
-		paddingHorizontal: theme.gap(1.5),
-		paddingVertical: theme.gap(1),
-		borderRadius: theme.radius.md,
-		backgroundColor: theme.colors.secondary,
-	},
-	channelLabelRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.gap(1),
-	},
-	channelLabel: {
-		fontSize: 12,
-		fontWeight: "600",
-		color: theme.colors.foreground,
-	},
-	menuLabel: {
-		fontSize: 14,
-		fontWeight: "600",
-		color: theme.colors.foreground,
-	},
-	menuDescription: {
-		fontSize: 12,
-		color: theme.colors.mutedForeground,
-		marginTop: theme.gap(0.25),
-		lineHeight: 16,
 	},
 }));
