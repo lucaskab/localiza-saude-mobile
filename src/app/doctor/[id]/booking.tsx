@@ -246,7 +246,7 @@ export default function Booking() {
 
 	const provider = providerData?.healthcareProvider;
 	const canShowPrices = canDisplayProviderPrices(provider);
-	const bookingAvailabilityDays = provider?.bookingAvailabilityDays ?? 60;
+	const bookingAvailabilityDays = provider?.bookingAvailabilityDays ?? 90;
 	const procedures = proceduresData?.procedures || [];
 	const selectedProcedures = procedures.filter((p) =>
 		procedureIds.includes(p.id),

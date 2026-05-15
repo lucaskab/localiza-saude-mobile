@@ -153,7 +153,7 @@ function getCancellationPolicyPreview(appointment?: Appointment) {
 const todayDateString = () => new Date().toISOString().split("T")[0] || "";
 
 const getBookingWindowMaxDate = (bookingAvailabilityDays?: number | null) => {
-	const days = Math.min(Math.max(bookingAvailabilityDays ?? 60, 1), 365);
+	const days = Math.min(Math.max(bookingAvailabilityDays ?? 90, 1), 365);
 	const date = new Date();
 	date.setUTCDate(date.getUTCDate() + days);
 	return date.toISOString().split("T")[0] || "";

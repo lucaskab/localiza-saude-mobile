@@ -125,7 +125,7 @@ export default function ProviderSchedule() {
 	const [exceptionType, setExceptionType] =
 		useState<ScheduleExceptionType>("DAY_OFF");
 	const [bookingAvailabilityDays, setBookingAvailabilityDays] = useState(
-		String(healthcareProvider?.bookingAvailabilityDays ?? 60),
+		String(healthcareProvider?.bookingAvailabilityDays ?? 90),
 	);
 	const [exceptionStartTime, setExceptionStartTime] = useState("09:00");
 	const [exceptionEndTime, setExceptionEndTime] = useState("12:00");
@@ -335,7 +335,10 @@ export default function ProviderSchedule() {
 			await updateHealthcareProviderMutation.mutateAsync({
 				providerId: healthcareProvider.id,
 				data: {
-					bookingAvailabilityDays: Number(bookingAvailabilityDays || 60),
+					bookingAvailabilityDays: Math.min(
+						Math.max(Number(bookingAvailabilityDays || 90), 1),
+						365,
+					),
 				},
 			});
 			showSuccessToast("common.scheduleSavedSuccessfully");
@@ -627,7 +630,7 @@ export default function ProviderSchedule() {
 							<Input
 								value={bookingAvailabilityDays}
 								onChangeText={setBookingAvailabilityDays}
-								placeholder="60"
+								placeholder="90"
 								keyboardType="number-pad"
 							/>
 						</View>

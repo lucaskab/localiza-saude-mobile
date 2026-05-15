@@ -280,7 +280,7 @@ export default function ProviderCreateAppointment() {
 	const formattedDate = formatUtcDateForApi(selectedDate);
 	const todayDate = formatUtcDateForApi(new Date());
 	const bookingAvailabilityDays =
-		healthcareProvider?.bookingAvailabilityDays ?? 60;
+		healthcareProvider?.bookingAvailabilityDays ?? 90;
 	const activeScheduleExceptions =
 		scheduleExceptionsData?.exceptions.filter((exception) => exception.isActive) ||
 		[];
