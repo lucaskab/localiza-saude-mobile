@@ -11,6 +11,7 @@ import {
 	HeartPulse,
 	Mail,
 	MessageCircle,
+	NotebookPen,
 	Phone,
 	Pill,
 	ShieldPlus,
@@ -19,7 +20,7 @@ import {
 	Users,
 	Video,
 } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	ActivityIndicator,
 	Alert,
@@ -36,6 +37,7 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
+import { SelectInput } from "@/components/ui/select-input";
 import {
 	buildRecurrencePayload,
 	RecurrenceFields,
@@ -53,9 +55,10 @@ import {
 	useUpdateAppointmentRecurringSeries,
 } from "@/hooks/use-appointments";
 import { useGetOrCreateConversation } from "@/hooks/use-conversations";
+import { useAppointmentEvolutionNote, useUpsertAppointmentEvolutionNote } from "@/hooks/use-appointment-evolution-notes";
 import { useAppointmentMedicalRecord } from "@/hooks/use-medical-record";
 import { canDisplayProviderPrices } from "@/lib/provider-pricing";
-import type { Appointment, AppointmentStatus } from "@/types/appointment";
+import type { Appointment, AppointmentEvolutionStatus, AppointmentStatus } from "@/types/appointment";
 import type { MedicalRecord } from "@/types/medical-record";
 import { translationKeys, type TranslationKey } from "@/i18n/key-map";
 import { showErrorToast, showSuccessToast } from "@/services/toast";
@@ -280,12 +283,54 @@ function hasMedicalRecordContent(record: MedicalRecord | null | undefined) {
 	].some((value) => Boolean(value?.trim()));
 }
 
+type EvolutionNoteFormState = {
+	subjective: string;
+	objective: string;
+	assessment: string;
+	plan: string;
+	painLevel: string;
+	painLocation: string;
+	evolutionStatus: "" | AppointmentEvolutionStatus;
+};
+
+const emptyEvolutionNoteForm: EvolutionNoteFormState = {
+	subjective: "",
+	objective: "",
+	assessment: "",
+	plan: "",
+	painLevel: "",
+	painLocation: "",
+	evolutionStatus: "",
+};
+
+function buildEvolutionNoteForm(
+	note?: {
+		subjective: string | null;
+		objective: string | null;
+		assessment: string | null;
+		plan: string | null;
+		painLevel: number | null;
+		painLocation: string | null;
+		evolutionStatus: AppointmentEvolutionStatus | null;
+	} | null,
+): EvolutionNoteFormState {
+	return {
+		subjective: note?.subjective || "",
+		objective: note?.objective || "",
+		assessment: note?.assessment || "",
+		plan: note?.plan || "",
+		painLevel: note?.painLevel?.toString() || "",
+		painLocation: note?.painLocation || "",
+		evolutionStatus: note?.evolutionStatus || "",
+	};
+}
+
 export default function AppointmentDetails() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const router = useRouter();
 	const { theme } = useUnistyles();
 	const { t } = useTranslation();
-	const { isHealthcareProvider, isCustomer } = useAuth();
+	const { isHealthcareProvider, isCustomer, healthcareProvider } = useAuth();
 	const [showRescheduleForm, setShowRescheduleForm] = useState(false);
 	const [showCancellationForm, setShowCancellationForm] = useState(false);
 	const [showRecurringEditor, setShowRecurringEditor] = useState(false);
@@ -293,6 +338,8 @@ export default function AppointmentDetails() {
 	const [rescheduleDate, setRescheduleDate] = useState("");
 	const [rescheduleTime, setRescheduleTime] = useState("");
 	const [rescheduleReason, setRescheduleReason] = useState("");
+	const [evolutionNoteForm, setEvolutionNoteForm] =
+		useState<EvolutionNoteFormState>(emptyEvolutionNoteForm);
 	const [recurringForm, setRecurringForm] = useState<RecurrenceFormValue>({
 		enabled: true,
 		isIndefinite: false,
@@ -333,6 +380,23 @@ export default function AppointmentDetails() {
 		appointment?.id || "",
 		shouldRequestMedicalRecord && !!appointment?.id,
 	);
+	const canManageEvolutionNote =
+		isHealthcareProvider &&
+		appointment?.healthcareProviderId === healthcareProvider?.id;
+	const {
+		data: evolutionNoteData,
+		isLoading: isEvolutionNoteLoading,
+	} = useAppointmentEvolutionNote(
+		appointment?.id || "",
+		Boolean(canManageEvolutionNote && appointment?.id),
+	);
+	const upsertEvolutionNoteMutation = useUpsertAppointmentEvolutionNote(
+		appointment?.id || "",
+	);
+
+	useEffect(() => {
+		setEvolutionNoteForm(buildEvolutionNoteForm(evolutionNoteData?.evolutionNote));
+	}, [evolutionNoteData?.evolutionNote]);
 
 	const handleStatusUpdate = async (appointmentId: string, nextStatus: AppointmentStatus) => {
 		if (nextStatus === "CANCELLED") {
@@ -512,6 +576,30 @@ export default function AppointmentDetails() {
 		}
 	};
 
+	const handleSaveEvolutionNote = async () => {
+		if (!appointment) {
+			return;
+		}
+
+		try {
+			await upsertEvolutionNoteMutation.mutateAsync({
+				subjective: evolutionNoteForm.subjective.trim() || null,
+				objective: evolutionNoteForm.objective.trim() || null,
+				assessment: evolutionNoteForm.assessment.trim() || null,
+				plan: evolutionNoteForm.plan.trim() || null,
+				painLevel: evolutionNoteForm.painLevel.trim()
+					? Number(evolutionNoteForm.painLevel)
+					: null,
+				painLocation: evolutionNoteForm.painLocation.trim() || null,
+				evolutionStatus: evolutionNoteForm.evolutionStatus || null,
+			});
+			showSuccessToast("common.toastEvolutionNoteSaved");
+		} catch (noteError) {
+			console.error("Failed to save evolution note:", noteError);
+			showErrorToast("common.toastEvolutionNoteSaveFailed");
+		}
+	};
+
 	if (isLoading) {
 		return (
 			<SafeAreaView edges={["top"]} style={styles.container}>
@@ -580,6 +668,14 @@ export default function AppointmentDetails() {
 	const cancellationPolicyPreview = getCancellationPolicyPreview(appointment);
 	const availableRescheduleSlots =
 		timeSlotsData?.slots.filter((slot) => slot.available) || [];
+	const canEditEvolutionNote =
+		canManageEvolutionNote &&
+		(appointment.status === "IN_PROGRESS" || appointment.status === "COMPLETED");
+	const evolutionStatusOptions = [
+		{ value: "IMPROVED", label: t("common.evolutionImproved") },
+		{ value: "STABLE", label: t("common.evolutionStable") },
+		{ value: "WORSENED", label: t("common.evolutionWorsened") },
+	];
 
 	return (
 		<SafeAreaView edges={["top"]} style={styles.container}>
@@ -1187,6 +1283,218 @@ export default function AppointmentDetails() {
 					</View>
 				) : null}
 
+				{canManageEvolutionNote ? (
+					<View style={styles.section}>
+						<Text style={styles.sectionTitle}>{t("common.evolutionNote")}</Text>
+						<View style={styles.infoCard}>
+							<View style={styles.notesHeader}>
+								<NotebookPen
+									size={18}
+									color={theme.colors.primary}
+									strokeWidth={2}
+								/>
+								<Text style={styles.notesTitle}>
+									{t("common.evolutionNote")}
+								</Text>
+							</View>
+
+							{!canEditEvolutionNote && !evolutionNoteData?.evolutionNote ? (
+								<Text style={styles.notesText}>
+									{t("common.evolutionNoteAvailableAfterAppointmentStarts")}
+								</Text>
+							) : null}
+
+							{canEditEvolutionNote || evolutionNoteData?.evolutionNote ? (
+								<View style={styles.evolutionForm}>
+									<View style={styles.evolutionField}>
+										<Text style={styles.evolutionFieldLabel}>
+											{t("common.subjective")}
+										</Text>
+										<TextInput
+											value={evolutionNoteForm.subjective}
+											onChangeText={(value) =>
+												setEvolutionNoteForm((current) => ({
+													...current,
+													subjective: value,
+												}))
+											}
+											placeholder={t("common.evolutionSubjectivePlaceholder")}
+											multiline
+											style={styles.rescheduleReasonInput}
+										/>
+									</View>
+
+									<View style={styles.evolutionGrid}>
+										<View style={styles.evolutionField}>
+											<Text style={styles.evolutionFieldLabel}>
+												{t("common.painLevel")}
+											</Text>
+											<TextInput
+												value={evolutionNoteForm.painLevel}
+												onChangeText={(value) =>
+													setEvolutionNoteForm((current) => ({
+														...current,
+														painLevel: value,
+													}))
+												}
+												placeholder="0-10"
+												keyboardType="number-pad"
+												style={styles.evolutionInput}
+											/>
+										</View>
+										<View style={styles.evolutionField}>
+											<Text style={styles.evolutionFieldLabel}>
+												{t("common.painLocation")}
+											</Text>
+											<TextInput
+												value={evolutionNoteForm.painLocation}
+												onChangeText={(value) =>
+													setEvolutionNoteForm((current) => ({
+														...current,
+														painLocation: value,
+													}))
+												}
+												placeholder={t("common.evolutionPainLocationPlaceholder")}
+												style={styles.evolutionInput}
+											/>
+										</View>
+									</View>
+
+									<View style={styles.evolutionField}>
+										<Text style={styles.evolutionFieldLabel}>
+											{t("common.clinicalEvolution")}
+										</Text>
+										<SelectInput
+											value={evolutionNoteForm.evolutionStatus}
+											onChange={(value) =>
+												setEvolutionNoteForm((current) => ({
+													...current,
+													evolutionStatus:
+														value as EvolutionNoteFormState["evolutionStatus"],
+												}))
+											}
+											options={evolutionStatusOptions}
+											placeholder={t("common.selectClinicalEvolution")}
+										/>
+									</View>
+
+									<View style={styles.evolutionField}>
+										<Text style={styles.evolutionFieldLabel}>
+											{t("common.objective")}
+										</Text>
+										<TextInput
+											value={evolutionNoteForm.objective}
+											onChangeText={(value) =>
+												setEvolutionNoteForm((current) => ({
+													...current,
+													objective: value,
+												}))
+											}
+											placeholder={t("common.evolutionObjectivePlaceholder")}
+											multiline
+											style={styles.rescheduleReasonInput}
+										/>
+									</View>
+
+									<View style={styles.evolutionField}>
+										<Text style={styles.evolutionFieldLabel}>
+											{t("common.assessment")}
+										</Text>
+										<TextInput
+											value={evolutionNoteForm.assessment}
+											onChangeText={(value) =>
+												setEvolutionNoteForm((current) => ({
+													...current,
+													assessment: value,
+												}))
+											}
+											placeholder={t("common.evolutionAssessmentPlaceholder")}
+											multiline
+											style={styles.rescheduleReasonInput}
+										/>
+									</View>
+
+									<View style={styles.evolutionField}>
+										<Text style={styles.evolutionFieldLabel}>
+											{t("common.plan")}
+										</Text>
+										<TextInput
+											value={evolutionNoteForm.plan}
+											onChangeText={(value) =>
+												setEvolutionNoteForm((current) => ({
+													...current,
+													plan: value,
+												}))
+											}
+											placeholder={t("common.evolutionPlanPlaceholder")}
+											multiline
+											style={styles.rescheduleReasonInput}
+										/>
+									</View>
+
+									{canEditEvolutionNote ? (
+										<Button
+											loading={upsertEvolutionNoteMutation.isPending}
+											onPress={handleSaveEvolutionNote}
+										>
+											{t("common.saveEvolutionNote")}
+										</Button>
+									) : null}
+								</View>
+							) : null}
+
+							<View style={styles.evolutionHistory}>
+								<Text style={styles.notesTitle}>
+									{t("common.evolutionHistory")}
+								</Text>
+								{isEvolutionNoteLoading ? (
+									<Text style={styles.notesText}>{t("common.loading")}</Text>
+								) : evolutionNoteData?.history.length ? (
+									evolutionNoteData.history.map((note) => (
+										<View key={note.id} style={styles.evolutionHistoryItem}>
+											<View style={styles.evolutionHistoryHeader}>
+												<Text style={styles.evolutionHistoryDate}>
+													{formatShortDate(note.appointment.scheduledAt)}
+												</Text>
+												<Text style={styles.evolutionHistoryStatus}>
+													{note.evolutionStatus
+														? t(
+																note.evolutionStatus === "IMPROVED"
+																	? "common.evolutionImproved"
+																	: note.evolutionStatus === "STABLE"
+																		? "common.evolutionStable"
+																		: "common.evolutionWorsened",
+														  )
+														: t("common.notInformed")}
+												</Text>
+											</View>
+											<Text style={styles.notesText}>
+												{`${t("common.painLevel")}: ${
+													note.painLevel ?? t("common.notInformed")
+												} · ${t("common.painLocation")}: ${
+													note.painLocation || t("common.notInformed")
+												}`}
+											</Text>
+											{note.subjective ? (
+												<Text style={styles.notesText}>{note.subjective}</Text>
+											) : null}
+											{note.assessment ? (
+												<Text style={styles.evolutionHistorySecondary}>
+													{note.assessment}
+												</Text>
+											) : null}
+										</View>
+									))
+								) : (
+									<Text style={styles.notesText}>
+										{t("common.noEvolutionHistoryYet")}
+									</Text>
+								)}
+							</View>
+						</View>
+					</View>
+				) : null}
+
 				<View style={styles.section}>
 					<Text style={styles.sectionTitle}>{t("common.procedures")}</Text>
 					<View style={styles.infoCard}>
@@ -1582,6 +1890,65 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	recurringEditor: {
 		gap: theme.gap(2),
+	},
+	evolutionForm: {
+		gap: theme.gap(2),
+	},
+	evolutionField: {
+		gap: theme.gap(1),
+	},
+	evolutionFieldLabel: {
+		fontSize: 12,
+		fontWeight: "700",
+		textTransform: "uppercase",
+		color: theme.colors.mutedForeground,
+	},
+	evolutionGrid: {
+		gap: theme.gap(2),
+	},
+	evolutionInput: {
+		minHeight: 44,
+		borderRadius: theme.radius.lg,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		backgroundColor: theme.colors.background,
+		paddingHorizontal: theme.gap(1.5),
+		paddingVertical: theme.gap(1.25),
+		fontSize: 14,
+		color: theme.colors.foreground,
+	},
+	evolutionHistory: {
+		gap: theme.gap(1.5),
+		paddingTop: theme.gap(1),
+	},
+	evolutionHistoryItem: {
+		gap: theme.gap(0.75),
+		padding: theme.gap(1.5),
+		borderRadius: theme.radius.lg,
+		backgroundColor: theme.colors.surfaceMuted,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+	},
+	evolutionHistoryHeader: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		gap: theme.gap(2),
+	},
+	evolutionHistoryDate: {
+		fontSize: 13,
+		fontWeight: "700",
+		color: theme.colors.foreground,
+	},
+	evolutionHistoryStatus: {
+		fontSize: 12,
+		fontWeight: "600",
+		color: theme.colors.mutedForeground,
+	},
+	evolutionHistorySecondary: {
+		fontSize: 13,
+		lineHeight: 19,
+		color: theme.colors.mutedForeground,
 	},
 	slotGrid: {
 		flexDirection: "row",

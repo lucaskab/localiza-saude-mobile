@@ -609,6 +609,7 @@ export const en = {
     save: "Save",
     saveChanges: "Save Changes",
     saveMedicalRecord: "Save Medical Record",
+    saveEvolutionNote: "Save evolution note",
     seeAll: "See All",
     selectedProcedures: "Selected Procedures",
     sharedWithProvidersBeforeAppointments: "Shared with providers before appointments",
@@ -653,6 +654,35 @@ export const en = {
     patientReviewsDescription: "See patient ratings and comments",
     birthdayGreetingEmailEnabled: "Send a birthday email to the patient",
     birthdayGreetingEmailDescription: "When enabled, customers with a registered birth date receive a warm automatic message on behalf of the provider.",
+    evolutionNote: "Evolution note",
+    evolutionHistory: "Evolution history",
+    evolutionNoteAvailableAfterAppointmentStarts:
+      "The evolution note becomes available once the appointment starts.",
+    subjective: "Patient report",
+    objective: "Objective findings",
+    assessment: "Professional assessment",
+    plan: "Plan and next steps",
+    painLevel: "Pain level",
+    painLocation: "Pain location",
+    clinicalEvolution: "Clinical evolution",
+    selectClinicalEvolution: "Select the evolution",
+    evolutionImproved: "Improved",
+    evolutionStable: "Stable",
+    evolutionWorsened: "Worsened",
+    evolutionSubjectivePlaceholder:
+      "Example: patient reports less pain when moving the shoulder.",
+    evolutionObjectivePlaceholder:
+      "Example: better range of motion, less swelling, stable gait.",
+    evolutionAssessmentPlaceholder:
+      "Example: positive response to the current plan, no worsening signs.",
+    evolutionPlanPlaceholder:
+      "Example: continue exercises and reassess mobility next session.",
+    evolutionPainLocationPlaceholder:
+      "Example: lower back, right shoulder, left knee",
+    noEvolutionHistoryYet:
+      "There are no previous appointments with evolution notes yet.",
+    toastEvolutionNoteSaveFailed: "We could not save the evolution note.",
+    toastEvolutionNoteSaved: "Evolution note saved successfully.",
     appointmentConfirmationReminderHoursBefore: "Early confirmation (hours before)",
     appointmentReminderHoursBefore: "Arrival reminder (hours before)",
     choosePreferredLanguage: "Choose the app's preferred language",

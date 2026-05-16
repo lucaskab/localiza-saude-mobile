@@ -15,6 +15,8 @@ export type AppointmentStatus =
 	| "CANCELLED"
 	| "NO_SHOW";
 
+export type AppointmentEvolutionStatus = "IMPROVED" | "STABLE" | "WORSENED";
+
 export interface AppointmentProcedure {
 	id: string;
 	appointmentId: string;
@@ -237,4 +239,41 @@ export interface CreateAppointmentWaitlistEntryData {
 
 export interface CreateAppointmentWaitlistEntryResponse {
 	waitlistEntry: AppointmentWaitlistEntry;
+}
+
+export interface AppointmentEvolutionNote {
+	id: string;
+	appointmentId: string;
+	customerId: string | null;
+	patientProfileId: string | null;
+	healthcareProviderId: string;
+	subjective: string | null;
+	objective: string | null;
+	assessment: string | null;
+	plan: string | null;
+	painLevel: number | null;
+	painLocation: string | null;
+	evolutionStatus: AppointmentEvolutionStatus | null;
+	createdAt: string;
+	updatedAt: string;
+	appointment: {
+		id: string;
+		scheduledAt: string;
+		status: AppointmentStatus;
+	};
+}
+
+export interface AppointmentEvolutionNotePayload {
+	subjective?: string | null;
+	objective?: string | null;
+	assessment?: string | null;
+	plan?: string | null;
+	painLevel?: number | null;
+	painLocation?: string | null;
+	evolutionStatus?: AppointmentEvolutionStatus | null;
+}
+
+export interface AppointmentEvolutionNoteResponse {
+	evolutionNote: AppointmentEvolutionNote | null;
+	history: AppointmentEvolutionNote[];
 }

@@ -608,6 +608,7 @@ export const ptBR = {
     save: "Salvar",
     saveChanges: "Salvar alterações",
     saveMedicalRecord: "Salvar ficha médica",
+    saveEvolutionNote: "Salvar ficha de evolução",
     seeAll: "Ver todos",
     selectedProcedures: "Procedimentos selecionados",
     sharedWithProvidersBeforeAppointments: "Compartilhada com profissionais antes das consultas",
@@ -652,6 +653,35 @@ export const ptBR = {
     patientReviewsDescription: "Veja notas e comentários dos pacientes",
     birthdayGreetingEmailEnabled: "Enviar email de parabéns no aniversário do paciente",
     birthdayGreetingEmailDescription: "Quando ativado, clientes com data de nascimento cadastrada recebem uma mensagem automática e carinhosa em nome do profissional.",
+    evolutionNote: "Ficha de evolução",
+    evolutionHistory: "Histórico de evolução",
+    evolutionNoteAvailableAfterAppointmentStarts:
+      "A ficha de evolução fica disponível quando o atendimento iniciar.",
+    subjective: "Relato do paciente",
+    objective: "Achados objetivos",
+    assessment: "Avaliação profissional",
+    plan: "Conduta e próximos passos",
+    painLevel: "Nível de dor",
+    painLocation: "Local da dor",
+    clinicalEvolution: "Evolução clínica",
+    selectClinicalEvolution: "Selecione a evolução",
+    evolutionImproved: "Melhorou",
+    evolutionStable: "Estável",
+    evolutionWorsened: "Piorou",
+    evolutionSubjectivePlaceholder:
+      "Ex: paciente relata menos dor ao movimentar o ombro.",
+    evolutionObjectivePlaceholder:
+      "Ex: amplitude melhor, edema reduzido, marcha estável.",
+    evolutionAssessmentPlaceholder:
+      "Ex: resposta positiva ao plano atual, sem sinais de piora.",
+    evolutionPlanPlaceholder:
+      "Ex: manter exercícios, reavaliar mobilidade na próxima sessão.",
+    evolutionPainLocationPlaceholder:
+      "Ex: lombar, ombro direito, joelho esquerdo",
+    noEvolutionHistoryYet:
+      "Ainda não há atendimentos anteriores com ficha de evolução.",
+    toastEvolutionNoteSaveFailed: "Não foi possível salvar a ficha de evolução.",
+    toastEvolutionNoteSaved: "Ficha de evolução salva com sucesso.",
     appointmentConfirmationReminderHoursBefore: "Confirmação antecipada (horas antes)",
     appointmentReminderHoursBefore: "Lembrete de chegada (horas antes)",
     choosePreferredLanguage: "Escolha o idioma preferido do app",
