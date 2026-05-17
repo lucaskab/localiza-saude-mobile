@@ -600,6 +600,13 @@ export default function AppointmentDetails() {
 		}
 	};
 
+	const handleCopyEvolutionNote = (
+		note: NonNullable<typeof evolutionNoteData>["history"][number],
+	) => {
+		setEvolutionNoteForm(buildEvolutionNoteForm(note));
+		showSuccessToast("common.toastEvolutionNoteCopied");
+	};
+
 	if (isLoading) {
 		return (
 			<SafeAreaView edges={["top"]} style={styles.container}>
@@ -1483,6 +1490,16 @@ export default function AppointmentDetails() {
 													{note.assessment}
 												</Text>
 											) : null}
+											{canEditEvolutionNote ? (
+												<Button
+													variant="outline"
+													size="sm"
+													style={styles.evolutionHistoryCopyButton}
+													onPress={() => handleCopyEvolutionNote(note)}
+												>
+													{t("common.copyToCurrentEvolutionNote")}
+												</Button>
+											) : null}
 										</View>
 									))
 								) : (
@@ -1949,6 +1966,10 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 13,
 		lineHeight: 19,
 		color: theme.colors.mutedForeground,
+	},
+	evolutionHistoryCopyButton: {
+		alignSelf: "flex-end",
+		marginTop: theme.gap(0.5),
 	},
 	slotGrid: {
 		flexDirection: "row",

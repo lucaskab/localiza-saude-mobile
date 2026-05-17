@@ -676,6 +676,8 @@ export const es = {
     "noEvolutionHistoryYet": "Todavía no hay atenciones anteriores con ficha de evolución.",
     "toastEvolutionNoteSaveFailed": "No fue posible guardar la ficha de evolución.",
     "toastEvolutionNoteSaved": "Ficha de evolución guardada con éxito.",
+    "toastEvolutionNoteCopied": "Las notas anteriores se copiaron a la ficha actual.",
+    "copyToCurrentEvolutionNote": "Copiar a la ficha actual",
     "appointmentConfirmationReminderHoursBefore": "Confirmación anticipada (horas antes)",
     "appointmentReminderHoursBefore": "Recordatorio de llegada (horas antes)",
     "choosePreferredLanguage": "Elige el idioma preferido de la app",

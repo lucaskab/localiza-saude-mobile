@@ -682,6 +682,8 @@ export const ptBR = {
       "Ainda não há atendimentos anteriores com ficha de evolução.",
     toastEvolutionNoteSaveFailed: "Não foi possível salvar a ficha de evolução.",
     toastEvolutionNoteSaved: "Ficha de evolução salva com sucesso.",
+    toastEvolutionNoteCopied: "Anotações anteriores copiadas para a ficha atual.",
+    copyToCurrentEvolutionNote: "Copiar para a ficha atual",
     appointmentConfirmationReminderHoursBefore: "Confirmação antecipada (horas antes)",
     appointmentReminderHoursBefore: "Lembrete de chegada (horas antes)",
     choosePreferredLanguage: "Escolha o idioma preferido do app",

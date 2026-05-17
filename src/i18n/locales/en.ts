@@ -683,6 +683,8 @@ export const en = {
       "There are no previous appointments with evolution notes yet.",
     toastEvolutionNoteSaveFailed: "We could not save the evolution note.",
     toastEvolutionNoteSaved: "Evolution note saved successfully.",
+    toastEvolutionNoteCopied: "Previous notes copied into the current evolution note.",
+    copyToCurrentEvolutionNote: "Copy to current note",
     appointmentConfirmationReminderHoursBefore: "Early confirmation (hours before)",
     appointmentReminderHoursBefore: "Arrival reminder (hours before)",
     choosePreferredLanguage: "Choose the app's preferred language",
