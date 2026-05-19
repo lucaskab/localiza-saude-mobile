@@ -9,8 +9,8 @@ import {
 	ShieldAlert,
 	Trash2,
 } from "lucide-react-native";
-import { useEffect, useMemo, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { Controller, useForm, type UseFormSetError } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import {
 	ActivityIndicator,
@@ -29,6 +29,7 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { z } from "zod";
 import { ScreenHeader } from "@/components/screen-header";
 import { Button } from "@/components/ui/button";
+import { FieldGroup } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useAppInfo, useCreateSupportRequest } from "@/hooks/use-settings";
 import type { TranslationKey } from "@/i18n";
@@ -112,7 +113,14 @@ export default function SettingsScreen() {
 	const { data: appInfo, isLoading: isAppInfoLoading } = useAppInfo();
 	const createRequest = useCreateSupportRequest();
 
-	const { control, handleSubmit, reset } = useForm<SettingsFormValues>({
+	const {
+		control,
+		handleSubmit,
+		reset,
+		setError,
+		clearErrors,
+		formState: { errors },
+	} = useForm<SettingsFormValues>({
 		defaultValues: defaultFormValues,
 	});
 
@@ -122,18 +130,15 @@ export default function SettingsScreen() {
 		}
 	}, [selectedAction, reset]);
 
-	const deviceInfo = useMemo(
-		() => ({
-			appVersion: Constants.expoConfig?.version ?? "1.0.0",
-			environment: process.env.APP_VARIANT || process.env.NODE_ENV || "development",
-			platform: Platform.OS,
-			apiUrl:
-				Platform.OS === "android"
-					? process.env.EXPO_PUBLIC_ANDROID_API_URL
-					: process.env.EXPO_PUBLIC_BASE_URL,
-		}),
-		[],
-	);
+	const deviceInfo = {
+		appVersion: Constants.expoConfig?.version ?? "1.0.0",
+		environment: process.env.APP_VARIANT || process.env.NODE_ENV || "development",
+		platform: Platform.OS,
+		apiUrl:
+			Platform.OS === "android"
+				? process.env.EXPO_PUBLIC_ANDROID_API_URL
+				: process.env.EXPO_PUBLIC_BASE_URL,
+	};
 
 	const closeModal = () => {
 		if (createRequest.isPending) {
@@ -151,7 +156,8 @@ export default function SettingsScreen() {
 		const parsed = supportRequestFormSchema.safeParse(values);
 
 		if (!parsed.success) {
-			Alert.alert(t("common.checkTheForm"), t("common.messageMustHaveAtLeast10Characters"));
+			clearErrors();
+			applySettingsErrors(parsed.error, setError);
 			return;
 		}
 
@@ -271,53 +277,57 @@ export default function SettingsScreen() {
 						</Text>
 
 						<View style={styles.formGroup}>
-							<Text style={styles.fieldLabel}>{t("common.subjectOptional")}</Text>
-							<Controller
-								control={control}
-								name="subject"
-								render={({ field }) => (
-									<Input
-										value={field.value}
-										onChangeText={field.onChange}
-										placeholder={t("common.subjectOptional")}
-									/>
-								)}
-							/>
+							<FieldGroup label={t("common.subjectOptional")}>
+								<Controller
+									control={control}
+									name="subject"
+									render={({ field }) => (
+										<Input
+											value={field.value}
+											onChangeText={field.onChange}
+											placeholder={t("common.subjectOptional")}
+											errorMessage={errors.subject?.message}
+										/>
+									)}
+								/>
+							</FieldGroup>
 						</View>
 
 						<View style={styles.formGroup}>
-							<Text style={styles.fieldLabel}>{t("common.message")}</Text>
-							<Controller
-								control={control}
-								name="message"
-								render={({ field }) => (
-									<Input
-										value={field.value}
-										onChangeText={field.onChange}
-										placeholder={t("common.describeYourRequest")}
-										multiline
-									/>
-								)}
-							/>
+							<FieldGroup label={t("common.message")} required>
+								<Controller
+									control={control}
+									name="message"
+									render={({ field }) => (
+										<Input
+											value={field.value}
+											onChangeText={field.onChange}
+											placeholder={t("common.describeYourRequest")}
+											multiline
+											errorMessage={errors.message?.message}
+										/>
+									)}
+								/>
+							</FieldGroup>
 						</View>
 
 						<View style={styles.formGroup}>
-							<Text style={styles.fieldLabel}>
-								{t("common.contactEmailOptional")}
-							</Text>
-							<Controller
-								control={control}
-								name="contactEmail"
-								render={({ field }) => (
-									<Input
-										value={field.value}
-										onChangeText={field.onChange}
-										placeholder="name@email.com"
-										keyboardType="email-address"
-										autoCapitalize="none"
-									/>
-								)}
-							/>
+							<FieldGroup label={t("common.contactEmailOptional")}>
+								<Controller
+									control={control}
+									name="contactEmail"
+									render={({ field }) => (
+										<Input
+											value={field.value}
+											onChangeText={field.onChange}
+											placeholder="name@email.com"
+											keyboardType="email-address"
+											autoCapitalize="none"
+											errorMessage={errors.contactEmail?.message}
+										/>
+									)}
+								/>
+							</FieldGroup>
 						</View>
 
 						<View style={styles.modalActions}>
@@ -405,6 +415,24 @@ function AboutRow({ label, value }: { label: string; value: string }) {
 			<Text style={styles.aboutValue}>{value}</Text>
 		</View>
 	);
+}
+
+function applySettingsErrors(
+	error: z.ZodError,
+	setError: UseFormSetError<SettingsFormValues>,
+) {
+	for (const issue of error.issues) {
+		const fieldName = issue.path[0];
+
+		if (!fieldName || typeof fieldName !== "string") {
+			continue;
+		}
+
+		setError(fieldName as keyof SettingsFormValues, {
+			message: issue.message,
+			type: "manual",
+		});
+	}
 }
 
 const styles = StyleSheet.create((theme) => ({

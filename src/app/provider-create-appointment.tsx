@@ -16,6 +16,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { z } from "zod";
 import {
 	createEmptyRecurrence,
 	RecurrenceFields,
@@ -59,7 +60,15 @@ export default function ProviderCreateAppointment() {
 		createEmptyRecurrence(formatUtcDateForApi(new Date()), ""),
 	);
 
-	const { control, handleSubmit, watch, setValue } =
+	const {
+		control,
+		handleSubmit,
+		watch,
+		setValue,
+		setError,
+		clearErrors,
+		formState: { errors },
+	} =
 		useForm<ProviderAppointmentFormData>({
 			defaultValues: providerAppointmentDefaultValues,
 		});
@@ -140,10 +149,8 @@ export default function ProviderCreateAppointment() {
 		const parsed = providerAppointmentSchema.safeParse(values);
 
 		if (!parsed.success) {
-			Alert.alert(
-				t("common.checkTheForm"),
-				parsed.error.issues[0]?.message || t("common.pleaseReviewTheAppointment"),
-			);
+			clearErrors();
+			applyFormErrors(parsed.error, setError);
 			return;
 		}
 
@@ -221,6 +228,9 @@ export default function ProviderCreateAppointment() {
 							existingPatientProfileId={existingPatientProfileId}
 							patientProfiles={patientProfiles}
 							todayDate={todayDate}
+							existingPatientErrorMessage={
+								errors.existingPatientProfileId?.message
+							}
 							onSelectNewMode={() => setValue("patientMode", "new")}
 							onSelectExistingMode={() => {
 								setValue("patientMode", "existing");
@@ -241,6 +251,11 @@ export default function ProviderCreateAppointment() {
 							selectedProcedureIds={selectedProcedureIds}
 							onToggleProcedure={toggleProcedure}
 						/>
+						{errors.selectedProcedureIds?.message ? (
+							<Text style={styles.validationErrorText}>
+								{errors.selectedProcedureIds.message}
+							</Text>
+						) : null}
 
 						<View style={styles.section}>
 							<View style={styles.sectionHeader}>
@@ -254,7 +269,7 @@ export default function ProviderCreateAppointment() {
 							<Controller
 								control={control}
 								name="selectedDate"
-								render={({ field: { onChange } }) => (
+								render={({ field: { onChange }, fieldState }) => (
 									<DatePickerInput
 										value={formattedDate}
 										placeholder="common.selectAppointmentDate"
@@ -266,6 +281,7 @@ export default function ProviderCreateAppointment() {
 											setValue("selectedTime", "");
 										}}
 										markedDates={markedDates}
+										errorMessage={fieldState.error?.message}
 									/>
 								)}
 							/>
@@ -295,11 +311,12 @@ export default function ProviderCreateAppointment() {
 							<Controller
 								control={control}
 								name="notes"
-								render={({ field: { value, onChange } }) => (
+								render={({ field: { value, onChange }, fieldState }) => (
 									<Textarea
 										placeholder={t("common.internalNotesOrReasonForVisit")}
 										value={value}
 										onChangeText={onChange}
+										errorMessage={fieldState.error?.message}
 									/>
 								)}
 							/>
@@ -329,6 +346,24 @@ export default function ProviderCreateAppointment() {
 			</ScrollView>
 		</SafeAreaView>
 	);
+}
+
+function applyFormErrors(
+	error: z.ZodError,
+	setError: ReturnType<typeof useForm<ProviderAppointmentFormData>>["setError"],
+) {
+	for (const issue of error.issues) {
+		const fieldName = issue.path[0];
+
+		if (!fieldName || typeof fieldName !== "string") {
+			continue;
+		}
+
+		setError(fieldName as keyof ProviderAppointmentFormData, {
+			message: issue.message,
+			type: "manual",
+		});
+	}
 }
 
 const styles = StyleSheet.create((theme) => ({
@@ -403,6 +438,12 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 18,
 		fontWeight: "700",
 		color: theme.colors.foreground,
+	},
+	validationErrorText: {
+		marginTop: theme.gap(-1),
+		fontSize: 12,
+		fontWeight: "600",
+		color: theme.colors.destructive,
 	},
 	summaryCard: {
 		backgroundColor: `${theme.colors.primary}14`,

@@ -1,13 +1,14 @@
 import type { LucideIcon } from "lucide-react-native";
 import { useRef } from "react";
 import type { TextInputProps, ViewStyle } from "react-native";
-import { Pressable, TextInput, View } from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 
 interface InputProps extends Omit<TextInputProps, "style"> {
 	containerStyle?: ViewStyle;
 	disabled?: boolean;
 	error?: boolean;
+	errorMessage?: string;
 	leftIcon?: LucideIcon;
 	rightIcon?: LucideIcon;
 	iconSize?: number;
@@ -17,6 +18,7 @@ interface InputProps extends Omit<TextInputProps, "style"> {
 export const Input = ({
 	disabled = false,
 	error = false,
+	errorMessage,
 	leftIcon: LeftIcon,
 	rightIcon: RightIcon,
 	iconSize = 16,
@@ -34,6 +36,9 @@ export const Input = ({
 	};
 
 	const styles = StyleSheet.create({
+		wrapper: {
+			gap: theme.gap(1),
+		},
 		container: {
 			flexDirection: "row",
 			alignItems: multiline ? "flex-start" : "center",
@@ -60,45 +65,55 @@ export const Input = ({
 		iconContainer: {
 			paddingTop: multiline ? theme.gap(0.5) : 0,
 		},
+		errorText: {
+			fontSize: 12,
+			fontWeight: "600",
+			color: theme.colors.destructive,
+		},
 	});
 
 	return (
-		<Pressable
-			onPress={handleContainerPress}
-			style={[
-				styles.container,
-				disabled && styles.disabled,
-				error && { borderColor: theme.colors.destructive },
-				containerStyle,
-			]}
-		>
-			{LeftIcon && (
-				<View style={styles.iconContainer}>
-					<LeftIcon
-						size={iconSize}
-						color={theme.colors.mutedForeground}
-						strokeWidth={2}
-					/>
-				</View>
-			)}
-			<TextInput
-				ref={inputRef}
-				editable={!disabled}
-				style={styles.input}
-				placeholderTextColor={theme.colors.mutedForeground}
-				multiline={multiline}
-				numberOfLines={multiline ? 4 : 1}
-				{...props}
-			/>
-			{RightIcon && (
-				<View style={styles.iconContainer}>
-					<RightIcon
-						size={iconSize}
-						color={theme.colors.mutedForeground}
-						strokeWidth={2}
-					/>
-				</View>
-			)}
-		</Pressable>
+		<View style={styles.wrapper}>
+			<Pressable
+				onPress={handleContainerPress}
+				style={[
+					styles.container,
+					disabled && styles.disabled,
+					(error || errorMessage) && {
+						borderColor: theme.colors.destructive,
+					},
+					containerStyle,
+				]}
+			>
+				{LeftIcon && (
+					<View style={styles.iconContainer}>
+						<LeftIcon
+							size={iconSize}
+							color={theme.colors.mutedForeground}
+							strokeWidth={2}
+						/>
+					</View>
+				)}
+				<TextInput
+					ref={inputRef}
+					editable={!disabled}
+					style={styles.input}
+					placeholderTextColor={theme.colors.mutedForeground}
+					multiline={multiline}
+					numberOfLines={multiline ? 4 : 1}
+					{...props}
+				/>
+				{RightIcon && (
+					<View style={styles.iconContainer}>
+						<RightIcon
+							size={iconSize}
+							color={theme.colors.mutedForeground}
+							strokeWidth={2}
+						/>
+					</View>
+				)}
+			</Pressable>
+			{errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+		</View>
 	);
 };

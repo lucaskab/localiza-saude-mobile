@@ -18,6 +18,7 @@ type SelectInputProps = {
 	placeholder: string;
 	leftIcon?: LucideIcon;
 	title?: string;
+	errorMessage?: string;
 };
 
 export function SelectInput({
@@ -27,6 +28,7 @@ export function SelectInput({
 	placeholder,
 	leftIcon: LeftIcon,
 	title,
+	errorMessage,
 }: SelectInputProps) {
 	const { theme } = useUnistyles();
 	const selectedOption = options.find((option) => option.value === value);
@@ -41,8 +43,13 @@ export function SelectInput({
 			paddingHorizontal: theme.gap(2.5),
 			borderRadius: theme.radius.md,
 			borderWidth: 1,
-			borderColor: theme.colors.border,
+			borderColor: errorMessage
+				? theme.colors.destructive
+				: theme.colors.border,
 			backgroundColor: theme.colors.background,
+		},
+		wrapper: {
+			gap: theme.gap(1),
 		},
 		triggerText: {
 			flex: 1,
@@ -109,6 +116,11 @@ export function SelectInput({
 			fontSize: 13,
 			color: theme.colors.mutedForeground,
 		},
+		errorText: {
+			fontSize: 12,
+			fontWeight: "600",
+			color: theme.colors.destructive,
+		},
 	});
 
 	function selectOption(option: SelectInputOption) {
@@ -118,7 +130,7 @@ export function SelectInput({
 	}
 
 	return (
-		<>
+		<View style={styles.wrapper}>
 			<Pressable style={styles.trigger} onPress={() => setOpen(true)}>
 				{LeftIcon ? (
 					<LeftIcon
@@ -194,6 +206,7 @@ export function SelectInput({
 					</Pressable>
 				</Pressable>
 			</Modal>
-		</>
+			{errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+		</View>
 	);
 }

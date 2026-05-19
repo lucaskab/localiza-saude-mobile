@@ -26,6 +26,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { z } from "zod";
+import type { UseFormSetError } from "react-hook-form";
+import { FieldGroup } from "@/components/ui/field";
 
 type CreateProcedureFormData = {
   name: string;
@@ -77,7 +79,16 @@ export default function ProviderProcedureCreate() {
     updateProcedureMutation.isPending ||
     deleteProcedureMutation.isPending;
 
-  const { control, handleSubmit, reset, setValue, watch } =
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    setError,
+    clearErrors,
+    formState: { errors },
+  } =
     useForm<CreateProcedureFormData>({
     defaultValues: createProcedureDefaultValues,
   });
@@ -153,10 +164,8 @@ export default function ProviderProcedureCreate() {
       });
 
     if (!parsed.success) {
-      Alert.alert(
-        t("common.validationError"),
-        t("common.pleaseReviewTheAppointment"),
-      );
+      clearErrors();
+      applyProcedureErrors(parsed.error, setError);
       return;
     }
 
@@ -267,9 +276,7 @@ export default function ProviderProcedureCreate() {
           ) : (
             <View style={styles.form}>
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>
-                  {t("common.name")} <Text style={styles.required}>*</Text>
-                </Text>
+                <FieldGroup label={t("common.name")} required>
                 <Controller
                   control={control}
                   name="name"
@@ -278,13 +285,15 @@ export default function ProviderProcedureCreate() {
                       value={field.value}
                       onChangeText={field.onChange}
                       placeholder={t("common.eGConsultation")}
+                      errorMessage={errors.name?.message}
                     />
                   )}
                 />
+                </FieldGroup>
               </View>
 
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>{t("common.description")}</Text>
+                <FieldGroup label={t("common.description")}>
                 <Controller
                   control={control}
                   name="description"
@@ -294,17 +303,16 @@ export default function ProviderProcedureCreate() {
                       onChangeText={field.onChange}
                       placeholder={t("common.describeTheProcedure")}
                       multiline
+                      errorMessage={errors.description?.message}
                     />
                   )}
                 />
+                </FieldGroup>
               </View>
 
               <View style={styles.fieldRow}>
                 <View style={styles.fieldGroupHalf}>
-                  <Text style={styles.fieldLabel}>
-                    {t("common.durationMinutes")}{" "}
-                    <Text style={styles.required}>*</Text>
-                  </Text>
+                  <FieldGroup label={t("common.durationMinutes")} required>
                   <Controller
                     control={control}
                     name="durationInMinutes"
@@ -317,16 +325,15 @@ export default function ProviderProcedureCreate() {
                         }
                         placeholder="30"
                         keyboardType="number-pad"
+                        errorMessage={errors.durationInMinutes?.message}
                       />
                     )}
                   />
+                  </FieldGroup>
                 </View>
 
                 <View style={styles.fieldGroupHalf}>
-                  <Text style={styles.fieldLabel}>
-                    {t("common.priceBRL")}{" "}
-                    <Text style={styles.required}>*</Text>
-                  </Text>
+                  <FieldGroup label={t("common.priceBRL")} required>
                   <Controller
                     control={control}
                     name="price"
@@ -349,9 +356,11 @@ export default function ProviderProcedureCreate() {
                         }}
                         placeholder="0.00"
                         keyboardType="decimal-pad"
+                        errorMessage={errors.price?.message}
                       />
                     )}
                   />
+                  </FieldGroup>
                 </View>
               </View>
 
@@ -458,6 +467,23 @@ export default function ProviderProcedureCreate() {
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
+}
+
+function applyProcedureErrors(
+	error: z.ZodError,
+	setError: UseFormSetError<CreateProcedureFormData>,
+) {
+	for (const issue of error.issues) {
+		const fieldName = issue.path[0];
+		if (!fieldName || typeof fieldName !== "string") {
+			continue;
+		}
+
+		setError(fieldName as keyof CreateProcedureFormData, {
+			message: issue.message,
+			type: "manual",
+		});
+	}
 }
 
 const styles = StyleSheet.create((theme) => ({

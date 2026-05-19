@@ -14,6 +14,7 @@ type PatientSectionProps = {
 	existingPatientProfileId: string;
 	patientProfiles: PatientProfile[];
 	todayDate: string;
+	existingPatientErrorMessage?: string;
 	onSelectNewMode: () => void;
 	onSelectExistingMode: () => void;
 	onSelectExistingProfile: (profileId: string) => void;
@@ -25,6 +26,7 @@ export function PatientSection({
 	existingPatientProfileId,
 	patientProfiles,
 	todayDate,
+	existingPatientErrorMessage,
 	onSelectNewMode,
 	onSelectExistingMode,
 	onSelectExistingProfile,
@@ -95,6 +97,7 @@ export function PatientSection({
 					patientProfiles={patientProfiles}
 					existingPatientProfileId={existingPatientProfileId}
 					onSelectExistingProfile={onSelectExistingProfile}
+					errorMessage={existingPatientErrorMessage}
 				/>
 			) : null}
 

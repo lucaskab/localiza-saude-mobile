@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { Clock } from "lucide-react-native";
 import { Controller } from "react-hook-form";
@@ -36,18 +35,12 @@ export function TimeSlotSelector<TFieldValues extends FieldValues>({
 	const { t } = useTranslation();
 
 	// Format date to YYYY-MM-DD
-	const formattedDate = useMemo(() => {
-		const year = selectedDate.getUTCFullYear();
-		const month = String(selectedDate.getUTCMonth() + 1).padStart(2, "0");
-		const day = String(selectedDate.getUTCDate()).padStart(2, "0");
-		return `${year}-${month}-${day}`;
-	}, [selectedDate]);
+	const year = selectedDate.getUTCFullYear();
+	const month = String(selectedDate.getUTCMonth() + 1).padStart(2, "0");
+	const day = String(selectedDate.getUTCDate()).padStart(2, "0");
+	const formattedDate = `${year}-${month}-${day}`;
 
-	// Extract procedure IDs
-	const procedureIds = useMemo(
-		() => selectedProcedures.map((p) => p.id),
-		[selectedProcedures],
-	);
+	const procedureIds = selectedProcedures.map((procedure) => procedure.id);
 
 	// Fetch time slots from backend
 	const {
@@ -115,7 +108,7 @@ export function TimeSlotSelector<TFieldValues extends FieldValues>({
 				control={control}
 				name={name}
 				rules={{ required: t("common.pleaseSelectATime") }}
-				render={({ field: { value, onChange } }) => (
+				render={({ field: { value, onChange }, fieldState }) => (
 					<>
 						{!isLoading && !error && (
 							<>
@@ -177,6 +170,11 @@ export function TimeSlotSelector<TFieldValues extends FieldValues>({
 								)}
 							</>
 						)}
+						{fieldState.error?.message ? (
+							<Text style={styles.validationErrorText}>
+								{fieldState.error.message}
+							</Text>
+						) : null}
 					</>
 				)}
 			/>
@@ -239,6 +237,12 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 14,
 		color: theme.colors.mutedForeground,
 		textAlign: "center",
+	},
+	validationErrorText: {
+		marginTop: theme.gap(2),
+		fontSize: 12,
+		fontWeight: "600",
+		color: theme.colors.destructive,
 	},
 	timeSlots: {
 		flexDirection: "row",

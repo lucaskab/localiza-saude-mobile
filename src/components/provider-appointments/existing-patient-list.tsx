@@ -7,12 +7,14 @@ type ExistingPatientListProps = {
 	patientProfiles: PatientProfile[];
 	existingPatientProfileId: string;
 	onSelectExistingProfile: (profileId: string) => void;
+	errorMessage?: string;
 };
 
 export function ExistingPatientList({
 	patientProfiles,
 	existingPatientProfileId,
 	onSelectExistingProfile,
+	errorMessage,
 }: ExistingPatientListProps) {
 	const { t } = useTranslation();
 
@@ -56,6 +58,9 @@ export function ExistingPatientList({
 					</Pressable>
 				);
 			})}
+			{errorMessage ? (
+				<Text style={styles.errorText}>{errorMessage}</Text>
+			) : null}
 		</View>
 	);
 }
@@ -108,5 +113,10 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 14,
 		color: theme.colors.mutedForeground,
 		textAlign: "center",
+	},
+	errorText: {
+		fontSize: 12,
+		fontWeight: "600",
+		color: theme.colors.destructive,
 	},
 }));

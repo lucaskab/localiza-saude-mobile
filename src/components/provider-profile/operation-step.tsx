@@ -6,6 +6,7 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { serviceModalityOptions } from "@/constants/service-modalities";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FieldGroup } from "@/components/ui/field";
 import { FormInput } from "@/components/provider-profile/form-input";
 import type { ProfileFormData } from "@/components/provider-profile/profile-form";
 
@@ -37,9 +38,8 @@ export function ProviderOperationStep({
 			<Controller
 				control={control}
 				name="serviceModalities"
-				render={({ field: { value, onChange } }) => (
-					<View style={styles.fieldGroup}>
-						<Text style={styles.fieldLabel}>{t("common.serviceModalities")}</Text>
+				render={({ field: { value, onChange }, fieldState }) => (
+					<FieldGroup label={t("common.serviceModalities")} required>
 						<View style={styles.checkboxList}>
 							{serviceModalityOptions.map((option) => {
 								const checked = value.includes(option.value);
@@ -68,7 +68,10 @@ export function ProviderOperationStep({
 								);
 							})}
 						</View>
-					</View>
+						{fieldState.error?.message ? (
+							<Text style={styles.errorText}>{fieldState.error.message}</Text>
+						) : null}
+					</FieldGroup>
 				)}
 			/>
 			<View style={styles.infoBox}>
@@ -279,6 +282,11 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 14,
 		fontWeight: "500",
 		color: theme.colors.foreground,
+	},
+	errorText: {
+		fontSize: 12,
+		fontWeight: "600",
+		color: theme.colors.destructive,
 	},
 	checkboxList: {
 		gap: theme.gap(1.25),

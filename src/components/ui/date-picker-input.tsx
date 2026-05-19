@@ -1,5 +1,5 @@
 import { CalendarDays, X } from "lucide-react-native";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { ViewStyle } from "react-native";
 import { Modal, Pressable, Text, TextInput, View } from "react-native";
 import { Calendar } from "react-native-calendars";
@@ -29,6 +29,7 @@ type DatePickerInputProps = {
 	disabled?: boolean;
 	allowClear?: boolean;
 	containerStyle?: ViewStyle;
+	errorMessage?: string;
 };
 
 const parseDateStringAsUtc = (dateString: string) => {
@@ -62,6 +63,7 @@ export function DatePickerInput({
 	disabled = false,
 	allowClear = false,
 	containerStyle,
+	errorMessage,
 }: DatePickerInputProps) {
 	const { theme } = useUnistyles();
 	const { i18n, t } = useTranslation();
@@ -72,25 +74,16 @@ export function DatePickerInput({
 		? formatDateForDisplay(selectedDate, i18n.language)
 		: t(placeholder);
 
-	const calendarMarkedDates = useMemo(() => {
-		const nextMarkedDates = { ...(markedDates || {}) };
+	const calendarMarkedDates = { ...(markedDates || {}) };
 
-		if (selectedDate) {
-			nextMarkedDates[selectedDate] = {
-				...nextMarkedDates[selectedDate],
-				selected: true,
-				selectedColor: theme.colors.primary,
-				selectedTextColor: theme.colors.primaryForeground,
-			};
-		}
-
-		return nextMarkedDates;
-	}, [
-		markedDates,
-		selectedDate,
-		theme.colors.primary,
-		theme.colors.primaryForeground,
-	]);
+	if (selectedDate) {
+		calendarMarkedDates[selectedDate] = {
+			...calendarMarkedDates[selectedDate],
+			selected: true,
+			selectedColor: theme.colors.primary,
+			selectedTextColor: theme.colors.primaryForeground,
+		};
+	}
 
 	const handleSelectDate = (dateString: string) => {
 		onChange(dateString);
@@ -98,7 +91,7 @@ export function DatePickerInput({
 	};
 
 	return (
-		<>
+		<View style={styles.wrapper}>
 			<Pressable
 				accessibilityRole="button"
 				accessibilityLabel={t(title)}
@@ -106,6 +99,7 @@ export function DatePickerInput({
 				onPress={() => setIsOpen(true)}
 				style={[
 					styles.inputContainer,
+					errorMessage && styles.inputContainerError,
 					disabled && styles.inputContainerDisabled,
 					containerStyle,
 				]}
@@ -126,6 +120,7 @@ export function DatePickerInput({
 					style={styles.inputText}
 				/>
 			</Pressable>
+			{errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
 			<Modal
 				animationType="fade"
@@ -216,7 +211,7 @@ export function DatePickerInput({
 					</View>
 				</View>
 			</Modal>
-		</>
+		</View>
 	);
 }
 
@@ -232,6 +227,9 @@ const styles = StyleSheet.create((theme) => ({
 		borderColor: theme.colors.border,
 		backgroundColor: theme.colors.background,
 	},
+	inputContainerError: {
+		borderColor: theme.colors.destructive,
+	},
 	inputContainerDisabled: {
 		opacity: 0.5,
 		backgroundColor: theme.colors.muted,
@@ -244,6 +242,14 @@ const styles = StyleSheet.create((theme) => ({
 		flex: 1,
 		fontSize: 15,
 		color: theme.colors.foreground,
+	},
+	wrapper: {
+		gap: theme.gap(1),
+	},
+	errorText: {
+		fontSize: 12,
+		fontWeight: "600",
+		color: theme.colors.destructive,
 	},
 	modalOverlay: {
 		flex: 1,
