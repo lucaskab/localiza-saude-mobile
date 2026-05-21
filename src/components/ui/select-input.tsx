@@ -19,6 +19,7 @@ type SelectInputProps = {
 	leftIcon?: LucideIcon;
 	title?: string;
 	errorMessage?: string;
+	disabled?: boolean;
 };
 
 export function SelectInput({
@@ -29,6 +30,7 @@ export function SelectInput({
 	leftIcon: LeftIcon,
 	title,
 	errorMessage,
+	disabled = false,
 }: SelectInputProps) {
 	const { theme } = useUnistyles();
 	const selectedOption = options.find((option) => option.value === value);
@@ -47,6 +49,10 @@ export function SelectInput({
 				? theme.colors.destructive
 				: theme.colors.border,
 			backgroundColor: theme.colors.background,
+		},
+		triggerDisabled: {
+			opacity: 0.6,
+			backgroundColor: theme.colors.muted,
 		},
 		wrapper: {
 			gap: theme.gap(1),
@@ -131,7 +137,13 @@ export function SelectInput({
 
 	return (
 		<View style={styles.wrapper}>
-			<Pressable style={styles.trigger} onPress={() => setOpen(true)}>
+			<Pressable
+				style={[styles.trigger, disabled && styles.triggerDisabled]}
+				onPress={() => {
+					if (disabled) return;
+					setOpen(true);
+				}}
+			>
 				{LeftIcon ? (
 					<LeftIcon
 						size={16}

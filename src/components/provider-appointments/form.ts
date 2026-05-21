@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { buildRecurrencePayload, type RecurrenceFormValue } from "@/components/appointments/recurrence-fields";
+import { SERVICE_MODALITY_VALUES } from "@/constants/service-modalities";
 
 const optionalTextSchema = z.string().transform((value) => {
 	const trimmed = value.trim();
@@ -28,6 +29,9 @@ export const providerAppointmentSchema = z
 	.object({
 		selectedDate: z.date(),
 		selectedTime: z.string().min(1, "Choose an available time"),
+		selectedServiceModality: z.enum(SERVICE_MODALITY_VALUES, {
+			message: "Choose a service modality",
+		}),
 		selectedProcedureIds: z.array(z.string()).min(1, "Choose a procedure"),
 		patientMode: z.enum(["existing", "new"]),
 		existingPatientProfileId: z.string(),
@@ -95,6 +99,7 @@ export const formatUtcDateForDisplay = (date: Date) =>
 export const providerAppointmentDefaultValues: ProviderAppointmentFormData = {
 	selectedDate: parseCalendarDateAsUtc(formatUtcDateForApi(new Date())),
 	selectedTime: "",
+	selectedServiceModality: "IN_PERSON",
 	selectedProcedureIds: [],
 	patientMode: "new",
 	existingPatientProfileId: "",
@@ -241,6 +246,7 @@ export function buildCreateAppointmentPayload({
 		healthcareProviderId: providerId,
 		scheduledAt: appointmentDate.toISOString(),
 		procedureIds: values.selectedProcedureIds,
+		serviceModality: values.selectedServiceModality,
 		notes: values.notes,
 		customer,
 		recurrence: buildRecurrencePayload(recurrence),

@@ -37,7 +37,13 @@ import { PatientSection } from "@/components/provider-appointments/patient-secti
 import { ProceduresSection } from "@/components/provider-appointments/procedures-section";
 import { Button } from "@/components/ui/button";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
+import { FieldGroup } from "@/components/ui/field";
+import { SelectInput } from "@/components/ui/select-input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+	getServiceModalityLabelKey,
+	serviceModalityOptions,
+} from "@/constants/service-modalities";
 import { useAuth } from "@/contexts/auth";
 import { useCreateAppointment } from "@/hooks/use-appointments";
 import { usePatientProfiles } from "@/hooks/use-patient-profiles";
@@ -75,6 +81,7 @@ export default function ProviderCreateAppointment() {
 
 	const selectedDate = watch("selectedDate");
 	const selectedTime = watch("selectedTime");
+	const selectedServiceModality = watch("selectedServiceModality");
 	const selectedProcedureIds = watch("selectedProcedureIds");
 	const patientMode = watch("patientMode");
 	const existingPatientProfileId = watch("existingPatientProfileId");
@@ -112,6 +119,14 @@ export default function ProviderCreateAppointment() {
 	const activeScheduleExceptions =
 		scheduleExceptionsData?.exceptions.filter((exception) => exception.isActive) ||
 		[];
+	const availableServiceModalities = healthcareProvider?.serviceModalities || [];
+	const serviceModalityChoices = serviceModalityOptions
+		.filter((option) => availableServiceModalities.includes(option.value))
+		.map((option) => ({
+			value: option.value,
+			label: t(getServiceModalityLabelKey(option.value) || option.labelKey),
+			description: t(option.descriptionKey),
+		}));
 	const { markedDates, minDate, maxDate } = buildCalendarState({
 		activeSchedules,
 		bookingAvailabilityDays,
@@ -119,6 +134,20 @@ export default function ProviderCreateAppointment() {
 		selectedDate,
 		selectedColor: theme.colors.primary,
 	});
+
+	useEffect(() => {
+		if (availableServiceModalities.length === 0) {
+			return;
+		}
+
+		if (!availableServiceModalities.includes(selectedServiceModality)) {
+			setValue("selectedServiceModality", availableServiceModalities[0]);
+		}
+	}, [
+		availableServiceModalities,
+		selectedServiceModality,
+		setValue,
+	]);
 
 	useEffect(() => {
 		setRecurrence((current) => ({
@@ -146,6 +175,13 @@ export default function ProviderCreateAppointment() {
 	};
 
 	const onSubmit = async (values: ProviderAppointmentFormData) => {
+		if (availableServiceModalities.length === 0) {
+			setError("selectedServiceModality", {
+				message: t("common.providerHasNoServiceModalities"),
+			});
+			return;
+		}
+
 		const parsed = providerAppointmentSchema.safeParse(values);
 
 		if (!parsed.success) {
@@ -258,6 +294,36 @@ export default function ProviderCreateAppointment() {
 						) : null}
 
 						<View style={styles.section}>
+							<FieldGroup
+								label={t("common.appointmentServiceModality")}
+								required
+							>
+								{serviceModalityChoices.length === 0 ? (
+									<Text style={styles.emptyText}>
+										{t("common.providerHasNoServiceModalities")}
+									</Text>
+								) : (
+									<SelectInput
+										value={selectedServiceModality}
+										onChange={(value) =>
+											setValue(
+												"selectedServiceModality",
+												value as ProviderAppointmentFormData["selectedServiceModality"],
+											)
+										}
+										options={serviceModalityChoices}
+										placeholder={t("common.appointmentServiceModality")}
+										title={t("common.appointmentServiceModality")}
+										disabled={serviceModalityChoices.length === 1}
+										errorMessage={
+											errors.selectedServiceModality?.message
+										}
+									/>
+								)}
+							</FieldGroup>
+						</View>
+
+						<View style={styles.section}>
 							<View style={styles.sectionHeader}>
 								<CalendarIcon
 									size={20}
@@ -335,7 +401,10 @@ export default function ProviderCreateAppointment() {
 							<Button
 								onPress={handleSubmit(onSubmit)}
 								loading={createAppointment.isPending}
-								disabled={createAppointment.isPending}
+								disabled={
+									createAppointment.isPending ||
+									serviceModalityChoices.length === 0
+								}
 								style={styles.submitButton}
 							>
 								{t("common.schedule")}

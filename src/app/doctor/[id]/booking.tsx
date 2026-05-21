@@ -954,7 +954,10 @@ export default function Booking() {
 											style={[
 												styles.modalityOption,
 												selected && styles.modalityOptionActive,
+												availableServiceModalities.length === 1 &&
+													styles.modalityOptionLocked,
 											]}
+											disabled={availableServiceModalities.length === 1}
 											onPress={() =>
 												setValue("selectedServiceModality", option.value)
 											}
@@ -1269,6 +1272,9 @@ const styles = StyleSheet.create((theme) => ({
 	modalityOptionActive: {
 		borderColor: theme.colors.primary,
 		backgroundColor: `${theme.colors.primary}12`,
+	},
+	modalityOptionLocked: {
+		opacity: 0.72,
 	},
 	modalityTitle: {
 		fontSize: 15,

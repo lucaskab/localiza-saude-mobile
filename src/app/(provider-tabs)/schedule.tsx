@@ -81,6 +81,13 @@ function getTodayInputDate() {
 	return new Date().toISOString().slice(0, 10);
 }
 
+function getCurrentTimeInput() {
+	const now = new Date();
+	const hours = String(now.getHours()).padStart(2, "0");
+	const minutes = String(now.getMinutes()).padStart(2, "0");
+	return `${hours}:${minutes}`;
+}
+
 function parseDateInputAsUtc(date: string) {
 	const [year = 0, month = 1, day = 1] = date.split("-").map(Number);
 	return new Date(Date.UTC(year, month - 1, day));
@@ -115,6 +122,32 @@ function formatScheduleExceptionDate(date: string) {
 	});
 }
 
+function shouldDisplayException(
+	exception: {
+		date: string;
+		startTime: string | null;
+		endTime: string | null;
+	},
+	todayDate: string,
+	currentTime: string,
+) {
+	const exceptionDate = exception.date.slice(0, 10);
+
+	if (exceptionDate > todayDate) {
+		return true;
+	}
+
+	if (exceptionDate < todayDate) {
+		return false;
+	}
+
+	if (!exception.endTime) {
+		return true;
+	}
+
+	return exception.endTime >= currentTime;
+}
+
 export default function ProviderSchedule() {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation();
@@ -146,6 +179,14 @@ export default function ProviderSchedule() {
 			healthcareProvider?.id || "",
 			!!healthcareProvider?.id,
 		);
+	const visibleExceptions =
+		scheduleExceptionsData?.exceptions.filter((exception) =>
+			shouldDisplayException(
+				exception,
+				getTodayInputDate(),
+				getCurrentTimeInput(),
+			),
+		) || [];
 
 	// Mutations
 	const createMutation = useCreateSchedule();
@@ -774,8 +815,8 @@ export default function ProviderSchedule() {
 					</View>
 
 					<View style={styles.exceptionList}>
-						{scheduleExceptionsData?.exceptions.length ? (
-							scheduleExceptionsData.exceptions.map((exception) => (
+						{visibleExceptions.length ? (
+							visibleExceptions.map((exception) => (
 								<View key={exception.id} style={styles.exceptionCard}>
 									<View style={styles.exceptionCardInfo}>
 										<Text style={styles.exceptionCardTitle}>
@@ -791,7 +832,7 @@ export default function ProviderSchedule() {
 											<Text style={styles.exceptionReason}>
 												{exception.reason}
 											</Text>
-										) : null}
+						) : null}
 									</View>
 									<View style={styles.exceptionActions}>
 										<Switch
