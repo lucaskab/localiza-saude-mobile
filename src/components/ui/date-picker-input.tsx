@@ -258,7 +258,7 @@ const styles = StyleSheet.create((theme) => ({
 		padding: theme.gap(3),
 	},
 	modalBackdrop: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: "rgba(15, 23, 42, 0.48)",
 	},
 	modalCard: {

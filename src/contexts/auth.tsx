@@ -54,6 +54,8 @@ interface AuthContextData {
 		skipMedicalRecord?: boolean;
 	}) => Promise<void>;
 	signOut: () => void;
+	updateUserImage: (image: string | null) => void;
+	updateCustomerProfile: (payload: { user: User; customer: Customer | null }) => void;
 	user: User | null;
 	customer: Customer | null;
 	healthcareProvider: HealthcareProvider | null;
@@ -316,7 +318,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 			}
 
 			if (data.user.onboardingStep === "CUSTOMER_PROFILE") {
-				router.replace("/onboarding-customer-profile");
+				router.replace("/onboarding-customer-profile" as never);
 				return;
 			}
 
@@ -347,7 +349,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 				healthcareProvider: null,
 			});
 
-			router.replace("/onboarding-customer-medical");
+			router.replace("/onboarding-customer-medical" as never);
 		},
 		[authState?.sessionToken],
 	);
@@ -401,6 +403,45 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 			setIsLoading(false);
 		}
 	}, [refreshAuthStateFromSession]);
+
+	const updateUserImage = useCallback((image: string | null) => {
+		setAuthState((current) => {
+			if (!current) {
+				return current;
+			}
+
+			return {
+				...current,
+				user: {
+					...current.user,
+					image,
+				},
+				healthcareProvider: current.healthcareProvider
+					? {
+							...current.healthcareProvider,
+							image,
+						}
+					: null,
+			};
+		});
+	}, []);
+
+	const updateCustomerProfile = useCallback(
+		({ user, customer }: { user: User; customer: Customer | null }) => {
+			setAuthState((current) => {
+				if (!current) {
+					return current;
+				}
+
+				return {
+					...current,
+					user,
+					customer,
+				};
+			});
+		},
+		[],
+	);
 
 	const signInWithEmail = async (email: string, password: string) => {
 		try {
@@ -538,6 +579,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 			completeCustomerProfile,
 			finishCustomerOnboarding,
 			signOut,
+			updateUserImage,
+			updateCustomerProfile,
 			isAuthenticated,
 			user: authState?.user || null,
 			customer: authState?.customer || null,
@@ -568,6 +611,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 			completeCustomerProfile,
 			finishCustomerOnboarding,
 			signOut,
+			updateUserImage,
+			updateCustomerProfile,
 		],
 	);
 

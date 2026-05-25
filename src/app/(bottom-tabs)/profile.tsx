@@ -1,4 +1,4 @@
-import { Avatar } from "@/components/ui/avatar";
+import { ProfilePhotoEditor } from "@/components/profile-photo-editor";
 import { useAuth } from "@/contexts/auth";
 import { useFavorites } from "@/hooks/use-favorites";
 import type { TranslationKey } from "@/i18n";
@@ -76,7 +76,7 @@ const menuItems: {
 export default function Profile() {
   const { theme } = useUnistyles();
   const { t } = useTranslation();
-  const { signOut, user } = useAuth();
+  const { signOut, user, customer } = useAuth();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { data: favoritesData } = useFavorites();
@@ -93,17 +93,27 @@ export default function Profile() {
 
           {/* User Info */}
           <View style={styles.userInfo}>
-            <Avatar source={user?.image} size="md" />
+            <ProfilePhotoEditor
+              userId={user?.id}
+              image={user?.image}
+              fallbackName={user?.name || "US"}
+              size="md"
+              variant="onPrimary"
+              showActions={false}
+            />
             <View style={styles.userDetails}>
               <Text style={styles.userName}>{user?.name || "John Doe"}</Text>
               <Text style={styles.userEmail}>{user?.email}</Text>
-              <Text style={styles.userPhone}>+1 (555) 123-4567</Text>
+              <Text style={styles.userPhone}>
+                {user?.phone || customer?.phone || t("common.notSet")}
+              </Text>
             </View>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t("common.editProfile")}
               testID="customer-profile-edit-button"
               hitSlop={8}
+              onPress={() => router.push("/customer-profile-edit" as never)}
               style={({ pressed }) => [
                 styles.editIconButton,
                 pressed && styles.editIconButtonPressed,

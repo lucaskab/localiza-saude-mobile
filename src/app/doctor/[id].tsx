@@ -808,7 +808,7 @@ const styles = StyleSheet.create((theme) => ({
 		color: theme.colors.primaryForeground,
 	},
 	headerOverlay: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: "rgba(0, 0, 0, 0.1)",
 	},
 	backButton: {
@@ -1111,7 +1111,7 @@ const styles = StyleSheet.create((theme) => ({
 		paddingVertical: theme.gap(4),
 	},
 	ratingModalBackdrop: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: "rgba(15, 23, 42, 0.58)",
 	},
 	ratingModalCard: {

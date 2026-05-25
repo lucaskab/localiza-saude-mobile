@@ -525,7 +525,7 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "flex-end",
 	},
 	modalBackdrop: {
-		...RNStyleSheet.absoluteFillObject,
+		...RNStyleSheet.absoluteFill,
 		backgroundColor: "rgba(0, 0, 0, 0.45)",
 	},
 	modalCard: {

@@ -45,6 +45,7 @@ import {
 	profileFormSchema,
 } from "@/components/provider-profile/profile-form";
 import { StepIndicator } from "@/components/provider-profile/step-indicator";
+import { ProfilePhotoEditor } from "@/components/profile-photo-editor";
 import { ScreenHeader } from "@/components/screen-header";
 import { Button } from "@/components/ui/button";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
@@ -285,6 +286,15 @@ export default function ProviderProfileEdit() {
 							{currentStep === 0 ? (
 								<>
 							<View style={styles.card}>
+							<ProfilePhotoEditor
+								userId={healthcareProvider?.id}
+								image={healthcareProvider?.image}
+								fallbackName={
+									healthcareProvider?.displayName ||
+									healthcareProvider?.name ||
+									"US"
+								}
+							/>
 							<View style={styles.fieldGroup}>
 								<Text style={styles.fieldLabel}>{t("common.name")}</Text>
 								<View style={styles.readOnlyField}>

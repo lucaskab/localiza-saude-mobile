@@ -74,6 +74,7 @@ function RootNavigator() {
 					<Stack.Screen name="language-settings" />
 					<Stack.Screen name="medical-record" />
 					<Stack.Screen name="notification-settings" />
+					<Stack.Screen name="customer-profile-edit" />
 					<Stack.Screen name="settings" />
 					<Stack.Screen name="staff" />
 					<Stack.Screen name="provider-create-appointment" />

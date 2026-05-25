@@ -163,7 +163,6 @@ export default function Search() {
 		setNearMeLocation(null);
 		setRadiusInKm("15");
 		setMaxPrice("");
-		setMinRating("");
 		setOnlyAvailable(false);
 	};
 

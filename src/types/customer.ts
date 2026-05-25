@@ -29,6 +29,9 @@ export interface CreateCustomerData {
 }
 
 export interface UpdateCustomerData {
+	name?: string;
+	phone?: string | null;
 	cpf?: string | null;
 	dateOfBirth?: Date | string | null;
+	address?: import("@/types/address").AddressInput;
 }

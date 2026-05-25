@@ -86,18 +86,18 @@ function Field({
 
 const styles = StyleSheet.create((theme) => ({
 	grid: {
-		gap: theme.spacing.md,
+		gap: theme.gap(2),
 	},
 	field: {
-		gap: theme.spacing.xs,
+		gap: theme.gap(1),
 	},
 	label: {
-		fontSize: theme.fontSize.sm,
+		fontSize: 14,
 		fontWeight: "600",
 		color: theme.colors.foreground,
 	},
 	hint: {
-		fontSize: theme.fontSize.xs,
+		fontSize: 12,
 		color: theme.colors.mutedForeground,
 	},
 }));

@@ -1,4 +1,5 @@
 import { Avatar } from "@/components/ui/avatar";
+import { ProfilePhotoEditor } from "@/components/profile-photo-editor";
 import { useAuth } from "@/contexts/auth";
 import { useProceduresByProvider } from "@/hooks/use-procedures";
 import type { TranslationKey } from "@/i18n";
@@ -127,7 +128,13 @@ export default function ProviderProfile() {
           style={[styles.header, { paddingTop: insets.top + theme.gap(3) }]}
         >
           <View style={styles.userInfo}>
-            <Avatar source={healthcareProvider?.image} size="md" />
+            <Avatar
+              source={healthcareProvider?.image}
+              fallback={healthcareProvider?.name || t("common.provider")}
+              size="md"
+              backgroundColor="rgba(255, 255, 255, 0.15)"
+              textColor={theme.colors.primaryForeground}
+            />
             <View style={styles.userDetails}>
               <Text style={styles.userName}>
                 {healthcareProvider?.name || t("common.provider")}

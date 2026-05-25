@@ -491,7 +491,7 @@ const styles = StyleSheet.create((theme) => ({
 		justifyContent: "flex-end",
 	},
 	filtersSheetBackdrop: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: "rgba(15, 23, 42, 0.42)",
 	},
 	filtersSheet: {
