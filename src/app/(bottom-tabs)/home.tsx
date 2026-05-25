@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { MapPin, Search, Star } from "lucide-react-native";
+import { MapPin, Search } from "lucide-react-native";
 import { useState } from "react";
 import {
 	ActivityIndicator,
@@ -16,7 +16,6 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { useCategories, getProvidersByCategory } from "@/hooks/use-categories";
 import { formatNextAvailableAt } from "@/utils/availability";
-import { formatAverageRating, formatRatingCount } from "@/utils/ratings";
 
 export default function Home() {
 	const { theme } = useUnistyles();
@@ -217,29 +216,7 @@ export default function Home() {
 														.filter(Boolean)
 														.join(" · ") || t("common.healthcareProvider")}
 												</Text>
-												{provider.verificationStatus === "VERIFIED" ? (
-													<Text style={styles.verifiedText}>{t("common.verified")}</Text>
-												) : null}
-												{provider.isSuperProfessional ? (
-													<Text style={styles.superProfessionalText}>
-														{t("common.superProfessional")}
-													</Text>
-												) : null}
 												<View style={styles.professionalStats}>
-													<View style={styles.ratingContainer}>
-														<Star
-															size={14}
-															color={theme.colors.amber}
-															fill={theme.colors.amber}
-															strokeWidth={2}
-														/>
-														<Text style={styles.ratingText}>
-															{formatAverageRating(provider.averageRating)}
-														</Text>
-														<Text style={styles.reviewsText}>
-															{formatRatingCount(provider.totalRatings)}
-														</Text>
-													</View>
 													{typeof provider.completedAppointments === "number" ? (
 														<Text style={styles.metricText}>
 															{t("common.completedAppointmentCount", {

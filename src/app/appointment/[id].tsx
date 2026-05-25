@@ -10,6 +10,7 @@ import {
 	FileText,
 	HeartPulse,
 	Mail,
+	MapPin,
 	MessageCircle,
 	NotebookPen,
 	Phone,
@@ -45,6 +46,7 @@ import {
 } from "@/components/appointments/recurrence-fields";
 import { getServiceModalityLabelKey } from "@/constants/service-modalities";
 import { useAuth } from "@/contexts/auth";
+import { getProviderCareAddress } from "@/lib/format-address";
 import {
 	useAppointment,
 	useDeleteAppointmentRecurringSeries,
@@ -649,6 +651,7 @@ export default function AppointmentDetails() {
 				image: getAppointmentPatientImage(appointment),
 				email: getAppointmentPatientEmail(appointment) || t("common.notInformed"),
 				phone: getAppointmentPatientPhone(appointment),
+				address: null as string | null,
 		  }
 		: {
 				title: t("common.provider"),
@@ -658,6 +661,7 @@ export default function AppointmentDetails() {
 				image: appointment.healthcareProvider.image,
 				email: appointment.healthcareProvider.email,
 				phone: appointment.healthcareProvider.phone,
+				address: getProviderCareAddress(appointment.healthcareProvider),
 		  };
 
 	const providerActions = isHealthcareProvider
@@ -780,6 +784,13 @@ export default function AppointmentDetails() {
 						<DetailRow icon={Mail} label={t("common.email")} value={counterpart.email} />
 						{counterpart.phone ? (
 							<DetailRow icon={Phone} label={t("common.phone")} value={counterpart.phone} />
+						) : null}
+						{counterpart.address ? (
+							<DetailRow
+								icon={MapPin}
+								label={t("common.clinicAddress")}
+								value={counterpart.address}
+							/>
 						) : null}
 					</View>
 					{canOpenChat ? (

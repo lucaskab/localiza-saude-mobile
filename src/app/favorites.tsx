@@ -15,14 +15,12 @@ import {
 	Calendar,
 	Heart,
 	MessageCircle,
-	Star,
 } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
 import { useFavorites, useRemoveFavorite } from "@/hooks/use-favorites";
 import { formatNextAvailableAt } from "@/utils/availability";
-import { formatAverageRating, formatReviewCount } from "@/utils/ratings";
 
 export default function FavoritesScreen() {
 	const router = useRouter();
@@ -180,20 +178,6 @@ export default function FavoritesScreen() {
 								)}
 
 								<View style={styles.statsRow}>
-									<View style={styles.statItem}>
-										<Star
-											size={14}
-											color={theme.colors.amber}
-											fill={theme.colors.amber}
-											strokeWidth={2}
-										/>
-										<Text style={styles.statText}>
-											{formatAverageRating(provider.averageRating)}
-										</Text>
-										<Text style={styles.mutedStatText}>
-											{formatReviewCount(provider.totalRatings)}
-										</Text>
-									</View>
 									<View style={styles.statItem}>
 										<Calendar
 											size={14}

@@ -5,7 +5,6 @@ import {
 	MessageCircle,
 	Search as SearchIcon,
 	SlidersHorizontal,
-	Star,
 } from "lucide-react-native";
 import { useState, type ReactNode } from "react";
 import {
@@ -35,8 +34,8 @@ import {
 } from "@/hooks/use-favorites";
 import { useInfiniteHealthcareProviders } from "@/hooks/use-healthcare-providers";
 import { getErrorMessage } from "@/services/api";
+import { getProviderLocationLabel } from "@/lib/format-address";
 import { formatNextAvailableAt } from "@/utils/availability";
-import { formatAverageRating } from "@/utils/ratings";
 
 function priceToCents(value: string) {
 	const normalized = value.replace(/\D/g, "");
@@ -70,10 +69,7 @@ export default function Search() {
 	const [radiusInKm, setRadiusInKm] = useState("15");
 	const [isLocating, setIsLocating] = useState(false);
 	const [maxPrice, setMaxPrice] = useState("");
-	const [minRating, setMinRating] = useState("");
-	const [onlyVerified, setOnlyVerified] = useState(false);
 	const [onlyAvailable, setOnlyAvailable] = useState(false);
-	const [onlySuperProfessional, setOnlySuperProfessional] = useState(false);
 	const [favoriteMutationProviderId, setFavoriteMutationProviderId] = useState<
 		string | null
 	>(null);
@@ -119,10 +115,7 @@ export default function Search() {
 		longitude: nearMeLocation?.longitude,
 		radiusInKm: nearMeLocation ? Number(radiusInKm) || 15 : undefined,
 		maxPriceCents: priceToCents(maxPrice),
-		minRating: minRating ? Number(minRating) : undefined,
-		verified: onlyVerified || undefined,
 		available: onlyAvailable || undefined,
-		superProfessional: onlySuperProfessional || undefined,
 		limit: 12,
 	});
 	const filteredProfessionals =
@@ -171,9 +164,7 @@ export default function Search() {
 		setRadiusInKm("15");
 		setMaxPrice("");
 		setMinRating("");
-		setOnlyVerified(false);
 		setOnlyAvailable(false);
-		setOnlySuperProfessional(false);
 	};
 
 	const handleNearMe = async () => {
@@ -264,16 +255,6 @@ export default function Search() {
 								/>
 							))}
 						</FilterSection>
-						<FilterSection title={t("common.avgRating")}>
-							{["4", "4.5", "4.8"].map((item) => (
-								<FilterChip
-									key={item}
-									label={`${item}+`}
-									active={minRating === item}
-									onPress={() => setMinRating(minRating === item ? "" : item)}
-								/>
-							))}
-						</FilterSection>
 						<View style={styles.filterInputGrid}>
 							<Input
 								placeholder={t("common.acceptedInsurance")}
@@ -329,21 +310,9 @@ export default function Search() {
 						</View>
 						<View style={styles.filterChipsRow}>
 							<FilterChip
-								label={t("common.verified")}
-								active={onlyVerified}
-								onPress={() => setOnlyVerified(!onlyVerified)}
-							/>
-							<FilterChip
 								label={t("common.nextAvailable")}
 								active={onlyAvailable}
 								onPress={() => setOnlyAvailable(!onlyAvailable)}
-							/>
-							<FilterChip
-								label={t("common.superProfessional")}
-								active={onlySuperProfessional}
-								onPress={() =>
-									setOnlySuperProfessional(!onlySuperProfessional)
-								}
 							/>
 						</View>
 						<Button variant="ghost" size="sm" onPress={clearFilters}>
@@ -542,16 +511,6 @@ export default function Search() {
 																.filter(Boolean)
 																.join(" · ") || t("common.healthcareProvider")}
 														</Text>
-														{provider.verificationStatus === "VERIFIED" && (
-															<Text style={styles.verifiedText}>
-																{t("common.verified")}
-															</Text>
-														)}
-														{provider.isSuperProfessional ? (
-															<Text style={styles.superProfessionalText}>
-																{t("common.superProfessional")}
-															</Text>
-														) : null}
 														{provider.bio && (
 															<Text
 																style={styles.professionalBio}
@@ -561,24 +520,6 @@ export default function Search() {
 															</Text>
 														)}
 														<View style={styles.professionalStats}>
-															<View style={styles.statItem}>
-																<Star
-																	size={12}
-																	color={theme.colors.amber}
-																	fill={theme.colors.amber}
-																	strokeWidth={2}
-																/>
-																<Text style={styles.ratingText}>
-																	{formatAverageRating(provider.averageRating)}
-																</Text>
-															</View>
-															<View style={styles.statDivider} />
-															<Text style={styles.ratingCountText}>
-																{t("common.ratingCount", {
-																	count: provider.totalRatings ?? 0,
-																})}
-															</Text>
-															<View style={styles.statDivider} />
 															<Text style={styles.availableText}>
 																{formatNextAvailableAt(
 																	provider.nextAvailableAt,
@@ -622,14 +563,9 @@ export default function Search() {
 																	.join(" · ")}
 															</Text>
 														) : null}
-														{provider.clinicNeighborhood || provider.clinicCity ? (
+														{getProviderLocationLabel(provider) ? (
 															<Text style={styles.professionalMeta} numberOfLines={1}>
-																{[
-																	provider.clinicNeighborhood,
-																	provider.clinicCity,
-																]
-																	.filter(Boolean)
-																	.join(" · ")}
+																{getProviderLocationLabel(provider)}
 															</Text>
 														) : null}
 														<View style={styles.professionalActions}>

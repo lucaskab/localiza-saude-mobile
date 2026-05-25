@@ -16,8 +16,6 @@ interface UseHealthcareProvidersParams {
 	latitude?: number;
 	longitude?: number;
 	radiusInKm?: number;
-	verified?: boolean;
-	superProfessional?: boolean;
 	available?: boolean;
 	minRating?: number;
 	maxPriceCents?: number;
@@ -37,8 +35,6 @@ export const getHealthcareProviders = async ({
 	latitude,
 	longitude,
 	radiusInKm,
-	verified,
-	superProfessional,
 	available,
 	minRating,
 	maxPriceCents,
@@ -87,14 +83,6 @@ export const getHealthcareProviders = async ({
 		params.append("radiusInKm", radiusInKm.toString());
 	}
 
-	if (verified) {
-		params.append("verified", "true");
-	}
-
-	if (superProfessional) {
-		params.append("superProfessional", "true");
-	}
-
 	if (available) {
 		params.append("available", "true");
 	}
@@ -135,8 +123,6 @@ export const useHealthcareProviders = ({
 	latitude,
 	longitude,
 	radiusInKm,
-	verified,
-	superProfessional,
 	available,
 	minRating,
 	maxPriceCents,
@@ -156,8 +142,6 @@ export const useHealthcareProviders = ({
 			latitude,
 			longitude,
 			radiusInKm,
-			verified,
-			superProfessional,
 			available,
 			minRating,
 			maxPriceCents,
@@ -175,8 +159,6 @@ export const useHealthcareProviders = ({
 				latitude,
 				longitude,
 				radiusInKm,
-				verified,
-				superProfessional,
 				available,
 				minRating,
 				maxPriceCents,
@@ -199,8 +181,6 @@ export const useInfiniteHealthcareProviders = ({
 	latitude,
 	longitude,
 	radiusInKm,
-	verified,
-	superProfessional,
 	available,
 	minRating,
 	maxPriceCents,
@@ -221,8 +201,6 @@ export const useInfiniteHealthcareProviders = ({
 			latitude,
 			longitude,
 			radiusInKm,
-			verified,
-			superProfessional,
 			available,
 			minRating,
 			maxPriceCents,
@@ -240,8 +218,6 @@ export const useInfiniteHealthcareProviders = ({
 				latitude,
 				longitude,
 				radiusInKm,
-				verified,
-				superProfessional,
 				available,
 				minRating,
 				maxPriceCents,

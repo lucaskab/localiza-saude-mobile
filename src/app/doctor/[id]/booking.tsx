@@ -30,12 +30,6 @@ import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-	buildRecurrencePayload,
-	createEmptyRecurrence,
-	RecurrenceFields,
-	type RecurrenceFormValue,
-} from "@/components/appointments/recurrence-fields";
-import {
 	SERVICE_MODALITIES,
 	SERVICE_MODALITY_VALUES,
 	serviceModalityOptions,
@@ -45,6 +39,7 @@ import { useProceduresByProvider } from "@/hooks/use-procedures";
 import {
 	useCreateAppointment,
 	useCreateAppointmentWaitlistEntry,
+	useTimeSlots,
 } from "@/hooks/use-appointments";
 import { usePatientProfiles } from "@/hooks/use-patient-profiles";
 import {
@@ -52,7 +47,7 @@ import {
 	useSchedulesByProvider,
 } from "@/hooks/use-schedules";
 import { canDisplayProviderPrices } from "@/lib/provider-pricing";
-import { TimeSlotSelector } from "@/components/booking-screen";
+import { TimeSlotSelector, WaitlistSection } from "@/components/booking-screen";
 import { getErrorMessage } from "@/services/api";
 import { showErrorMessageToast, showSuccessToast } from "@/services/toast";
 import { buildUtcDateTimeISO } from "@/utils/appointments";
@@ -178,9 +173,7 @@ export default function Booking() {
 	const { t } = useTranslation();
 	const insets = useSafeAreaInsets();
 	const [waitlistLoadingSlot, setWaitlistLoadingSlot] = useState("");
-	const [recurrence, setRecurrence] = useState<RecurrenceFormValue>(
-		createEmptyRecurrence(todayDateString(), ""),
-	);
+	const [joinedWaitlistSlots, setJoinedWaitlistSlots] = useState<string[]>([]);
 
 	// Setup React Hook Form
 	const { control, handleSubmit, watch, setValue } = useForm<BookingFormData>({
@@ -237,6 +230,13 @@ export default function Booking() {
 	// Create appointment mutation
 	const createAppointment = useCreateAppointment();
 	const createWaitlistEntry = useCreateAppointmentWaitlistEntry();
+	const { data: timeSlotsData } = useTimeSlots({
+		healthcareProviderId: id,
+		date: formattedDate,
+		procedureIds,
+		enabled: procedureIds.length > 0,
+	});
+	const waitlistSlots = timeSlotsData?.slots.filter((slot) => !slot.available) ?? [];
 
 	const isLoading =
 		providerLoading ||
@@ -362,20 +362,8 @@ export default function Booking() {
 	]);
 
 	useEffect(() => {
-		setRecurrence((current) => ({
-			...current,
-			weeklySlots: current.weeklySlots.length
-				? current.weeklySlots.map((slot, index) =>
-						index === 0
-							? {
-									dayOfWeek: String(selectedDate.getUTCDay()),
-									startTime: selectedTime,
-								}
-							: slot,
-					)
-				: current.weeklySlots,
-		}));
-	}, [selectedDate, selectedTime]);
+		setJoinedWaitlistSlots([]);
+	}, [formattedDate, procedureIds.join(",")]);
 
 	const onSubmit = async (data: BookingFormData) => {
 		const parsed = bookingFormSchema.safeParse(data);
@@ -433,7 +421,6 @@ export default function Booking() {
 				serviceModality: formData.selectedServiceModality,
 				notes: formData.notes,
 				customer: patient,
-				recurrence: buildRecurrencePayload(recurrence),
 			});
 
 			showSuccessToast("common.yourAppointmentHasBeenBookedSuccessfully");
@@ -453,6 +440,9 @@ export default function Booking() {
 				scheduledAt: buildUtcDateTimeISO(formattedDate, slotStartTime),
 				procedureIds,
 			});
+			setJoinedWaitlistSlots((current) =>
+				current.includes(slotStartTime) ? current : [...current, slotStartTime],
+			);
 			showSuccessToast("common.waitlistJoined");
 		} catch (error) {
 			showErrorMessageToast(getErrorMessage(error));
@@ -561,19 +551,6 @@ export default function Booking() {
 						</View>
 					</View>
 				)}
-
-				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>{t("common.recurringAppointment")}</Text>
-					<Text style={styles.sectionSubtitle}>
-						{t("common.reserveRecurringTimesForThisProvider")}
-					</Text>
-					<RecurrenceFields
-						baseDate={formattedDate}
-						baseTime={selectedTime}
-						value={recurrence}
-						onChange={setRecurrence}
-					/>
-				</View>
 
 				{/* Patient */}
 				<View style={styles.section}>
@@ -1035,8 +1012,14 @@ export default function Booking() {
 					healthcareProviderId={id}
 					selectedDate={selectedDate}
 					selectedProcedures={selectedProcedures}
-					onJoinWaitlist={handleJoinWaitlist}
+				/>
+
+				<WaitlistSection
+					formattedDate={formatUtcDateForDisplay(selectedDate)}
+					waitlistSlots={waitlistSlots}
+					joinedWaitlistSlots={joinedWaitlistSlots}
 					waitlistLoadingSlot={waitlistLoadingSlot}
+					onJoinWaitlist={handleJoinWaitlist}
 				/>
 
 				{/* Additional Notes */}

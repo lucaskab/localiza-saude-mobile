@@ -8,8 +8,10 @@ import {
 	useContext,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
 } from "react";
+import { AppState } from "react-native";
 import { getCustomerByUserId } from "@/hooks/use-customer";
 import { getHealthcareProviderByUserId } from "@/hooks/use-healthcare-providers";
 import { env } from "@/constants/env";
@@ -42,6 +44,15 @@ interface AuthContextData {
 	completeOnboarding: (
 		role: "HEALTHCARE_PROVIDER" | "CUSTOMER",
 	) => Promise<void>;
+	completeCustomerProfile: (data: {
+		phone: string;
+		cpf: string;
+		address: import("@/types/address").AddressInput;
+	}) => Promise<void>;
+	finishCustomerOnboarding: (data: {
+		medicalRecord?: Record<string, unknown>;
+		skipMedicalRecord?: boolean;
+	}) => Promise<void>;
 	signOut: () => void;
 	user: User | null;
 	customer: Customer | null;
@@ -108,49 +119,57 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 		[],
 	);
 
+	const syncSessionState = useCallback(
+		async (options?: { clearOnMissingSession?: boolean }) => {
+			const session = await authClient.getSession();
+
+			if (session.data?.session.token && session.data?.user) {
+				const user = session.data.user as unknown as User;
+
+				api.setAuthToken(session.data.session.token);
+
+				if (user.onboardingCompleted === false) {
+					setAuthState({
+						sessionToken: session.data.session.token,
+						user,
+						customer: null,
+						healthcareProvider: null,
+					});
+					return;
+				}
+
+				let customer: Customer | null = null;
+				if (user.role === "CUSTOMER") {
+					customer = await fetchCustomerData(user.id);
+				}
+
+				let healthcareProvider: HealthcareProvider | null = null;
+				if (user.role === "HEALTHCARE_PROVIDER") {
+					healthcareProvider = await fetchHealthcareProviderData(user.id);
+				}
+
+				setAuthState({
+					sessionToken: session.data.session.token,
+					user,
+					customer,
+					healthcareProvider,
+				});
+				return;
+			}
+
+			if (options?.clearOnMissingSession) {
+				api.setAuthToken(null);
+				setAuthState(null);
+			}
+		},
+		[fetchCustomerData, fetchHealthcareProviderData],
+	);
+
 	// Initialize auth state from Better Auth session on mount
 	useEffect(() => {
 		const initializeAuth = async () => {
 			try {
-				const session = await authClient.getSession();
-
-				if (session.data?.session.token && session.data?.user) {
-					const user = session.data.user as unknown as User;
-
-					// Set token in memory for API requests
-					api.setAuthToken(session.data.session.token);
-
-					if (user.onboardingCompleted === false) {
-						setAuthState({
-							sessionToken: session.data.session.token,
-							user,
-							customer: null,
-							healthcareProvider: null,
-						});
-						return;
-					}
-
-					// Fetch customer data if user is a customer
-					let customer: Customer | null = null;
-					if (user.role === "CUSTOMER") {
-						customer = await fetchCustomerData(user.id);
-					}
-
-					// Fetch healthcare provider data if user is a provider
-					let healthcareProvider: HealthcareProvider | null = null;
-					if (user.role === "HEALTHCARE_PROVIDER") {
-						healthcareProvider = await fetchHealthcareProviderData(user.id);
-					}
-
-					setAuthState({
-						sessionToken: session.data.session.token,
-						user,
-						customer,
-						healthcareProvider,
-					});
-				} else {
-					setAuthState(null);
-				}
+				await syncSessionState({ clearOnMissingSession: true });
 			} catch (error) {
 				console.error("Failed to initialize auth:", error);
 				setAuthState(null);
@@ -159,8 +178,25 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 			}
 		};
 
-		initializeAuth();
-	}, [fetchCustomerData, fetchHealthcareProviderData]);
+		void initializeAuth();
+	}, [syncSessionState]);
+
+	const appState = useRef(AppState.currentState);
+
+	useEffect(() => {
+		const subscription = AppState.addEventListener("change", (nextAppState) => {
+			const wasBackground =
+				appState.current === "background" || appState.current === "inactive";
+
+			if (wasBackground && nextAppState === "active") {
+				void syncSessionState({ clearOnMissingSession: true });
+			}
+
+			appState.current = nextAppState;
+		});
+
+		return () => subscription.remove();
+	}, [syncSessionState]);
 
 	const signOut = useCallback(async () => {
 		try {
@@ -278,6 +314,64 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 				router.replace("/provider-profile-edit");
 				return;
 			}
+
+			if (data.user.onboardingStep === "CUSTOMER_PROFILE") {
+				router.replace("/onboarding-customer-profile");
+				return;
+			}
+
+			router.replace("/(bottom-tabs)/home");
+		},
+		[authState?.sessionToken],
+	);
+
+	const completeCustomerProfile = useCallback(
+		async (payload: {
+			phone: string;
+			cpf: string;
+			address: import("@/types/address").AddressInput;
+		}) => {
+			if (!authState?.sessionToken) {
+				throw new Error("Missing authenticated session");
+			}
+
+			const { data } = await api.post<CompleteOnboardingResponse>(
+				"/auth/onboarding/customer-profile",
+				payload,
+			);
+
+			setAuthState({
+				sessionToken: authState.sessionToken,
+				user: data.user,
+				customer: data.customer,
+				healthcareProvider: null,
+			});
+
+			router.replace("/onboarding-customer-medical");
+		},
+		[authState?.sessionToken],
+	);
+
+	const finishCustomerOnboarding = useCallback(
+		async (payload: {
+			medicalRecord?: Record<string, unknown>;
+			skipMedicalRecord?: boolean;
+		}) => {
+			if (!authState?.sessionToken) {
+				throw new Error("Missing authenticated session");
+			}
+
+			const { data } = await api.post<CompleteOnboardingResponse>(
+				"/auth/onboarding/customer-finish",
+				payload,
+			);
+
+			setAuthState({
+				sessionToken: authState.sessionToken,
+				user: data.user,
+				customer: data.customer,
+				healthcareProvider: null,
+			});
 
 			router.replace("/(bottom-tabs)/home");
 		},
@@ -441,6 +535,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 			requestPasswordReset,
 			resetPassword,
 			completeOnboarding,
+			completeCustomerProfile,
+			finishCustomerOnboarding,
 			signOut,
 			isAuthenticated,
 			user: authState?.user || null,
@@ -469,6 +565,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 			requestPasswordReset,
 			resetPassword,
 			completeOnboarding,
+			completeCustomerProfile,
+			finishCustomerOnboarding,
 			signOut,
 		],
 	);

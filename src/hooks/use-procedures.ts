@@ -196,7 +196,7 @@ interface UpdateHealthcareProviderData {
 	yearsOfExperience?: number | null;
 	targetAudiences?: string[];
 	serviceModalities?: string[];
-	clinicAddress?: string | null;
+	primaryAddress?: import("@/types/address").Address | null;
 	homeCareRadiusKm?: number | null;
 	acceptedInsurance?: string[];
 	paymentMethods?: string[];

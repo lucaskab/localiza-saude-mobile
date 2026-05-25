@@ -26,11 +26,9 @@ export interface CreateCustomerData {
 	userId: string;
 	cpf?: string | null;
 	dateOfBirth?: Date | string | null;
-	address?: string | null;
 }
 
 export interface UpdateCustomerData {
 	cpf?: string | null;
 	dateOfBirth?: Date | string | null;
-	address?: string | null;
 }

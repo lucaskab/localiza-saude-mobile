@@ -18,8 +18,6 @@ interface TimeSlotSelectorProps<TFieldValues extends FieldValues> {
 	selectedDate: Date;
 	selectedProcedures: Procedure[];
 	name?: Path<TFieldValues>;
-	onJoinWaitlist?: (slotStartTime: string) => void;
-	waitlistLoadingSlot?: string;
 }
 
 export function TimeSlotSelector<TFieldValues extends FieldValues>({
@@ -28,13 +26,10 @@ export function TimeSlotSelector<TFieldValues extends FieldValues>({
 	selectedDate,
 	selectedProcedures,
 	name = "selectedTime" as Path<TFieldValues>,
-	onJoinWaitlist,
-	waitlistLoadingSlot,
 }: TimeSlotSelectorProps<TFieldValues>) {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation();
 
-	// Format date to YYYY-MM-DD
 	const year = selectedDate.getUTCFullYear();
 	const month = String(selectedDate.getUTCMonth() + 1).padStart(2, "0");
 	const day = String(selectedDate.getUTCDate()).padStart(2, "0");
@@ -42,7 +37,6 @@ export function TimeSlotSelector<TFieldValues extends FieldValues>({
 
 	const procedureIds = selectedProcedures.map((procedure) => procedure.id);
 
-	// Fetch time slots from backend
 	const {
 		data: timeSlotsData,
 		isLoading,
@@ -54,16 +48,14 @@ export function TimeSlotSelector<TFieldValues extends FieldValues>({
 		enabled: procedureIds.length > 0,
 	});
 
-	// Get all slots (available and unavailable)
-	const allSlots = timeSlotsData?.slots || [];
+	const availableSlots = timeSlotsData?.slots.filter((slot) => slot.available) ?? [];
 
-	// Show message if no procedures selected
 	if (selectedProcedures.length === 0) {
 		return (
 			<View style={styles.section}>
 				<View style={styles.sectionHeader}>
 					<Clock size={20} color={theme.colors.primary} strokeWidth={2} />
-					<Text style={styles.sectionTitle}>{t("common.selectTime")}</Text>
+					<Text style={styles.sectionTitle}>{t("common.bookingAvailableSlotsTitle")}</Text>
 				</View>
 				<View style={styles.emptySlots}>
 					<Text style={styles.emptyText}>
@@ -78,16 +70,17 @@ export function TimeSlotSelector<TFieldValues extends FieldValues>({
 		<View style={styles.section}>
 			<View style={styles.sectionHeader}>
 				<Clock size={20} color={theme.colors.primary} strokeWidth={2} />
-				<Text style={styles.sectionTitle}>{t("common.selectTime")}</Text>
+				<Text style={styles.sectionTitle}>{t("common.bookingAvailableSlotsTitle")}</Text>
 			</View>
-			{timeSlotsData && (
+			<Text style={styles.sectionSubtitle}>{t("common.bookingAvailableSlotsHint")}</Text>
+			{timeSlotsData ? (
 				<Text style={styles.sectionSubtitle}>
 					{t("common.availableSlotsForDurationMinuteAppointmentIntervalMinIntervals", {
 						duration: String(timeSlotsData.totalDurationMinutes),
 						interval: String(timeSlotsData.slotIntervalMinutes),
 					})}
 				</Text>
-			)}
+			) : null}
 
 			{isLoading && (
 				<View style={styles.loadingSlots}>
@@ -110,66 +103,35 @@ export function TimeSlotSelector<TFieldValues extends FieldValues>({
 				rules={{ required: t("common.pleaseSelectATime") }}
 				render={({ field: { value, onChange }, fieldState }) => (
 					<>
-						{!isLoading && !error && (
-							<>
-								{allSlots.length === 0 ? (
-									<View style={styles.emptySlots}>
-										<Text style={styles.emptyText}>{t("common.noSlotsForThisDate")}</Text>
-									</View>
-								) : (
-									<View style={styles.timeSlots}>
-										{allSlots.map((slot) => {
-											const isWaitlistLoading =
-												waitlistLoadingSlot === slot.startTime;
-
-											return (
-												<Pressable
-													key={slot.startTime}
-													onPress={() => {
-														if (slot.available) {
-															onChange(slot.startTime);
-															return;
-														}
-
-														onJoinWaitlist?.(slot.startTime);
-													}}
-													disabled={!slot.available && !onJoinWaitlist}
-													style={[
-														styles.timeSlot,
-														!slot.available && styles.timeSlotDisabled,
-														!slot.available &&
-															onJoinWaitlist &&
-															styles.timeSlotWaitlist,
-														value === slot.startTime &&
-															slot.available &&
-															styles.timeSlotSelected,
-													]}
-												>
-													<Text
-														style={[
-															styles.timeSlotText,
-															!slot.available && styles.timeSlotTextDisabled,
-															!slot.available &&
-																onJoinWaitlist &&
-																styles.timeSlotWaitlistText,
-															value === slot.startTime &&
-																slot.available &&
-																styles.timeSlotTextSelected,
-														]}
-													>
-														{isWaitlistLoading
-															? t("common.loading")
-															: slot.available
-																? slot.startTime
-																: `${slot.startTime}\nFila`}
-													</Text>
-												</Pressable>
-											);
-										})}
-									</View>
-								)}
-							</>
-						)}
+						{!isLoading && !error ? (
+							availableSlots.length === 0 ? (
+								<View style={styles.emptySlots}>
+									<Text style={styles.emptyText}>{t("common.bookingNoAvailableSlots")}</Text>
+								</View>
+							) : (
+								<View style={styles.timeSlots}>
+									{availableSlots.map((slot) => (
+										<Pressable
+											key={slot.startTime}
+											onPress={() => onChange(slot.startTime)}
+											style={[
+												styles.timeSlot,
+												value === slot.startTime && styles.timeSlotSelected,
+											]}
+										>
+											<Text
+												style={[
+													styles.timeSlotText,
+													value === slot.startTime && styles.timeSlotTextSelected,
+												]}
+											>
+												{slot.startTime}
+											</Text>
+										</Pressable>
+									))}
+								</View>
+							)
+						) : null}
 						{fieldState.error?.message ? (
 							<Text style={styles.validationErrorText}>
 								{fieldState.error.message}
@@ -206,7 +168,7 @@ const styles = StyleSheet.create((theme) => ({
 	sectionSubtitle: {
 		fontSize: 14,
 		color: theme.colors.mutedForeground,
-		marginBottom: theme.gap(2),
+		marginBottom: theme.gap(1),
 	},
 	loadingSlots: {
 		paddingVertical: theme.gap(4),
@@ -229,7 +191,7 @@ const styles = StyleSheet.create((theme) => ({
 		textAlign: "center",
 	},
 	emptySlots: {
-		paddingVertical: theme.gap(4),
+		paddingVertical: theme.gap(3),
 		alignItems: "center",
 		justifyContent: "center",
 	},
@@ -237,6 +199,7 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 14,
 		color: theme.colors.mutedForeground,
 		textAlign: "center",
+		lineHeight: 20,
 	},
 	validationErrorText: {
 		marginTop: theme.gap(2),
@@ -266,15 +229,6 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: theme.colors.primary,
 		borderColor: theme.colors.primary,
 	},
-	timeSlotDisabled: {
-		backgroundColor: theme.colors.muted,
-		borderColor: theme.colors.border,
-		opacity: 0.5,
-	},
-	timeSlotWaitlist: {
-		opacity: 1,
-		backgroundColor: theme.colors.surfaceMuted,
-	},
 	timeSlotText: {
 		fontSize: 14,
 		fontWeight: "500",
@@ -282,12 +236,5 @@ const styles = StyleSheet.create((theme) => ({
 	},
 	timeSlotTextSelected: {
 		color: theme.colors.primaryForeground,
-	},
-	timeSlotTextDisabled: {
-		color: theme.colors.mutedForeground,
-	},
-	timeSlotWaitlistText: {
-		color: theme.colors.primary,
-		textAlign: "center",
 	},
 }));

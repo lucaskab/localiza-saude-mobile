@@ -66,6 +66,8 @@ function RootNavigator() {
 					<Stack.Screen name="login" />
 					<Stack.Screen name="reset-password" />
 					<Stack.Screen name="onboarding" />
+					<Stack.Screen name="onboarding-customer-profile" />
+					<Stack.Screen name="onboarding-customer-medical" />
 					<Stack.Screen name="(bottom-tabs)" />
 					<Stack.Screen name="(provider-tabs)" />
 					<Stack.Screen name="favorites" />

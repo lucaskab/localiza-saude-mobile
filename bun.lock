@@ -15,6 +15,7 @@
         "@tanstack/react-query": "^5.95.2",
         "axios": "^1.14.0",
         "better-auth": "^1.5.6",
+        "debug": "^4.3.7",
         "expo": "~55.0.14",
         "expo-apple-authentication": "~55.0.13",
         "expo-auth-session": "~55.0.13",

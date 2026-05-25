@@ -48,6 +48,14 @@ export default function Onboarding() {
 		);
 	}
 
+	if (user.onboardingStep === "CUSTOMER_PROFILE") {
+		return <Redirect href={"/onboarding-customer-profile" as never} />;
+	}
+
+	if (user.onboardingStep === "CUSTOMER_MEDICAL") {
+		return <Redirect href={"/onboarding-customer-medical" as never} />;
+	}
+
 	const handleSelectRole = async (role: OnboardingRole) => {
 		setSelectedRole(role);
 

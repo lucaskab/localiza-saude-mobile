@@ -40,14 +40,13 @@ import {
 	useRatingsByProvider,
 	useUpdateRating,
 } from "@/hooks/use-ratings";
+import { getProviderCareAddress } from "@/lib/format-address";
 import { canDisplayProviderPrices } from "@/lib/provider-pricing";
 import { getErrorMessage } from "@/services/api";
 import type { Rating } from "@/types/rating";
 import { translationKeys, type TranslationKey } from "@/i18n/key-map";
 import {
 	fivePointRatingToApiRating,
-	formatAverageRating,
-	formatReviewCount,
 	ratingToFivePointScale,
 } from "@/utils/ratings";
 
@@ -151,9 +150,6 @@ export default function DoctorDetails() {
 	}
 
 	const providerUser = provider;
-	const averageRating = ratingsData?.stats.averageRating ?? provider.averageRating;
-	const totalRatings = ratingsData?.stats.totalRatings ?? provider.totalRatings;
-
 	const handleSubmitRating = async () => {
 		if (!provider || selectedRating === 0) {
 			Alert.alert(t("common.ratingRequired"), t("common.chooseAStarRatingBeforeSubmitting"));
@@ -271,15 +267,6 @@ export default function DoctorDetails() {
 								<Text style={styles.name} numberOfLines={2}>
 									{provider.displayName || providerUser.name}
 								</Text>
-								{provider.verificationStatus === "VERIFIED" && (
-									<View style={styles.verifiedBadge}>
-										<CheckCircle2
-											size={20}
-											color={theme.colors.primary}
-											strokeWidth={2.5}
-										/>
-									</View>
-								)}
 							</View>
 							<Text style={styles.specialty}>
 								{[provider.professionalCategory, provider.specialty]
@@ -299,36 +286,10 @@ export default function DoctorDetails() {
 									})}
 								</Text>
 							)}
-							{provider.isSuperProfessional ? (
-								<View style={styles.superProfessionalBadge}>
-									<Sparkles
-										size={14}
-										color={theme.colors.amber}
-										strokeWidth={2.5}
-									/>
-									<Text style={styles.superProfessionalBadgeText}>
-										{t("common.superProfessional")}
-									</Text>
-								</View>
-							) : null}
 						</View>
 					</View>
 
 					<View style={styles.statsRow}>
-						<View style={styles.statItem}>
-							<Star
-								size={18}
-								color={theme.colors.amber}
-								fill={theme.colors.amber}
-								strokeWidth={2}
-							/>
-							<Text style={styles.statValue}>
-								{formatAverageRating(averageRating)}
-							</Text>
-							<Text style={styles.statLabel}>
-								({formatReviewCount(totalRatings)})
-							</Text>
-						</View>
 						<View style={styles.statItem}>
 							<Briefcase
 								size={18}
@@ -372,13 +333,6 @@ export default function DoctorDetails() {
 
 				{/* Stats Cards */}
 				<View style={styles.statsGrid}>
-					<View style={styles.statsCard}>
-						<Award size={24} color={theme.colors.primary} strokeWidth={2} />
-						<Text style={styles.statsCardLabel}>{t("common.verified")}</Text>
-						<Text style={styles.statsCardValue}>
-							{providerUser.emailVerified ? t("common.yes") : t("common.no")}
-						</Text>
-					</View>
 					<View style={styles.statsCard}>
 						<DollarSign
 							size={24}
@@ -428,7 +382,7 @@ export default function DoctorDetails() {
 					</View>
 				)}
 
-				{provider.clinicAddress ||
+				{getProviderCareAddress(provider) ||
 				provider.serviceModalities?.length ||
 				provider.languages?.length ||
 				provider.acceptedInsurance?.length ||
@@ -438,14 +392,16 @@ export default function DoctorDetails() {
 						<Text style={styles.sectionTitle}>
 							{t("common.practicalInformation")}
 						</Text>
-						{provider.clinicAddress ? (
+						{getProviderCareAddress(provider) ? (
 							<View style={styles.infoRow}>
 								<MapPin
 									size={18}
 									color={theme.colors.primary}
 									strokeWidth={2}
 								/>
-								<Text style={styles.infoRowText}>{provider.clinicAddress}</Text>
+								<Text style={styles.infoRowText}>
+									{getProviderCareAddress(provider)}
+								</Text>
 							</View>
 						) : null}
 						<TagGroup

@@ -1,4 +1,5 @@
 import type { ServiceModality } from "@/constants/service-modalities";
+import type { Address } from "@/types/address";
 
 export type UserRole = "HEALTHCARE_PROVIDER" | "CUSTOMER" | "ADMIN" | "STAFF";
 export type ClinicEmployeeRole = "OWNER" | "PROVIDER" | "STAFF";
@@ -65,6 +66,7 @@ export interface BaseUser {
 	emailVerified: boolean;
 	image: string | null;
 	onboardingCompleted?: boolean;
+	onboardingStep?: "ROLE" | "CUSTOMER_PROFILE" | "CUSTOMER_MEDICAL" | "COMPLETED";
 	createdAt?: string;
 	updatedAt?: string;
 }
@@ -73,7 +75,7 @@ export type Customer = BaseUser & {
 	role: "CUSTOMER";
 	cpf: string | null;
 	dateOfBirth: string | null;
-	address: string | null;
+	primaryAddress?: Address | null;
 };
 
 export type HealthcareProvider = BaseUser & {
@@ -105,12 +107,7 @@ export type HealthcareProvider = BaseUser & {
 	yearsOfExperience: number | null;
 	targetAudiences: string[];
 	serviceModalities: ServiceModality[];
-	clinicAddress: string | null;
-	clinicLatitude?: number | null;
-	clinicLongitude?: number | null;
-	clinicNeighborhood?: string | null;
-	clinicCity?: string | null;
-	clinicState?: string | null;
+	primaryAddress?: Address | null;
 	homeCareRadiusKm: number | null;
 	acceptedInsurance: string[];
 	paymentMethods: string[];
@@ -136,7 +133,6 @@ export type HealthcareProvider = BaseUser & {
 	completedAppointments?: number;
 	confirmationRate?: number;
 	distanceInKm?: number | null;
-	isSuperProfessional?: boolean;
 	procedures: Procedure[];
 	faqs?: HealthcareProviderFaq[];
 };
