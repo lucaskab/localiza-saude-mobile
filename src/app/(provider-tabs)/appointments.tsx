@@ -1,13 +1,10 @@
 import { useRouter } from "expo-router";
-import { Calendar, Plus, SlidersHorizontal, X } from "lucide-react-native";
-import { useMemo, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { Calendar, Plus, Search, SlidersHorizontal } from "lucide-react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import {
 	ActivityIndicator,
 	Alert,
-	KeyboardAvoidingView,
-	Modal,
-	Pressable,
 	RefreshControl,
 	ScrollView,
 	Text,
@@ -19,7 +16,9 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { AppointmentFiltersPanel } from "@/components/provider-appointments/appointment-filters-panel";
 import { AppointmentTabs } from "@/components/provider-appointments/appointment-tabs";
 import { ProviderAppointmentCard } from "@/components/provider-appointments/provider-appointment-card";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth";
 import {
 	useAppointments,
@@ -27,6 +26,7 @@ import {
 } from "@/hooks/use-appointments";
 import { useGetOrCreateConversation } from "@/hooks/use-conversations";
 import { translationKeys, type TranslationKey } from "@/i18n/key-map";
+import { readStoredJson, writeStoredJson } from "@/lib/json-storage";
 import type { Appointment, AppointmentStatus } from "@/types/appointment";
 import { getAppointmentPatientName } from "@/utils/appointments";
 import {
@@ -48,6 +48,9 @@ const providerAppointmentTabLabels: Record<ProviderAppointmentTab, TranslationKe
 		cancelled: translationKeys.Cancelled,
 	};
 
+const providerAppointmentsFiltersStorageKey =
+	"provider-appointments-bottom-sheet-filters";
+
 export default function ProviderAppointments() {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation();
@@ -56,8 +59,14 @@ export default function ProviderAppointments() {
 	const [activeTab, setActiveTab] =
 		useState<ProviderAppointmentTab>("upcoming");
 	const [isFiltersSheetVisible, setIsFiltersSheetVisible] = useState(false);
+	const storedFiltersRef = useRef(
+		readStoredJson<ProviderAppointmentFiltersForm>(
+			providerAppointmentsFiltersStorageKey,
+			defaultProviderAppointmentFilters,
+		),
+	);
 	const filtersForm = useForm<ProviderAppointmentFiltersForm>({
-		defaultValues: defaultProviderAppointmentFilters,
+		defaultValues: storedFiltersRef.current,
 	});
 	const filters = useWatch({ control: filtersForm.control });
 
@@ -76,10 +85,13 @@ export default function ProviderAppointments() {
 	const createConversationMutation = useGetOrCreateConversation();
 	const appointments = appointmentsData?.appointments || [];
 
-	const normalizedFilters = {
-		...defaultProviderAppointmentFilters,
-		...filters,
-	};
+	const normalizedFilters = useMemo(
+		() => ({
+			...defaultProviderAppointmentFilters,
+			...filters,
+		}),
+		[filters],
+	);
 
 	const procedureOptions = useMemo(
 		() => getProviderAppointmentProcedureOptions(appointments),
@@ -107,6 +119,10 @@ export default function ProviderAppointments() {
 
 	const activeFilterCount =
 		getActiveProviderAppointmentFilterCount(normalizedFilters);
+
+	useEffect(() => {
+		writeStoredJson(providerAppointmentsFiltersStorageKey, normalizedFilters);
+	}, [normalizedFilters]);
 
 	const handleTabChange = (tab: ProviderAppointmentTab) => {
 		setActiveTab(tab);
@@ -195,31 +211,6 @@ export default function ProviderAppointments() {
 						</View>
 						<View style={styles.headerActions}>
 							<Button
-								variant="outline"
-								size="sm"
-								style={styles.filterButton}
-								testID="provider-appointments-filter-button"
-								accessibilityLabel={t("common.openAppointmentFilters")}
-								onPress={() => setIsFiltersSheetVisible(true)}
-							>
-								<SlidersHorizontal
-									size={16}
-									color={
-										activeFilterCount > 0
-											? theme.colors.primary
-											: theme.colors.foreground
-									}
-									strokeWidth={2}
-								/>
-								{activeFilterCount > 0 ? (
-									<View style={styles.filterButtonBadge}>
-										<Text style={styles.filterButtonBadgeText}>
-											{activeFilterCount}
-										</Text>
-									</View>
-								) : null}
-							</Button>
-							<Button
 								size="sm"
 								style={styles.newAppointmentButton}
 								testID="provider-appointments-new-button"
@@ -234,6 +225,46 @@ export default function ProviderAppointments() {
 							</Button>
 						</View>
 					</View>
+					<Controller
+						control={filtersForm.control}
+						name="searchQuery"
+						render={({ field }) => (
+							<View style={styles.searchRow}>
+								<Input
+									leftIcon={Search}
+									placeholder={t("common.searchByPatientPhoneEmailOrProcedure")}
+									value={field.value}
+									onChangeText={field.onChange}
+									containerStyle={styles.searchInputContainer}
+								/>
+								<Button
+									variant="outline"
+									size="sm"
+									style={styles.searchFilterButton}
+									testID="provider-appointments-filter-button"
+									accessibilityLabel={t("common.openAppointmentFilters")}
+									onPress={() => setIsFiltersSheetVisible(true)}
+								>
+									<SlidersHorizontal
+										size={16}
+										color={
+											activeFilterCount > 0
+												? theme.colors.primary
+												: theme.colors.foreground
+										}
+										strokeWidth={2}
+									/>
+									{activeFilterCount > 0 ? (
+										<View style={styles.filterButtonBadge}>
+											<Text style={styles.filterButtonBadgeText}>
+												{activeFilterCount}
+											</Text>
+										</View>
+									) : null}
+								</Button>
+							</View>
+						)}
+					/>
 				</View>
 
 				<AppointmentTabs
@@ -292,7 +323,10 @@ export default function ProviderAppointments() {
 									size="sm"
 									style={styles.emptyClearButton}
 									onPress={() =>
-										filtersForm.reset(defaultProviderAppointmentFilters)
+										filtersForm.reset({
+											...defaultProviderAppointmentFilters,
+											searchQuery: normalizedFilters.searchQuery,
+										})
 									}
 								>
 									{t("common.clearFilters")}
@@ -303,72 +337,34 @@ export default function ProviderAppointments() {
 				</View>
 			</ScrollView>
 
-			<Modal
-				animationType="slide"
-				transparent
-				visible={isFiltersSheetVisible}
-				onRequestClose={() => setIsFiltersSheetVisible(false)}
+			<BottomSheet
+				isOpen={isFiltersSheetVisible}
+				onClose={() => setIsFiltersSheetVisible(false)}
+				title={t("common.filters")}
+				subtitle={t("common.showingFilteredCountOfTabCountAppointments", {
+					filteredCount: String(filteredAppointments.length),
+					tabCount: String(tabCounts[activeTab]),
+				})}
+				badgeCount={activeFilterCount}
 			>
-				<KeyboardAvoidingView
-					behavior={process.env.EXPO_OS === "ios" ? "padding" : undefined}
-					style={styles.filtersSheetOverlay}
-				>
-					<Pressable
-						style={styles.filtersSheetBackdrop}
-						onPress={() => setIsFiltersSheetVisible(false)}
-					/>
-					<View style={styles.filtersSheet}>
-						<View style={styles.filtersSheetHandle} />
-						<View style={styles.filtersSheetHeader}>
-							<View style={styles.filtersSheetTitleGroup}>
-								<View style={styles.filtersSheetTitleRow}>
-									<Text style={styles.filtersSheetTitle}>{t("common.filters")}</Text>
-									{activeFilterCount > 0 ? (
-										<View style={styles.filtersSheetBadge}>
-											<Text style={styles.filtersSheetBadgeText}>
-												{activeFilterCount}
-											</Text>
-										</View>
-									) : null}
-								</View>
-								<Text style={styles.filtersSheetSubtitle}>
-									{t("common.showingFilteredCountOfTabCountAppointments", {
-										filteredCount: String(filteredAppointments.length),
-										tabCount: String(tabCounts[activeTab]),
-									})}
-								</Text>
-							</View>
-							<Pressable
-								style={styles.filtersSheetCloseButton}
-								onPress={() => setIsFiltersSheetVisible(false)}
-							>
-								<X
-									size={20}
-									color={theme.colors.mutedForeground}
-									strokeWidth={2}
-								/>
-							</Pressable>
-						</View>
-						<ScrollView
-							showsVerticalScrollIndicator={false}
-							keyboardShouldPersistTaps="handled"
-							contentContainerStyle={styles.filtersSheetContent}
-						>
-							<AppointmentFiltersPanel
-								control={filtersForm.control}
-								reset={filtersForm.reset}
-								activeTab={activeTab}
-								activeFilterCount={activeFilterCount}
-								filteredCount={filteredAppointments.length}
-								tabCount={tabCounts[activeTab]}
-								procedureOptions={procedureOptions}
-								showHeader={false}
-								variant="sheet"
-							/>
-						</ScrollView>
-					</View>
-				</KeyboardAvoidingView>
-			</Modal>
+				<AppointmentFiltersPanel
+					control={filtersForm.control}
+					activeTab={activeTab}
+					activeFilterCount={activeFilterCount}
+					filteredCount={filteredAppointments.length}
+					tabCount={tabCounts[activeTab]}
+					procedureOptions={procedureOptions}
+					onClearFilters={() =>
+						filtersForm.reset({
+							...defaultProviderAppointmentFilters,
+							searchQuery: normalizedFilters.searchQuery,
+						})
+					}
+					showHeader={false}
+					showSearch={false}
+					variant="sheet"
+				/>
+			</BottomSheet>
 		</SafeAreaView>
 	);
 }
@@ -397,7 +393,15 @@ const styles = StyleSheet.create((theme) => ({
 		alignItems: "center",
 		gap: theme.gap(1),
 	},
-	filterButton: {
+	searchRow: {
+		flexDirection: "row",
+		gap: theme.gap(1.5),
+		marginTop: theme.gap(2),
+	},
+	searchInputContainer: {
+		flex: 1,
+	},
+	searchFilterButton: {
 		width: 40,
 		borderRadius: theme.radius.full,
 		paddingHorizontal: 0,
@@ -485,87 +489,5 @@ const styles = StyleSheet.create((theme) => ({
 	emptyClearButton: {
 		marginTop: theme.gap(3),
 		borderRadius: theme.radius.full,
-	},
-	filtersSheetOverlay: {
-		flex: 1,
-		justifyContent: "flex-end",
-	},
-	filtersSheetBackdrop: {
-		...StyleSheet.absoluteFill,
-		backgroundColor: "rgba(15, 23, 42, 0.42)",
-	},
-	filtersSheet: {
-		maxHeight: "86%",
-		backgroundColor: theme.colors.background,
-		borderTopLeftRadius: 24,
-		borderTopRightRadius: 24,
-		paddingTop: theme.gap(1.5),
-		paddingHorizontal: theme.gap(4),
-		paddingBottom: theme.gap(4),
-		shadowColor: "#000",
-		shadowOffset: { width: 0, height: -8 },
-		shadowOpacity: 0.12,
-		shadowRadius: 20,
-		elevation: 12,
-	},
-	filtersSheetHandle: {
-		width: 44,
-		height: 4,
-		borderRadius: 2,
-		backgroundColor: theme.colors.border,
-		alignSelf: "center",
-		marginBottom: theme.gap(2),
-	},
-	filtersSheetHeader: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		gap: theme.gap(2),
-		paddingBottom: theme.gap(2),
-		borderBottomWidth: 1,
-		borderBottomColor: theme.colors.border,
-	},
-	filtersSheetTitleGroup: {
-		flex: 1,
-		gap: theme.gap(0.5),
-	},
-	filtersSheetTitleRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.gap(1),
-	},
-	filtersSheetTitle: {
-		fontSize: 20,
-		fontWeight: "700",
-		color: theme.colors.foreground,
-	},
-	filtersSheetSubtitle: {
-		fontSize: 13,
-		color: theme.colors.mutedForeground,
-	},
-	filtersSheetBadge: {
-		minWidth: 22,
-		height: 22,
-		borderRadius: 11,
-		alignItems: "center",
-		justifyContent: "center",
-		backgroundColor: theme.colors.primary,
-	},
-	filtersSheetBadgeText: {
-		fontSize: 11,
-		fontWeight: "700",
-		color: theme.colors.primaryForeground,
-	},
-	filtersSheetCloseButton: {
-		width: 38,
-		height: 38,
-		borderRadius: 19,
-		alignItems: "center",
-		justifyContent: "center",
-		backgroundColor: theme.colors.surfaceSecondary,
-	},
-	filtersSheetContent: {
-		paddingTop: theme.gap(2),
-		paddingBottom: theme.gap(3),
 	},
 }));

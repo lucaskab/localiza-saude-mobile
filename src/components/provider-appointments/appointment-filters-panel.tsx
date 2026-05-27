@@ -1,6 +1,6 @@
 import { Search, SlidersHorizontal } from "lucide-react-native";
 import { Controller, useWatch } from "react-hook-form";
-import type { Control, UseFormReset } from "react-hook-form";
+import type { Control } from "react-hook-form";
 import { ScrollView, Text, View, Pressable } from "react-native";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { FilterChip } from "@/components/provider-appointments/filter-chip";
 import {
-	defaultProviderAppointmentFilters,
 	getProviderAppointmentStatusConfig,
 	providerAppointmentDateFilters,
 	providerAppointmentPatientFilters,
@@ -21,25 +20,27 @@ import {
 
 type AppointmentFiltersPanelProps = {
 	control: Control<ProviderAppointmentFiltersForm>;
-	reset: UseFormReset<ProviderAppointmentFiltersForm>;
 	activeTab: ProviderAppointmentTab;
 	activeFilterCount: number;
 	filteredCount: number;
 	tabCount: number;
 	procedureOptions: ProcedureFilterOption[];
+	onClearFilters: () => void;
 	showHeader?: boolean;
+	showSearch?: boolean;
 	variant?: "card" | "sheet";
 };
 
 export function AppointmentFiltersPanel({
 	control,
-	reset,
 	activeTab,
 	activeFilterCount,
 	filteredCount,
 	tabCount,
 	procedureOptions,
+	onClearFilters,
 	showHeader = true,
+	showSearch = true,
 	variant = "card",
 }: AppointmentFiltersPanelProps) {
 	const { theme } = useUnistyles();
@@ -81,18 +82,20 @@ export function AppointmentFiltersPanel({
 				</View>
 			) : null}
 
-			<Controller
-				control={control}
-				name="searchQuery"
-				render={({ field }) => (
-					<Input
-						leftIcon={Search}
-						placeholder={t("common.searchByPatientPhoneEmailOrProcedure")}
-						value={field.value}
-						onChangeText={field.onChange}
-					/>
-				)}
-			/>
+			{showSearch ? (
+				<Controller
+					control={control}
+					name="searchQuery"
+					render={({ field }) => (
+						<Input
+							leftIcon={Search}
+							placeholder={t("common.searchByPatientPhoneEmailOrProcedure")}
+							value={field.value}
+							onChangeText={field.onChange}
+						/>
+					)}
+				/>
+			) : null}
 
 			<View style={styles.filterGroup}>
 				<Text style={styles.filterLabel}>{t("common.date")}</Text>
@@ -259,7 +262,7 @@ export function AppointmentFiltersPanel({
 				{activeFilterCount > 0 ? (
 					<Pressable
 						style={styles.clearFiltersButton}
-						onPress={() => reset(defaultProviderAppointmentFilters)}
+						onPress={onClearFilters}
 					>
 						<Text style={styles.clearFiltersText}>{t("common.clear")}</Text>
 					</Pressable>

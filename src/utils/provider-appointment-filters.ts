@@ -220,7 +220,6 @@ export const getActiveProviderAppointmentFilterCount = (
 	filters: ProviderAppointmentFiltersForm,
 ) =>
 	[
-		filters.searchQuery.trim(),
 		filters.dateFilter !== "all",
 		filters.statusFilter !== "ALL",
 		filters.patientFilter !== "all",

@@ -5,9 +5,11 @@ import {
 	MapPin,
 	MessageCircle,
 	Phone,
+	Search,
+	SlidersHorizontal,
 	Video,
 } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	Alert,
@@ -22,14 +24,27 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth";
 import { useAppointmentsByCustomer } from "@/hooks/use-appointments";
 import { useGetOrCreateConversation } from "@/hooks/use-conversations";
+import { readStoredJson, writeStoredJson } from "@/lib/json-storage";
 import { canDisplayProviderPrices } from "@/lib/provider-pricing";
 import type { Appointment } from "@/types/appointment";
 import { getAppointmentPatientName } from "@/utils/appointments";
+
+type CustomerAppointmentsStoredFilters = {
+	endDate: string;
+	searchQuery: string;
+	startDate: string;
+};
+
+const customerAppointmentsFiltersStorageKey =
+	"customer-appointments-bottom-sheet-filters";
 
 export default function Appointments() {
 	const router = useRouter();
@@ -41,6 +56,22 @@ export default function Appointments() {
 	const [activeTab, setActiveTab] = useState<"upcoming" | "completed">(
 		"upcoming",
 	);
+	const storedFiltersRef = useRef(
+		readStoredJson<CustomerAppointmentsStoredFilters>(
+			customerAppointmentsFiltersStorageKey,
+			{
+				endDate: "",
+				searchQuery: "",
+				startDate: "",
+			},
+		),
+	);
+	const [searchQuery, setSearchQuery] = useState(
+		storedFiltersRef.current.searchQuery,
+	);
+	const [startDate, setStartDate] = useState(storedFiltersRef.current.startDate);
+	const [endDate, setEndDate] = useState(storedFiltersRef.current.endDate);
+	const [isFiltersSheetVisible, setIsFiltersSheetVisible] = useState(false);
 
 	// Fetch appointments using customer ID from auth context
 	const {
@@ -58,19 +89,69 @@ export default function Appointments() {
 		setIsRefreshing(false);
 	};
 
-	// Filter appointments based on status
-	const filteredAppointments = (appointmentsData?.appointments || []).filter(
-		(appointment) => {
-			if (activeTab === "upcoming") {
-				return (
-					appointment.status === "SCHEDULED" ||
-					appointment.status === "CONFIRMED" ||
-					appointment.status === "IN_PROGRESS"
-				);
-			}
-			return appointment.status === "COMPLETED";
-		},
-	);
+	const activeFilterCount = [startDate, endDate].filter(Boolean).length;
+
+	useEffect(() => {
+		writeStoredJson(customerAppointmentsFiltersStorageKey, {
+			endDate,
+			searchQuery,
+			startDate,
+		});
+	}, [endDate, searchQuery, startDate]);
+
+	// Filter appointments based on tab, search, and date range
+	const filteredAppointments = useMemo(() => {
+		const query = searchQuery.trim().toLowerCase();
+
+		return (appointmentsData?.appointments || [])
+			.filter((appointment) => {
+				if (activeTab === "upcoming") {
+					return (
+						appointment.status === "SCHEDULED" ||
+						appointment.status === "CONFIRMED" ||
+						appointment.status === "IN_PROGRESS"
+					);
+				}
+				return appointment.status === "COMPLETED";
+			})
+			.filter((appointment) => {
+				if (!query) {
+					return true;
+				}
+
+				const providerName =
+					appointment.healthcareProvider.displayName ||
+					appointment.healthcareProvider.name;
+				const procedures = appointment.appointmentProcedures
+					.map((item) => item.procedure.name)
+					.join(" ");
+
+				return `${providerName} ${procedures}`.toLowerCase().includes(query);
+			})
+			.filter((appointment) => {
+				if (!startDate && !endDate) {
+					return true;
+				}
+
+				const scheduledAt = new Date(appointment.scheduledAt);
+
+				if (startDate) {
+					const start = new Date(`${startDate}T00:00:00`);
+					if (scheduledAt < start) {
+						return false;
+					}
+				}
+
+				if (endDate) {
+					const end = new Date(`${endDate}T23:59:59.999`);
+					if (scheduledAt > end) {
+						return false;
+					}
+				}
+
+				return true;
+			});
+	}, [activeTab, appointmentsData?.appointments, endDate, searchQuery, startDate]);
 
 	// Format date and time
 	const formatDateTime = (dateString: string) => {
@@ -159,6 +240,39 @@ export default function Appointments() {
 			{/* Header */}
 			<View style={styles.header}>
 				<Text style={styles.headerTitle}>{t("common.myAppointments")}</Text>
+				<View style={styles.searchRow}>
+					<Input
+						leftIcon={Search}
+						placeholder={t("common.searchByProfessionalOrProcedure")}
+						value={searchQuery}
+						onChangeText={setSearchQuery}
+						containerStyle={styles.searchInputContainer}
+					/>
+					<Pressable
+						onPress={() => setIsFiltersSheetVisible(true)}
+						style={[
+							styles.filterButton,
+							activeFilterCount > 0 && styles.filterButtonActive,
+						]}
+					>
+						<SlidersHorizontal
+							size={20}
+							color={
+								activeFilterCount > 0
+									? theme.colors.primaryForeground
+									: theme.colors.foreground
+							}
+							strokeWidth={2}
+						/>
+						{activeFilterCount > 0 ? (
+							<View style={styles.filterButtonBadge}>
+								<Text style={styles.filterButtonBadgeText}>
+									{activeFilterCount}
+								</Text>
+							</View>
+						) : null}
+					</Pressable>
+				</View>
 
 				{/* Tabs */}
 				<View style={styles.tabsContainer}>
@@ -200,6 +314,39 @@ export default function Appointments() {
 					</Pressable>
 				</View>
 			</View>
+
+			<BottomSheet
+				isOpen={isFiltersSheetVisible}
+				onClose={() => setIsFiltersSheetVisible(false)}
+				title={t("common.filters")}
+				badgeCount={activeFilterCount}
+			>
+				<View style={styles.filtersContent}>
+					<DatePickerInput
+						value={startDate}
+						title="common.selectStartDate"
+						placeholder="common.selectStartDate"
+						onChange={setStartDate}
+					/>
+					<DatePickerInput
+						value={endDate}
+						title="common.selectEndDate"
+						placeholder="common.selectEndDate"
+						onChange={setEndDate}
+						minDate={startDate || undefined}
+					/>
+					<Button
+						variant="ghost"
+						size="sm"
+						onPress={() => {
+							setStartDate("");
+							setEndDate("");
+						}}
+					>
+						{t("common.clearFilters")}
+					</Button>
+				</View>
+			</BottomSheet>
 
 			{/* Content */}
 			<ScrollView
@@ -256,12 +403,16 @@ export default function Appointments() {
 							style={styles.emptyIcon}
 						/>
 						<Text style={styles.emptyTitle}>
-							{activeTab === "upcoming"
+							{searchQuery || activeFilterCount > 0
+								? t("common.noAppointmentsFoundWithTheseFilters")
+								: activeTab === "upcoming"
 								? t("common.noUpcomingAppointments")
 								: t("common.noCompletedAppointments")}
 						</Text>
 						<Text style={styles.emptyText}>
-							{activeTab === "upcoming"
+							{searchQuery || activeFilterCount > 0
+								? t("common.adjustYourSearchOrFiltersAndTryAgain")
+								: activeTab === "upcoming"
 								? t("common.youDontHaveAnyScheduledAppointmentsFindAHealthcareProviderToGetStarted")
 								: t("common.youHaventCompletedAnyAppointmentsYetYourAppointmentHistoryWillAppearHere")}
 						</Text>
@@ -523,9 +674,50 @@ const styles = StyleSheet.create((theme) => ({
 		color: theme.colors.foreground,
 		marginBottom: theme.gap(2),
 	},
+	searchRow: {
+		flexDirection: "row",
+		gap: theme.gap(1.5),
+		marginBottom: theme.gap(2),
+	},
+	searchInputContainer: {
+		flex: 1,
+	},
+	filterButton: {
+		width: 48,
+		height: 48,
+		borderRadius: theme.radius.lg,
+		borderWidth: 2,
+		borderColor: theme.colors.border,
+		backgroundColor: "transparent",
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	filterButtonActive: {
+		backgroundColor: theme.colors.primary,
+		borderColor: theme.colors.primary,
+	},
+	filterButtonBadge: {
+		position: "absolute",
+		top: -6,
+		right: -6,
+		minWidth: 20,
+		height: 20,
+		borderRadius: 10,
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: theme.colors.primary,
+	},
+	filterButtonBadgeText: {
+		fontSize: 11,
+		fontWeight: "700",
+		color: theme.colors.primaryForeground,
+	},
 	tabsContainer: {
 		flexDirection: "row",
 		gap: theme.gap(1),
+	},
+	filtersContent: {
+		gap: theme.gap(3),
 	},
 	tab: {
 		flex: 1,

@@ -1,12 +1,11 @@
 import { useRouter } from "expo-router";
-import * as Location from "expo-location";
 import {
 	Heart,
 	MessageCircle,
 	Search as SearchIcon,
 	SlidersHorizontal,
 } from "lucide-react-native";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
 	ActivityIndicator,
 	Alert,
@@ -19,8 +18,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/contexts/auth";
 import {
 	getServiceModalityLabelKey,
 	serviceModalityOptions,
@@ -35,6 +36,12 @@ import {
 import { useInfiniteHealthcareProviders } from "@/hooks/use-healthcare-providers";
 import { getErrorMessage } from "@/services/api";
 import { getProviderLocationLabel } from "@/lib/format-address";
+import { hasStoredJson, readStoredJson, writeStoredJson } from "@/lib/json-storage";
+import {
+	getAddressLocationFallback,
+	requestDeviceCoordinates,
+	type SearchCoordinates,
+} from "@/lib/search-location";
 import { formatNextAvailableAt } from "@/utils/availability";
 
 function priceToCents(value: string) {
@@ -49,27 +56,108 @@ function formatDistance(distance?: number | null) {
 
 const radiusOptions = ["5", "10", "15", "25", "50"];
 
+type SearchScreenStoredFilters = {
+	addressFallbackApplied: boolean;
+	city: string;
+	insurance: string;
+	language: string;
+	locationSource: "device" | "address" | null;
+	maxPrice: string;
+	nearMeEnabled: boolean;
+	nearMeLocation: SearchCoordinates | null;
+	neighborhood: string;
+	radiusInKm: string;
+	searchQuery: string;
+	selectedCategory: string;
+	serviceModality: string;
+};
+
+const searchFiltersStorageKey = "customer-search-bottom-sheet-filters";
+
+const defaultStoredSearchFilters: SearchScreenStoredFilters = {
+	addressFallbackApplied: false,
+	city: "",
+	insurance: "",
+	language: "",
+	locationSource: null,
+	maxPrice: "",
+	nearMeEnabled: true,
+	nearMeLocation: null,
+	neighborhood: "",
+	radiusInKm: "15",
+	searchQuery: "",
+	selectedCategory: "all",
+	serviceModality: "",
+};
+
+function getActiveSearchFilterCount(filters: SearchScreenStoredFilters) {
+	let count = 0;
+
+	if (filters.selectedCategory !== "all") count += 1;
+	if (filters.serviceModality) count += 1;
+	if (filters.language) count += 1;
+	if (filters.insurance.trim()) count += 1;
+	if (filters.maxPrice.trim()) count += 1;
+	if (filters.radiusInKm !== defaultStoredSearchFilters.radiusInKm) count += 1;
+
+	if (filters.locationSource !== "address") {
+		if (filters.city.trim()) count += 1;
+		if (filters.neighborhood.trim()) count += 1;
+	}
+
+	return count;
+}
+
 export default function Search() {
 	const router = useRouter();
 	const { theme } = useUnistyles();
 	const { t } = useTranslation();
+	const { customer } = useAuth();
+	const storedFiltersRef = useRef(
+		readStoredJson<SearchScreenStoredFilters>(
+			searchFiltersStorageKey,
+			defaultStoredSearchFilters,
+		),
+	);
+	const hasStoredFiltersRef = useRef(hasStoredJson(searchFiltersStorageKey));
+	const skipAutomaticLocationRef = useRef(
+		hasStoredJson(searchFiltersStorageKey) &&
+			(storedFiltersRef.current.nearMeEnabled === false ||
+				Boolean(storedFiltersRef.current.nearMeLocation) ||
+				Boolean(storedFiltersRef.current.locationSource) ||
+				Boolean(storedFiltersRef.current.city.trim()) ||
+				Boolean(storedFiltersRef.current.neighborhood.trim())),
+	);
 	const insets = useSafeAreaInsets();
-	const [searchQuery, setSearchQuery] = useState("");
-	const [selectedCategory, setSelectedCategory] = useState("all");
-	const [isFilterPanelVisible, setIsFilterPanelVisible] = useState(false);
-	const [serviceModality, setServiceModality] = useState("");
-	const [language, setLanguage] = useState("");
-	const [insurance, setInsurance] = useState("");
-	const [city, setCity] = useState("");
-	const [neighborhood, setNeighborhood] = useState("");
-	const [nearMeLocation, setNearMeLocation] = useState<{
-		latitude: number;
-		longitude: number;
-	} | null>(null);
-	const [radiusInKm, setRadiusInKm] = useState("15");
+	const [searchQuery, setSearchQuery] = useState(storedFiltersRef.current.searchQuery);
+	const [selectedCategory, setSelectedCategory] = useState(
+		storedFiltersRef.current.selectedCategory,
+	);
+	const [isFiltersSheetVisible, setIsFiltersSheetVisible] = useState(false);
+	const [serviceModality, setServiceModality] = useState(
+		storedFiltersRef.current.serviceModality,
+	);
+	const [language, setLanguage] = useState(storedFiltersRef.current.language);
+	const [insurance, setInsurance] = useState(storedFiltersRef.current.insurance);
+	const [city, setCity] = useState(storedFiltersRef.current.city);
+	const [neighborhood, setNeighborhood] = useState(storedFiltersRef.current.neighborhood);
+	const [nearMeEnabled, setNearMeEnabled] = useState(
+		storedFiltersRef.current.nearMeEnabled,
+	);
+	const [locationSource, setLocationSource] = useState<"device" | "address" | null>(
+		storedFiltersRef.current.locationSource,
+	);
+	const [addressFallbackApplied, setAddressFallbackApplied] = useState(
+		storedFiltersRef.current.addressFallbackApplied,
+	);
+	const [nearMeLocation, setNearMeLocation] = useState<SearchCoordinates | null>(
+		storedFiltersRef.current.nearMeLocation,
+	);
+	const [radiusInKm, setRadiusInKm] = useState(storedFiltersRef.current.radiusInKm);
 	const [isLocating, setIsLocating] = useState(false);
-	const [maxPrice, setMaxPrice] = useState("");
-	const [onlyAvailable, setOnlyAvailable] = useState(false);
+	const gpsAttemptedRef = useRef(false);
+	const deviceLocationResolvedRef = useRef(false);
+	const [maxPrice, setMaxPrice] = useState(storedFiltersRef.current.maxPrice);
 	const [favoriteMutationProviderId, setFavoriteMutationProviderId] = useState<
 		string | null
 	>(null);
@@ -111,11 +199,11 @@ export default function Search() {
 		insurance: insurance.trim() || undefined,
 		city: city.trim() || undefined,
 		neighborhood: neighborhood.trim() || undefined,
-		latitude: nearMeLocation?.latitude,
-		longitude: nearMeLocation?.longitude,
-		radiusInKm: nearMeLocation ? Number(radiusInKm) || 15 : undefined,
+		latitude: nearMeEnabled ? nearMeLocation?.latitude : undefined,
+		longitude: nearMeEnabled ? nearMeLocation?.longitude : undefined,
+		radiusInKm:
+			nearMeEnabled && nearMeLocation ? Number(radiusInKm) || 15 : undefined,
 		maxPriceCents: priceToCents(maxPrice),
-		available: onlyAvailable || undefined,
 		limit: 12,
 	});
 	const filteredProfessionals =
@@ -123,6 +211,124 @@ export default function Search() {
 	const totalProfessionals = providersData?.pages[0]?.total ?? 0;
 	const isLoading = isCategoriesLoading || isProvidersLoading;
 	const error = categoriesError || providersError;
+
+	function applyAddressFallback() {
+		const fallback = getAddressLocationFallback(customer?.primaryAddress);
+
+		if (!fallback) {
+			return false;
+		}
+
+		setNearMeEnabled(true);
+		setLocationSource("address");
+
+		if (fallback.coordinates) {
+			setNearMeLocation(fallback.coordinates);
+			setAddressFallbackApplied(false);
+			return true;
+		}
+
+		setNearMeLocation(null);
+		setCity((current) => current || fallback.city);
+		setNeighborhood((current) => current || fallback.neighborhood);
+		setAddressFallbackApplied(true);
+		return true;
+	}
+
+	async function initializeNearMeSearch() {
+		setIsLocating(true);
+
+		try {
+			const coordinates = await requestDeviceCoordinates();
+			deviceLocationResolvedRef.current = true;
+			setNearMeEnabled(true);
+			setLocationSource("device");
+			setNearMeLocation(coordinates);
+			setAddressFallbackApplied(false);
+			return;
+		} catch {
+			applyAddressFallback();
+		} finally {
+			setIsLocating(false);
+		}
+	}
+
+	useEffect(() => {
+		if (skipAutomaticLocationRef.current) {
+			return;
+		}
+
+		let cancelled = false;
+
+		async function run() {
+			if (!gpsAttemptedRef.current) {
+				gpsAttemptedRef.current = true;
+				setIsLocating(true);
+
+				try {
+					const coordinates = await requestDeviceCoordinates();
+					if (cancelled) {
+						return;
+					}
+
+					deviceLocationResolvedRef.current = true;
+					setNearMeEnabled(true);
+					setLocationSource("device");
+					setNearMeLocation(coordinates);
+					setAddressFallbackApplied(false);
+					return;
+				} catch {
+					// Fall back to the saved address when permission is denied.
+				} finally {
+					setIsLocating(false);
+				}
+			}
+
+			if (cancelled || deviceLocationResolvedRef.current) {
+				return;
+			}
+
+			applyAddressFallback();
+		}
+
+		void run();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [customer?.primaryAddress]);
+
+	useEffect(() => {
+		writeStoredJson(searchFiltersStorageKey, {
+			addressFallbackApplied,
+			city,
+			insurance,
+			language,
+			locationSource,
+			maxPrice,
+			nearMeEnabled,
+			nearMeLocation,
+			neighborhood,
+			radiusInKm,
+			searchQuery,
+			selectedCategory,
+			serviceModality,
+		});
+	}, [
+		addressFallbackApplied,
+		city,
+		insurance,
+		language,
+		locationSource,
+		maxPrice,
+		nearMeEnabled,
+		nearMeLocation,
+		neighborhood,
+		radiusInKm,
+		searchQuery,
+		selectedCategory,
+		serviceModality,
+	]);
 
 	const handleOpenChat = async (healthcareProviderId: string) => {
 		try {
@@ -155,47 +361,70 @@ export default function Search() {
 	};
 
 	const clearFilters = () => {
-		setServiceModality("");
-		setLanguage("");
-		setInsurance("");
-		setCity("");
-		setNeighborhood("");
-		setNearMeLocation(null);
-		setRadiusInKm("15");
-		setMaxPrice("");
-		setOnlyAvailable(false);
+		setSelectedCategory(defaultStoredSearchFilters.selectedCategory);
+		setServiceModality(defaultStoredSearchFilters.serviceModality);
+		setLanguage(defaultStoredSearchFilters.language);
+		setInsurance(defaultStoredSearchFilters.insurance);
+		setCity(defaultStoredSearchFilters.city);
+		setNeighborhood(defaultStoredSearchFilters.neighborhood);
+		setNearMeEnabled(defaultStoredSearchFilters.nearMeEnabled);
+		setNearMeLocation(defaultStoredSearchFilters.nearMeLocation);
+		setLocationSource(defaultStoredSearchFilters.locationSource);
+		setAddressFallbackApplied(defaultStoredSearchFilters.addressFallbackApplied);
+		setRadiusInKm(defaultStoredSearchFilters.radiusInKm);
+		setMaxPrice(defaultStoredSearchFilters.maxPrice);
+		gpsAttemptedRef.current = false;
+		deviceLocationResolvedRef.current = false;
+		hasStoredFiltersRef.current = false;
+		skipAutomaticLocationRef.current = false;
+		void initializeNearMeSearch();
 	};
 
 	const handleNearMe = async () => {
-		if (nearMeLocation) {
+		if (nearMeEnabled) {
+			setNearMeEnabled(false);
 			setNearMeLocation(null);
+			setLocationSource(null);
+
+			if (addressFallbackApplied) {
+				setCity("");
+				setNeighborhood("");
+				setAddressFallbackApplied(false);
+			}
+
 			return;
 		}
 
-		setIsLocating(true);
-
-		try {
-			const permission = await Location.requestForegroundPermissionsAsync();
-
-			if (permission.status !== "granted") {
-				Alert.alert(t("common.error"), t("common.locationPermissionDenied"));
-				return;
-			}
-
-			const location = await Location.getCurrentPositionAsync({
-				accuracy: Location.Accuracy.Balanced,
-			});
-
-			setNearMeLocation({
-				latitude: location.coords.latitude,
-				longitude: location.coords.longitude,
-			});
-		} catch {
-			Alert.alert(t("common.error"), t("common.locationPermissionDenied"));
-		} finally {
-			setIsLocating(false);
-		}
+		gpsAttemptedRef.current = false;
+		deviceLocationResolvedRef.current = false;
+		await initializeNearMeSearch();
 	};
+
+	const isNearMeActive =
+		nearMeEnabled && (Boolean(nearMeLocation) || locationSource === "address");
+	const nearMeLabel =
+		isLocating && !isNearMeActive
+			? t("common.locating")
+			: isNearMeActive
+				? locationSource === "address"
+					? t("common.usingMyAddress")
+					: t("common.usingMyLocation")
+				: t("common.nearMe");
+	const activeFilterCount = getActiveSearchFilterCount({
+		addressFallbackApplied,
+		city,
+		insurance,
+		language,
+		locationSource,
+		maxPrice,
+		nearMeEnabled,
+		nearMeLocation,
+		neighborhood,
+		radiusInKm,
+		searchQuery,
+		selectedCategory,
+		serviceModality,
+	});
 
 	return (
 		<View style={styles.container}>
@@ -213,172 +442,126 @@ export default function Search() {
 					<Pressable
 						style={[
 							styles.filterButton,
-							isFilterPanelVisible && styles.filterButtonActive,
+							activeFilterCount > 0 && styles.filterButtonActive,
 						]}
-						onPress={() => setIsFilterPanelVisible((visible) => !visible)}
+						onPress={() => setIsFiltersSheetVisible(true)}
 					>
 						<SlidersHorizontal
 							size={20}
 							color={
-								isFilterPanelVisible
+								activeFilterCount > 0
 									? theme.colors.primaryForeground
 									: theme.colors.foreground
 							}
 							strokeWidth={2}
 						/>
+						{activeFilterCount > 0 ? (
+							<View style={styles.filterButtonBadge}>
+								<Text style={styles.filterButtonBadgeText}>
+									{activeFilterCount}
+								</Text>
+							</View>
+						) : null}
 					</Pressable>
 				</View>
-				{isFilterPanelVisible ? (
-					<View style={styles.filterPanel}>
-						<FilterSection title={t("common.serviceModalities")}>
-							{serviceModalityOptions.map((item) => (
-								<FilterChip
-									key={item.value}
-									label={t(item.labelKey)}
-									active={serviceModality === item.value}
-									onPress={() =>
-										setServiceModality(
-											serviceModality === item.value ? "" : item.value,
-										)
-									}
-								/>
-							))}
-						</FilterSection>
-						<FilterSection title={t("common.attendanceLanguages")}>
-							{["Português", "Inglês", "Espanhol"].map((item) => (
-								<FilterChip
-									key={item}
-									label={item}
-									active={language === item}
-									onPress={() => setLanguage(language === item ? "" : item)}
-								/>
-							))}
-						</FilterSection>
-						<View style={styles.filterInputGrid}>
-							<Input
-								placeholder={t("common.acceptedInsurance")}
-								value={insurance}
-								onChangeText={setInsurance}
-								containerStyle={styles.filterInput}
-							/>
-							<Input
-								placeholder={t("common.maxPrice")}
-								value={maxPrice}
-								onChangeText={setMaxPrice}
-								keyboardType="numeric"
-								containerStyle={styles.filterInput}
-							/>
-						</View>
-						<View style={styles.filterInputGrid}>
-							<Input
-								placeholder={t("common.city")}
-								value={city}
-								onChangeText={setCity}
-								containerStyle={styles.filterInput}
-							/>
-							<Input
-								placeholder={t("common.neighborhood")}
-								value={neighborhood}
-								onChangeText={setNeighborhood}
-								containerStyle={styles.filterInput}
-							/>
-						</View>
-						<View style={styles.locationRow}>
-							<FilterChip
-								label={
-									isLocating
-										? "..."
-										: nearMeLocation
-											? t("common.usingMyLocation")
-											: t("common.nearMe")
-								}
-								active={Boolean(nearMeLocation)}
-								onPress={handleNearMe}
-							/>
-							<Text style={styles.radiusLabel}>{t("common.radiusKm")}</Text>
-						</View>
-						<View style={styles.radiusChipsRow}>
-							{radiusOptions.map((radiusOption) => (
-								<FilterChip
-									key={radiusOption}
-									label={`${radiusOption} km`}
-									active={radiusInKm === radiusOption}
-									onPress={() => setRadiusInKm(radiusOption)}
-								/>
-							))}
-						</View>
-						<View style={styles.filterChipsRow}>
-							<FilterChip
-								label={t("common.nextAvailable")}
-								active={onlyAvailable}
-								onPress={() => setOnlyAvailable(!onlyAvailable)}
-							/>
-						</View>
-						<Button variant="ghost" size="sm" onPress={clearFilters}>
-							{t("common.clearFilters")}
-						</Button>
-					</View>
-				) : null}
 			</View>
 
-			{/* Category Filter */}
-			<View style={styles.categorySection}>
-				{isLoading ? (
-					<View style={styles.categoryLoading}>
-						<ActivityIndicator size="small" color={theme.colors.primary} />
-					</View>
-				) : (
-					<ScrollView
-						horizontal
-						showsHorizontalScrollIndicator={false}
-						contentContainerStyle={styles.categoryScroll}
-					>
-						{/* All Categories */}
-						<Pressable
-							onPress={() => setSelectedCategory("all")}
-							style={[
-								styles.categoryChip,
-								selectedCategory === "all" && styles.categoryChipActive,
-							]}
-						>
-							<Text style={styles.categoryIcon}>🏥</Text>
-							<Text
-								style={[
-									styles.categoryText,
-									selectedCategory === "all" && styles.categoryTextActive,
-								]}
-							>
-								{t("common.all")}
-							</Text>
-						</Pressable>
-
-						{/* API Categories */}
-						{categories.map((category) => (
-							<Pressable
-								key={category.id}
-								onPress={() => setSelectedCategory(category.id)}
-								style={[
-									styles.categoryChip,
-									selectedCategory === category.id && styles.categoryChipActive,
-								]}
-							>
-								<Text style={styles.categoryIcon}>
-									{getCategoryIcon(category.name)}
-								</Text>
-								<Text
-									style={[
-										styles.categoryText,
-										selectedCategory === category.id &&
-											styles.categoryTextActive,
-									]}
-								>
-									{category.name}
-								</Text>
-							</Pressable>
-						))}
-					</ScrollView>
-				)}
-			</View>
+			<BottomSheet
+				isOpen={isFiltersSheetVisible}
+				onClose={() => setIsFiltersSheetVisible(false)}
+				title={t("common.filters")}
+				badgeCount={activeFilterCount}
+			>
+				<FilterSection title={t("common.specialty")}>
+					<FilterChip
+						label={t("common.all")}
+						active={selectedCategory === "all"}
+						onPress={() => setSelectedCategory("all")}
+					/>
+					{categories.map((category) => (
+						<FilterChip
+							key={category.id}
+							label={category.name}
+							active={selectedCategory === category.id}
+							onPress={() => setSelectedCategory(category.id)}
+						/>
+					))}
+				</FilterSection>
+				<FilterSection title={t("common.serviceModalities")}>
+					{serviceModalityOptions.map((item) => (
+						<FilterChip
+							key={item.value}
+							label={t(item.labelKey)}
+							active={serviceModality === item.value}
+							onPress={() =>
+								setServiceModality(
+									serviceModality === item.value ? "" : item.value,
+								)
+							}
+						/>
+					))}
+				</FilterSection>
+				<FilterSection title={t("common.attendanceLanguages")}>
+					{["Português", "Inglês", "Espanhol"].map((item) => (
+						<FilterChip
+							key={item}
+							label={item}
+							active={language === item}
+							onPress={() => setLanguage(language === item ? "" : item)}
+						/>
+					))}
+				</FilterSection>
+				<View style={styles.filterInputGrid}>
+					<Input
+						placeholder={t("common.acceptedInsurance")}
+						value={insurance}
+						onChangeText={setInsurance}
+						containerStyle={styles.filterInput}
+					/>
+					<Input
+						placeholder={t("common.maxPrice")}
+						value={maxPrice}
+						onChangeText={setMaxPrice}
+						keyboardType="numeric"
+						containerStyle={styles.filterInput}
+					/>
+				</View>
+				<View style={styles.filterInputGrid}>
+					<Input
+						placeholder={t("common.city")}
+						value={city}
+						onChangeText={setCity}
+						containerStyle={styles.filterInput}
+					/>
+					<Input
+						placeholder={t("common.neighborhood")}
+						value={neighborhood}
+						onChangeText={setNeighborhood}
+						containerStyle={styles.filterInput}
+					/>
+				</View>
+				<View style={styles.locationRow}>
+					<FilterChip
+						label={nearMeLabel}
+						active={isNearMeActive}
+						onPress={handleNearMe}
+					/>
+					<Text style={styles.radiusLabel}>{t("common.radiusKm")}</Text>
+				</View>
+				<View style={styles.radiusChipsRow}>
+					{radiusOptions.map((radiusOption) => (
+						<FilterChip
+							key={radiusOption}
+							label={`${radiusOption} km`}
+							active={radiusInKm === radiusOption}
+							onPress={() => setRadiusInKm(radiusOption)}
+						/>
+					))}
+				</View>
+				<Button variant="ghost" size="sm" onPress={clearFilters}>
+					{t("common.clearFilters")}
+				</Button>
+			</BottomSheet>
 
 			{/* Results */}
 			<ScrollView
@@ -671,30 +854,6 @@ function FilterChip({
 }
 
 // Helper function to get category icon based on name
-function getCategoryIcon(categoryName: string): string {
-	const iconMap: Record<string, string> = {
-		Cardiology: "❤️",
-		Dermatology: "🧴",
-		Pediatrics: "👶",
-		Orthopedics: "🦴",
-		Neurology: "🧠",
-		Psychiatry: "🧘",
-		General: "👨‍⚕️",
-		Dentistry: "🦷",
-		Ophthalmology: "👁️",
-		ENT: "👂",
-		Gynecology: "🤰",
-		Urology: "💧",
-	};
-
-	// Try to find a match in the map
-	const match = Object.keys(iconMap).find((key) =>
-		categoryName.toLowerCase().includes(key.toLowerCase()),
-	);
-
-	return match ? iconMap[match] : "⚕️";
-}
-
 const styles = StyleSheet.create((theme) => ({
 	container: {
 		flex: 1,
@@ -734,14 +893,21 @@ const styles = StyleSheet.create((theme) => ({
 		backgroundColor: theme.colors.primary,
 		borderColor: theme.colors.primary,
 	},
-	filterPanel: {
-		marginTop: theme.gap(2),
-		gap: theme.gap(2),
-		padding: theme.gap(2),
-		borderRadius: theme.radius.lg,
-		backgroundColor: theme.colors.background,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
+	filterButtonBadge: {
+		position: "absolute",
+		top: -6,
+		right: -6,
+		minWidth: 20,
+		height: 20,
+		borderRadius: 10,
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: theme.colors.primary,
+	},
+	filterButtonBadgeText: {
+		fontSize: 11,
+		fontWeight: "700",
+		color: theme.colors.primaryForeground,
 	},
 	filterSection: {
 		gap: theme.gap(1),
@@ -799,42 +965,6 @@ const styles = StyleSheet.create((theme) => ({
 		flexDirection: "row",
 		flexWrap: "wrap",
 		gap: theme.gap(1),
-	},
-	categorySection: {
-		paddingVertical: theme.gap(2),
-		borderBottomWidth: 1,
-		borderBottomColor: theme.colors.border,
-	},
-	categoryLoading: {
-		paddingVertical: theme.gap(2),
-		alignItems: "center",
-	},
-	categoryScroll: {
-		paddingHorizontal: theme.gap(3),
-		gap: theme.gap(1.5),
-	},
-	categoryChip: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: theme.gap(1),
-		paddingHorizontal: theme.gap(2),
-		paddingVertical: theme.gap(1),
-		borderRadius: theme.radius.full,
-		backgroundColor: theme.colors.secondary,
-	},
-	categoryChipActive: {
-		backgroundColor: theme.colors.primary,
-	},
-	categoryIcon: {
-		fontSize: 14,
-	},
-	categoryText: {
-		fontSize: 14,
-		color: theme.colors.secondaryForeground,
-		fontWeight: "500",
-	},
-	categoryTextActive: {
-		color: theme.colors.primaryForeground,
 	},
 	resultsContainer: {
 		flex: 1,
