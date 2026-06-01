@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	BadgeCheck,
 	CalendarCheck,
@@ -16,7 +16,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
+import { env } from "@/constants/env";
 import { useAuth } from "@/contexts/auth";
+import { useAppInfo } from "@/hooks/use-settings";
 import { getErrorMessage } from "@/services/api";
 
 type OnboardingRole = "CUSTOMER" | "HEALTHCARE_PROVIDER";
@@ -24,9 +26,12 @@ type OnboardingRole = "CUSTOMER" | "HEALTHCARE_PROVIDER";
 export default function Onboarding() {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation();
+	const { data: appInfo } = useAppInfo();
 	const { completeOnboarding, isHealthcareProvider, isLoading, needsOnboarding, user } =
 		useAuth();
 	const [selectedRole, setSelectedRole] = useState<OnboardingRole | null>(null);
+	const providerSignUpEnabled =
+		appInfo?.app.enableProviderSignUp ?? env.EXPO_PUBLIC_ENABLE_PROVIDER_SIGN_UP;
 
 	if (isLoading) {
 		return null;
@@ -67,6 +72,14 @@ export default function Onboarding() {
 		}
 	};
 
+	useEffect(() => {
+		if (!needsOnboarding || !user || providerSignUpEnabled || selectedRole) {
+			return;
+		}
+
+		void handleSelectRole("CUSTOMER");
+	}, [needsOnboarding, providerSignUpEnabled, selectedRole, user]);
+
 	return (
 		<SafeAreaView style={styles.container}>
 			<ScrollView
@@ -82,43 +95,68 @@ export default function Onboarding() {
 						/>
 					</View>
 					<Text style={styles.badge}>{t("common.firstAccess")}</Text>
-					<Text style={styles.title}>{t("common.howDoYouWantToUseApp")}</Text>
+					<Text style={styles.title}>
+						{providerSignUpEnabled
+							? t("common.howDoYouWantToUseApp")
+							: "Estamos preparando sua conta"}
+					</Text>
 					<Text style={styles.subtitle}>
-						{t("common.chooseAccountTypeFirstLogin")}
+						{providerSignUpEnabled
+							? t("common.chooseAccountTypeFirstLogin")
+							: "O cadastro de profissionais está temporariamente desabilitado. Vamos continuar com sua conta de cliente automaticamente."}
 					</Text>
 				</View>
 
-				<View style={styles.cardsContainer}>
-					<RoleCard
-						actionLabel={t("common.createPatientAccount")}
-						description={t("common.patientOnboardingDescription")}
-						disabled={Boolean(selectedRole)}
-						icon={UserRound}
-						isLoading={selectedRole === "CUSTOMER"}
-						onPress={() => handleSelectRole("CUSTOMER")}
-						title={t("common.iWantToCareForMyHealth")}
-						items={[
-							t("common.bookAndTrackAppointments"),
-							t("common.saveFavoriteProfessionals"),
-							t("common.keepMedicalRecordUpdated"),
-						]}
-					/>
+				{providerSignUpEnabled ? (
+					<View style={styles.cardsContainer}>
+						<RoleCard
+							actionLabel={t("common.createPatientAccount")}
+							description={t("common.patientOnboardingDescription")}
+							disabled={Boolean(selectedRole)}
+							icon={UserRound}
+							isLoading={selectedRole === "CUSTOMER"}
+							onPress={() => handleSelectRole("CUSTOMER")}
+							title={t("common.iWantToCareForMyHealth")}
+							items={[
+								t("common.bookAndTrackAppointments"),
+								t("common.saveFavoriteProfessionals"),
+								t("common.keepMedicalRecordUpdated"),
+							]}
+						/>
 
-					<RoleCard
-						actionLabel={t("common.createProviderAccount")}
-						description={t("common.providerOnboardingDescription")}
-						disabled={Boolean(selectedRole)}
-						icon={HeartPulse}
-						isLoading={selectedRole === "HEALTHCARE_PROVIDER"}
-						onPress={() => handleSelectRole("HEALTHCARE_PROVIDER")}
-						title={t("common.iAmHealthcareProvider")}
-						items={[
-							t("common.submitDataForVerification"),
-							t("common.registerProceduresAndPrices"),
-							t("common.organizeScheduleAndCare"),
-						]}
-					/>
-				</View>
+						<RoleCard
+							actionLabel={t("common.createProviderAccount")}
+							description={t("common.providerOnboardingDescription")}
+							disabled={Boolean(selectedRole)}
+							icon={HeartPulse}
+							isLoading={selectedRole === "HEALTHCARE_PROVIDER"}
+							onPress={() => handleSelectRole("HEALTHCARE_PROVIDER")}
+							title={t("common.iAmHealthcareProvider")}
+							items={[
+								t("common.submitDataForVerification"),
+								t("common.registerProceduresAndPrices"),
+								t("common.organizeScheduleAndCare"),
+							]}
+						/>
+					</View>
+				) : (
+					<View style={styles.cardsContainer}>
+						<RoleCard
+							actionLabel="Preparando sua conta..."
+							description="Você poderá buscar profissionais, agendar consultas e manter seus dados de saúde organizados."
+							disabled
+							icon={UserRound}
+							isLoading={selectedRole === "CUSTOMER"}
+							onPress={() => undefined}
+							title="Conta de cliente"
+							items={[
+								t("common.bookAndTrackAppointments"),
+								t("common.saveFavoriteProfessionals"),
+								t("common.keepMedicalRecordUpdated"),
+							]}
+						/>
+					</View>
+				)}
 
 				<View style={styles.trustContainer}>
 					<TrustItem icon={ShieldCheck} label={t("common.secureSession")} />

@@ -9,7 +9,6 @@ export interface MedicalRecord {
 	allergies: string | null;
 	surgeries: string | null;
 	familyHistory: string | null;
-	lifestyleNotes: string | null;
 	emergencyContactName: string | null;
 	emergencyContactPhone: string | null;
 	createdAt: string;
@@ -24,7 +23,6 @@ export interface MedicalRecordData {
 	allergies?: string | null;
 	surgeries?: string | null;
 	familyHistory?: string | null;
-	lifestyleNotes?: string | null;
 	emergencyContactName?: string | null;
 	emergencyContactPhone?: string | null;
 }

@@ -42,5 +42,6 @@ export interface AppInfoResponse {
 		apiVersion: string;
 		environment: string;
 		serverTime: string;
+		enableProviderSignUp: boolean;
 	};
 }

@@ -222,7 +222,6 @@ export const ptBR = {
     justNow: "Agora mesmo",
     keepThisReady: "Deixe isso preparado",
     lastUpdated: "Última atualização",
-    lifestyleNotes: "Notas de estilo de vida",
     loadingAppointment: "Carregando consulta...",
     loadingAppointments: "Carregando consultas...",
     loadingAvailableSlots: "Carregando horários disponíveis...",
@@ -547,6 +546,7 @@ export const ptBR = {
     topRated: "Melhores avaliados",
     unableToRenderThisPDF: "Não foi possível renderizar este PDF.",
     upcoming: "Próximas",
+    upcomingAppointments: "Próximas consultas",
     validationError: "Erro de validação",
     viewDetails: "Ver detalhes",
     weCouldNotFindAProviderProfileForThisAccount: "Não encontramos um perfil de profissional para esta conta.",
@@ -596,7 +596,6 @@ export const ptBR = {
     failedToSaveProfilePleaseTryAgain: "Falha ao salvar perfil. Tente novamente.",
     failedToSaveSchedulePleaseTryAgain: "Falha ao salvar agenda. Tente novamente.",
     forPatientName: "Para {{patientName}}",
-    lifestyleNotes2: "Notas de estilo de vida",
     loadingPDF: "Carregando PDF...",
     loadingProviders: "Carregando profissionais...",
     markNoShow: "Marcar ausência",
@@ -705,6 +704,18 @@ export const ptBR = {
     toastEvolutionNoteCopied: "Anotações anteriores copiadas para a ficha atual.",
     copyToCurrentEvolutionNote: "Copiar para a ficha atual",
     appointmentConfirmationReminderHoursBefore: "Confirmação antecipada (horas antes)",
+    appointmentConfirmationSettingsTitle: "Confirmação de agendamento",
+    appointmentConfirmationSettingsDescription:
+      "Defina com quantas horas de antecedência o paciente receberá push e e-mail pedindo para confirmar a consulta ainda agendada.",
+    appointmentConfirmationSettingsMenuDescription:
+      "Configure o prazo para o paciente confirmar presença antes da consulta.",
+    appointmentConfirmationPresetHours: "{{hours}}h antes",
+    appointmentConfirmationHoursBeforeLabel: "Antecedência personalizada (horas)",
+    appointmentConfirmationHoursBeforeHint:
+      "Entre 1 e 168 horas. O sistema verifica a cada 15 minutos e envia uma única notificação por consulta.",
+    appointmentConfirmationSettingsSaved: "Prazo de confirmação salvo com sucesso.",
+    appointmentConfirmationSettingsSaveFailed:
+      "Não foi possível salvar o prazo de confirmação.",
     appointmentReminderHoursBefore: "Lembrete de chegada (horas antes)",
     choosePreferredLanguage: "Escolha o idioma preferido do app",
     providerAccountSettingsDescription: "Preferências e configurações da conta profissional",
@@ -831,7 +842,10 @@ export const ptBR = {
     medicalConditions: "Doenças preexistentes",
     medicalSurgeries: "Cirurgias anteriores",
     medicalFamilyHistory: "Histórico familiar",
-    medicalLifestyle: "Hábitos de vida",
+  },
+  search: {
+    allHealthInsurancePlans: "Todos os planos",
+    healthInsurancePlanPlaceholder: "Plano de saúde",
   },
 } as const;
 

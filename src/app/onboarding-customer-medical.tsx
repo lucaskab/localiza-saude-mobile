@@ -20,7 +20,6 @@ export default function OnboardingCustomerMedical() {
 	const [preExistingConditions, setPreExistingConditions] = useState("");
 	const [surgeries, setSurgeries] = useState("");
 	const [familyHistory, setFamilyHistory] = useState("");
-	const [lifestyleNotes, setLifestyleNotes] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [isSkipping, setIsSkipping] = useState(false);
 
@@ -45,7 +44,6 @@ export default function OnboardingCustomerMedical() {
 					preExistingConditions,
 					surgeries,
 					familyHistory,
-					lifestyleNotes,
 				},
 			});
 		} catch (error) {
@@ -103,9 +101,6 @@ export default function OnboardingCustomerMedical() {
 					</Field>
 					<Field label={t("onboarding.medicalFamilyHistory")}>
 						<Textarea value={familyHistory} onChangeText={setFamilyHistory} />
-					</Field>
-					<Field label={t("onboarding.medicalLifestyle")}>
-						<Textarea value={lifestyleNotes} onChangeText={setLifestyleNotes} />
 					</Field>
 				</View>
 

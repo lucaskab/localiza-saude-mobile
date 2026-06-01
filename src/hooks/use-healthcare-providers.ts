@@ -10,7 +10,7 @@ interface UseHealthcareProvidersParams {
 	specialty?: string;
 	serviceModality?: string;
 	language?: string;
-	insurance?: string;
+	healthInsurancePlanId?: string;
 	city?: string;
 	neighborhood?: string;
 	latitude?: number;
@@ -29,7 +29,7 @@ export const getHealthcareProviders = async ({
 	specialty,
 	serviceModality,
 	language,
-	insurance,
+	healthInsurancePlanId,
 	city,
 	neighborhood,
 	latitude,
@@ -59,8 +59,8 @@ export const getHealthcareProviders = async ({
 		params.append("language", language);
 	}
 
-	if (insurance) {
-		params.append("insurance", insurance);
+	if (healthInsurancePlanId) {
+		params.append("healthInsurancePlanId", healthInsurancePlanId);
 	}
 
 	if (city) {
@@ -117,7 +117,7 @@ export const useHealthcareProviders = ({
 	specialty,
 	serviceModality,
 	language,
-	insurance,
+	healthInsurancePlanId,
 	city,
 	neighborhood,
 	latitude,
@@ -136,7 +136,7 @@ export const useHealthcareProviders = ({
 			specialty,
 			serviceModality,
 			language,
-			insurance,
+			healthInsurancePlanId,
 			city,
 			neighborhood,
 			latitude,
@@ -153,7 +153,7 @@ export const useHealthcareProviders = ({
 				specialty,
 				serviceModality,
 				language,
-				insurance,
+				healthInsurancePlanId,
 				city,
 				neighborhood,
 				latitude,
@@ -175,7 +175,7 @@ export const useInfiniteHealthcareProviders = ({
 	specialty,
 	serviceModality,
 	language,
-	insurance,
+	healthInsurancePlanId,
 	city,
 	neighborhood,
 	latitude,
@@ -195,7 +195,7 @@ export const useInfiniteHealthcareProviders = ({
 			specialty,
 			serviceModality,
 			language,
-			insurance,
+			healthInsurancePlanId,
 			city,
 			neighborhood,
 			latitude,
@@ -212,7 +212,7 @@ export const useInfiniteHealthcareProviders = ({
 				specialty,
 				serviceModality,
 				language,
-				insurance,
+				healthInsurancePlanId,
 				city,
 				neighborhood,
 				latitude,

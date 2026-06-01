@@ -269,7 +269,6 @@ function getMedicalRecordFields(record: MedicalRecord | null | undefined) {
 		{ label: translationKeys.Allergies, value: record?.allergies },
 		{ label: translationKeys.Surgeries, value: record?.surgeries },
 		{ label: translationKeys["Family History"], value: record?.familyHistory },
-		{ label: translationKeys["Lifestyle Notes"], value: record?.lifestyleNotes },
 	].filter((field) => field.value?.trim());
 }
 

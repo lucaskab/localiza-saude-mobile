@@ -1,6 +1,6 @@
 import { ProfilePhotoEditor } from "@/components/profile-photo-editor";
 import { useAuth } from "@/contexts/auth";
-import { useFavorites } from "@/hooks/use-favorites";
+import { useCustomerHomeSummary } from "@/hooks/use-customer-home-summary";
 import type { TranslationKey } from "@/i18n";
 import { useRouter } from "expo-router";
 import {
@@ -79,8 +79,9 @@ export default function Profile() {
   const { signOut, user, customer } = useAuth();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { data: favoritesData } = useFavorites();
-  const favoritesCount = favoritesData?.favorites.length ?? 0;
+  const { data: summary, isLoading: summaryLoading } = useCustomerHomeSummary(
+    Boolean(customer?.id),
+  );
 
   return (
     <View style={styles.container}>
@@ -131,15 +132,21 @@ export default function Profile() {
         {/* Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>12</Text>
+            <Text style={styles.statValue}>
+              {summaryLoading ? "—" : String(summary?.totalAppointments ?? 0)}
+            </Text>
             <Text style={styles.statLabel}>{t("common.appointments")}</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>5</Text>
-            <Text style={styles.statLabel}>{t("common.reviews")}</Text>
+            <Text style={styles.statValue}>
+              {summaryLoading ? "—" : String(summary?.upcomingAppointments ?? 0)}
+            </Text>
+            <Text style={styles.statLabel}>{t("common.upcomingAppointments")}</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{favoritesCount}</Text>
+            <Text style={styles.statValue}>
+              {summaryLoading ? "—" : String(summary?.favoritesCount ?? 0)}
+            </Text>
             <Text style={styles.statLabel}>{t("common.favorites")}</Text>
           </View>
         </View>

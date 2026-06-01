@@ -39,6 +39,7 @@ export const useAddFavorite = () => {
 		mutationFn: addFavorite,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["favorites"] });
+			queryClient.invalidateQueries({ queryKey: ["customer-home-summary"] });
 		},
 	});
 };
@@ -59,6 +60,7 @@ export const useRemoveFavorite = () => {
 		mutationFn: removeFavorite,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["favorites"] });
+			queryClient.invalidateQueries({ queryKey: ["customer-home-summary"] });
 		},
 	});
 };

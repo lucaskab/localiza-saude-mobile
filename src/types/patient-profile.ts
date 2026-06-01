@@ -18,7 +18,6 @@ export interface PatientProfile {
 	allergies: string | null;
 	surgeries: string | null;
 	familyHistory: string | null;
-	lifestyleNotes: string | null;
 	emergencyContactName: string | null;
 	emergencyContactPhone: string | null;
 	createdAt: string;
@@ -42,7 +41,6 @@ export interface PatientProfileData {
 	allergies?: string | null;
 	surgeries?: string | null;
 	familyHistory?: string | null;
-	lifestyleNotes?: string | null;
 	emergencyContactName?: string | null;
 	emergencyContactPhone?: string | null;
 }

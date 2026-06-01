@@ -8,6 +8,7 @@ import {
 	Building2,
 	Bell,
 	BriefcaseBusiness,
+	CalendarCheck2,
 	CalendarClock,
 	ChevronRight,
 	Globe2,
@@ -59,6 +60,13 @@ const providerMenuItems: ProviderMenuItem[] = [
     description: "common.workingScheduleDescription",
     route: "/provider-schedule",
     testID: "provider-profile-menu-schedule",
+  },
+  {
+    icon: CalendarCheck2,
+    label: "common.appointmentConfirmationSettingsTitle",
+    description: "common.appointmentConfirmationSettingsMenuDescription",
+    route: "/provider-appointment-confirmation",
+    testID: "provider-profile-menu-appointment-confirmation",
   },
   {
     icon: MessageSquareText,

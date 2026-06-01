@@ -1,5 +1,6 @@
 import type { ServiceModality } from "@/constants/service-modalities";
 import type { Address } from "@/types/address";
+import type { HealthInsurancePlan } from "@/types/health-insurance-plan";
 
 export type UserRole = "HEALTHCARE_PROVIDER" | "CUSTOMER" | "ADMIN" | "STAFF";
 export type ClinicEmployeeRole = "OWNER" | "PROVIDER" | "STAFF";
@@ -76,6 +77,7 @@ export type Customer = BaseUser & {
 	cpf: string | null;
 	dateOfBirth: string | null;
 	primaryAddress?: Address | null;
+	healthInsurancePlans?: HealthInsurancePlan[];
 };
 
 export type HealthcareProvider = BaseUser & {
@@ -109,7 +111,7 @@ export type HealthcareProvider = BaseUser & {
 	serviceModalities: ServiceModality[];
 	primaryAddress?: Address | null;
 	homeCareRadiusKm: number | null;
-	acceptedInsurance: string[];
+	acceptedHealthInsurancePlans: HealthInsurancePlan[];
 	paymentMethods: string[];
 	bookingAvailabilityDays?: number | null;
 	appointmentConfirmationReminderHoursBefore?: number | null;

@@ -116,7 +116,6 @@ export const translationKeys = {
   "Just now": "common.justNow",
   "Keep this ready": "common.keepThisReady",
   "Last Updated": "common.lastUpdated",
-  "Lifestyle Notes": "common.lifestyleNotes",
   "Loading appointment...": "common.loadingAppointment",
   "Loading appointments...": "common.loadingAppointments",
   "Loading available slots...": "common.loadingAvailableSlots",

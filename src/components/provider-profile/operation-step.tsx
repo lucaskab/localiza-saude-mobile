@@ -1,4 +1,4 @@
-import { Clock, CreditCard, FileText, MapPin, ShieldCheck } from "lucide-react-native";
+import { Clock, CreditCard, FileText, MapPin } from "lucide-react-native";
 import { Controller, type Control, useWatch } from "react-hook-form";
 import { Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
@@ -7,7 +7,10 @@ import { serviceModalityOptions } from "@/constants/service-modalities";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FieldGroup } from "@/components/ui/field";
+import { HealthInsurancePlanPicker } from "@/components/health-insurance-plan-picker";
 import { FormInput } from "@/components/provider-profile/form-input";
+import { useHealthInsurancePlans } from "@/hooks/use-health-insurance-plans";
+import { AppointmentConfirmationSettings } from "@/components/provider-profile/appointment-confirmation-settings";
 import type { ProfileFormData } from "@/components/provider-profile/profile-form";
 
 type ProviderOperationStepProps = {
@@ -21,6 +24,7 @@ export function ProviderOperationStep({
 }: ProviderOperationStepProps) {
 	const { theme } = useUnistyles();
 	const { t } = useTranslation();
+	const { data: healthInsurancePlans = [] } = useHealthInsurancePlans();
 	const cancellationPolicyEnabled = useWatch({
 		control,
 		name: "cancellationPolicyEnabled",
@@ -116,14 +120,7 @@ export function ProviderOperationStep({
 				placeholder="10"
 				keyboardType="numeric"
 			/>
-			<FormInput
-				control={control}
-				icon={Clock}
-				name="appointmentConfirmationReminderHoursBefore"
-				label={t("common.appointmentConfirmationReminderHoursBefore")}
-				placeholder="24"
-				keyboardType="numeric"
-			/>
+			<AppointmentConfirmationSettings control={control} />
 			<FormInput
 				control={control}
 				icon={Clock}
@@ -132,12 +129,11 @@ export function ProviderOperationStep({
 				placeholder="1"
 				keyboardType="numeric"
 			/>
-			<FormInput
+			<HealthInsurancePlanPicker
 				control={control}
-				icon={ShieldCheck}
-				name="acceptedInsurance"
+				name="acceptedHealthInsurancePlanIds"
 				label={t("common.acceptedInsurance")}
-				placeholder={t("common.commaSeparatedExamplesInsurance")}
+				plans={healthInsurancePlans}
 			/>
 			<FormInput
 				control={control}

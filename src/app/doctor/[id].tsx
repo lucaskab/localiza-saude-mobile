@@ -385,7 +385,7 @@ export default function DoctorDetails() {
 				{getProviderCareAddress(provider) ||
 				provider.serviceModalities?.length ||
 				provider.languages?.length ||
-				provider.acceptedInsurance?.length ||
+				provider.acceptedHealthInsurancePlans?.length ||
 				provider.paymentMethods?.length ||
 				provider.cancellationPolicy ? (
 					<View style={styles.section}>
@@ -416,7 +416,10 @@ export default function DoctorDetails() {
 						/>
 						<TagGroup
 							title={t("common.acceptedInsurance")}
-							values={provider.acceptedInsurance}
+							values={
+								provider.acceptedHealthInsurancePlans?.map((plan) => plan.name) ??
+								[]
+							}
 							icon={ShieldCheck}
 						/>
 						<TagGroup

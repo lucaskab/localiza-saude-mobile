@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { MapPin, Search } from "lucide-react-native";
+import { CalendarClock, Clock, Heart, MapPin, Search } from "lucide-react-native";
 import { useState } from "react";
 import {
 	ActivityIndicator,
@@ -14,7 +14,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/auth";
 import { useCategories, getProvidersByCategory } from "@/hooks/use-categories";
+import { useCustomerHomeSummary } from "@/hooks/use-customer-home-summary";
 import { formatNextAvailableAt } from "@/utils/availability";
 
 export default function Home() {
@@ -22,7 +24,12 @@ export default function Home() {
 	const { t } = useTranslation();
 	const insets = useSafeAreaInsets();
 	const router = useRouter();
+	const { customer } = useAuth();
 	const [selectedCategory, setSelectedCategory] = useState("all");
+
+	const { data: summary, isLoading: summaryLoading } = useCustomerHomeSummary(
+		Boolean(customer?.id),
+	);
 
 	// Fetch categories with their healthcare providers
 	const { data, isLoading, error, refetch, isRefetching } = useCategories();
@@ -84,6 +91,24 @@ export default function Home() {
 							{t("common.searchDoctorsSpecialists")}
 						</Text>
 					</Pressable>
+				</View>
+
+				<View style={styles.metricsSection}>
+					<HomeMetricCard
+						icon={CalendarClock}
+						label={t("common.appointments")}
+						value={summaryLoading ? "—" : String(summary?.totalAppointments ?? 0)}
+					/>
+					<HomeMetricCard
+						icon={Clock}
+						label={t("common.upcomingAppointments")}
+						value={summaryLoading ? "—" : String(summary?.upcomingAppointments ?? 0)}
+					/>
+					<HomeMetricCard
+						icon={Heart}
+						label={t("common.favorites")}
+						value={summaryLoading ? "—" : String(summary?.favoritesCount ?? 0)}
+					/>
 				</View>
 
 				{/* Categories */}
@@ -258,6 +283,28 @@ export default function Home() {
 	);
 }
 
+function HomeMetricCard({
+	icon: Icon,
+	label,
+	value,
+}: {
+	icon: typeof CalendarClock;
+	label: string;
+	value: string;
+}) {
+	const { theme } = useUnistyles();
+
+	return (
+		<View style={styles.metricCard}>
+			<View style={styles.metricIcon}>
+				<Icon size={18} color={theme.colors.primary} strokeWidth={2.2} />
+			</View>
+			<Text style={styles.metricValue}>{value}</Text>
+			<Text style={styles.metricLabel}>{label}</Text>
+		</View>
+	);
+}
+
 // Helper function to get category icon based on name
 function getCategoryIcon(categoryName: string): string {
 	const iconMap: Record<string, string> = {
@@ -335,6 +382,39 @@ const styles = StyleSheet.create((theme) => ({
 		fontSize: 14,
 		color: theme.colors.mutedForeground,
 		flex: 1,
+	},
+	metricsSection: {
+		flexDirection: "row",
+		gap: theme.gap(1.5),
+		paddingHorizontal: theme.gap(3),
+		paddingTop: theme.gap(3),
+	},
+	metricCard: {
+		flex: 1,
+		backgroundColor: theme.colors.surfacePrimary,
+		borderRadius: theme.radius.xl,
+		borderWidth: 1,
+		borderColor: theme.colors.border,
+		padding: theme.gap(2),
+	},
+	metricIcon: {
+		width: 32,
+		height: 32,
+		borderRadius: theme.radius.md,
+		backgroundColor: `${theme.colors.primary}1A`,
+		alignItems: "center",
+		justifyContent: "center",
+		marginBottom: theme.gap(1),
+	},
+	metricValue: {
+		fontSize: 20,
+		fontWeight: "600",
+		color: theme.colors.foreground,
+	},
+	metricLabel: {
+		fontSize: 12,
+		color: theme.colors.mutedForeground,
+		marginTop: theme.gap(0.25),
 	},
 	categoriesSection: {
 		paddingVertical: theme.gap(3),

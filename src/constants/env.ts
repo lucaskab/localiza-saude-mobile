@@ -3,6 +3,10 @@ import { z } from "zod";
 const envSchema = z.object({
 	EXPO_PUBLIC_BASE_URL: z.url(),
 	EXPO_PUBLIC_SCHEME: z.string(),
+	EXPO_PUBLIC_ENABLE_PROVIDER_SIGN_UP: z
+		.enum(["true", "false"])
+		.optional()
+		.transform((value) => value === "true"),
 });
 
 const safeParse = () => {
@@ -10,6 +14,7 @@ const safeParse = () => {
 	console.log("📋 Raw env values:", {
 		BASE_URL: process.env.EXPO_PUBLIC_BASE_URL,
 		SCHEME: process.env.EXPO_PUBLIC_SCHEME,
+		ENABLE_PROVIDER_SIGN_UP: process.env.EXPO_PUBLIC_ENABLE_PROVIDER_SIGN_UP,
 	});
 
 	const result = envSchema.safeParse(process.env);

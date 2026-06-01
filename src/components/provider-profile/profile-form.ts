@@ -24,7 +24,7 @@ export const profileFormSchema = z.object({
 	targetAudiences: z.string().nullable(),
 	serviceModalities: z.array(z.enum(SERVICE_MODALITY_VALUES)),
 	homeCareRadiusKm: z.string().nullable(),
-	acceptedInsurance: z.string().nullable(),
+	acceptedHealthInsurancePlanIds: z.array(z.string()),
 	paymentMethods: z.string().nullable(),
 	appointmentConfirmationReminderHoursBefore: z.string().nullable(),
 	appointmentReminderHoursBefore: z.string().nullable(),
@@ -57,6 +57,7 @@ export type ProfileTextField = Exclude<
 	| "lgpdConsent"
 	| "professionalResponsibilityAccepted"
 	| "serviceModalities"
+	| "acceptedHealthInsurancePlanIds"
 	| "cancellationPolicyEnabled"
 	| "cancellationPolicyRequiresJustification"
 	| "birthdayGreetingEmailEnabled"
@@ -82,7 +83,7 @@ export const emptyProfileForm: ProfileFormData = {
 	targetAudiences: null,
 	serviceModalities: [],
 	homeCareRadiusKm: null,
-	acceptedInsurance: null,
+	acceptedHealthInsurancePlanIds: [],
 	paymentMethods: null,
 	appointmentConfirmationReminderHoursBefore: "24",
 	appointmentReminderHoursBefore: "1",
@@ -151,7 +152,8 @@ export function getProfileFormDefaults(
 		serviceModalities:
 			(healthcareProvider?.serviceModalities as ServiceModality[]) || [],
 		homeCareRadiusKm: healthcareProvider?.homeCareRadiusKm?.toString() || null,
-		acceptedInsurance: joinList(healthcareProvider?.acceptedInsurance),
+		acceptedHealthInsurancePlanIds:
+			healthcareProvider?.acceptedHealthInsurancePlans?.map((plan) => plan.id) ?? [],
 		paymentMethods: joinList(healthcareProvider?.paymentMethods),
 		appointmentConfirmationReminderHoursBefore:
 			healthcareProvider?.appointmentConfirmationReminderHoursBefore?.toString() ||
@@ -219,7 +221,7 @@ export function buildProfileUpdatePayload(
 		homeCareRadiusKm: data.homeCareRadiusKm?.trim()
 			? Number(data.homeCareRadiusKm)
 			: null,
-		acceptedInsurance: splitList(data.acceptedInsurance),
+		acceptedHealthInsurancePlanIds: data.acceptedHealthInsurancePlanIds,
 		paymentMethods: splitList(data.paymentMethods),
 		appointmentConfirmationReminderHoursBefore: Math.min(
 			Math.max(Number(data.appointmentConfirmationReminderHoursBefore || 24), 1),

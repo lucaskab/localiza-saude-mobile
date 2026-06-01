@@ -21,6 +21,8 @@ import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SelectInput } from "@/components/ui/select-input";
+import { useHealthInsurancePlans } from "@/hooks/use-health-insurance-plans";
 import { useAuth } from "@/contexts/auth";
 import {
 	getServiceModalityLabelKey,
@@ -59,7 +61,7 @@ const radiusOptions = ["5", "10", "15", "25", "50"];
 type SearchScreenStoredFilters = {
 	addressFallbackApplied: boolean;
 	city: string;
-	insurance: string;
+	healthInsurancePlanId: string;
 	language: string;
 	locationSource: "device" | "address" | null;
 	maxPrice: string;
@@ -77,7 +79,7 @@ const searchFiltersStorageKey = "customer-search-bottom-sheet-filters";
 const defaultStoredSearchFilters: SearchScreenStoredFilters = {
 	addressFallbackApplied: false,
 	city: "",
-	insurance: "",
+	healthInsurancePlanId: "",
 	language: "",
 	locationSource: null,
 	maxPrice: "",
@@ -96,7 +98,7 @@ function getActiveSearchFilterCount(filters: SearchScreenStoredFilters) {
 	if (filters.selectedCategory !== "all") count += 1;
 	if (filters.serviceModality) count += 1;
 	if (filters.language) count += 1;
-	if (filters.insurance.trim()) count += 1;
+	if (filters.healthInsurancePlanId) count += 1;
 	if (filters.maxPrice.trim()) count += 1;
 	if (filters.radiusInKm !== defaultStoredSearchFilters.radiusInKm) count += 1;
 
@@ -138,7 +140,17 @@ export default function Search() {
 		storedFiltersRef.current.serviceModality,
 	);
 	const [language, setLanguage] = useState(storedFiltersRef.current.language);
-	const [insurance, setInsurance] = useState(storedFiltersRef.current.insurance);
+	const [healthInsurancePlanId, setHealthInsurancePlanId] = useState(
+		storedFiltersRef.current.healthInsurancePlanId,
+	);
+	const { data: healthInsurancePlans = [] } = useHealthInsurancePlans();
+	const healthInsurancePlanOptions = [
+		{ value: "", label: t("search.allHealthInsurancePlans") },
+		...healthInsurancePlans.map((plan) => ({
+			value: plan.id,
+			label: plan.name,
+		})),
+	];
 	const [city, setCity] = useState(storedFiltersRef.current.city);
 	const [neighborhood, setNeighborhood] = useState(storedFiltersRef.current.neighborhood);
 	const [nearMeEnabled, setNearMeEnabled] = useState(
@@ -196,7 +208,7 @@ export default function Search() {
 		specialty: selectedCategoryName || undefined,
 		serviceModality: serviceModality || undefined,
 		language: language || undefined,
-		insurance: insurance.trim() || undefined,
+		healthInsurancePlanId: healthInsurancePlanId || undefined,
 		city: city.trim() || undefined,
 		neighborhood: neighborhood.trim() || undefined,
 		latitude: nearMeEnabled ? nearMeLocation?.latitude : undefined,
@@ -302,7 +314,7 @@ export default function Search() {
 		writeStoredJson(searchFiltersStorageKey, {
 			addressFallbackApplied,
 			city,
-			insurance,
+			healthInsurancePlanId,
 			language,
 			locationSource,
 			maxPrice,
@@ -317,7 +329,7 @@ export default function Search() {
 	}, [
 		addressFallbackApplied,
 		city,
-		insurance,
+		healthInsurancePlanId,
 		language,
 		locationSource,
 		maxPrice,
@@ -364,7 +376,7 @@ export default function Search() {
 		setSelectedCategory(defaultStoredSearchFilters.selectedCategory);
 		setServiceModality(defaultStoredSearchFilters.serviceModality);
 		setLanguage(defaultStoredSearchFilters.language);
-		setInsurance(defaultStoredSearchFilters.insurance);
+		setHealthInsurancePlanId(defaultStoredSearchFilters.healthInsurancePlanId);
 		setCity(defaultStoredSearchFilters.city);
 		setNeighborhood(defaultStoredSearchFilters.neighborhood);
 		setNearMeEnabled(defaultStoredSearchFilters.nearMeEnabled);
@@ -413,7 +425,7 @@ export default function Search() {
 	const activeFilterCount = getActiveSearchFilterCount({
 		addressFallbackApplied,
 		city,
-		insurance,
+		healthInsurancePlanId,
 		language,
 		locationSource,
 		maxPrice,
@@ -512,12 +524,15 @@ export default function Search() {
 					))}
 				</FilterSection>
 				<View style={styles.filterInputGrid}>
-					<Input
-						placeholder={t("common.acceptedInsurance")}
-						value={insurance}
-						onChangeText={setInsurance}
-						containerStyle={styles.filterInput}
-					/>
+					<View style={styles.filterInput}>
+						<SelectInput
+							value={healthInsurancePlanId}
+							onChange={setHealthInsurancePlanId}
+							options={healthInsurancePlanOptions}
+							placeholder={t("search.healthInsurancePlanPlaceholder")}
+							title={t("search.healthInsurancePlanPlaceholder")}
+						/>
+					</View>
 					<Input
 						placeholder={t("common.maxPrice")}
 						value={maxPrice}

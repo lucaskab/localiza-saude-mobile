@@ -236,7 +236,6 @@ export const en = {
     justNow: "Just now",
     keepThisReady: "Keep this ready",
     lastUpdated: "Last Updated",
-    lifestyleNotes: "Lifestyle Notes",
     loadingAppointment: "Loading appointment...",
     loadingAppointments: "Loading appointments...",
     loadingAvailableSlots: "Loading available slots...",
@@ -548,6 +547,7 @@ export const en = {
     topRated: "Top Rated",
     unableToRenderThisPDF: "Unable to render this PDF.",
     upcoming: "Upcoming",
+    upcomingAppointments: "Upcoming appointments",
     validationError: "Validation Error",
     viewDetails: "View Details",
     weCouldNotFindAProviderProfileForThisAccount: "We could not find a provider profile for this account.",
@@ -597,7 +597,6 @@ export const en = {
     failedToSaveProfilePleaseTryAgain: "Failed to save profile. Please try again.",
     failedToSaveSchedulePleaseTryAgain: "Failed to save schedule. Please try again.",
     forPatientName: "For {{patientName}}",
-    lifestyleNotes2: "Lifestyle notes",
     loadingPDF: "Loading PDF...",
     loadingProviders: "Loading providers...",
     markNoShow: "Mark No Show",
@@ -706,6 +705,17 @@ export const en = {
     toastEvolutionNoteCopied: "Previous notes copied into the current evolution note.",
     copyToCurrentEvolutionNote: "Copy to current note",
     appointmentConfirmationReminderHoursBefore: "Early confirmation (hours before)",
+    appointmentConfirmationSettingsTitle: "Appointment confirmation",
+    appointmentConfirmationSettingsDescription:
+      "Choose how many hours before the visit the patient receives push and email asking them to confirm a still scheduled appointment.",
+    appointmentConfirmationSettingsMenuDescription:
+      "Set the deadline for patients to confirm attendance before the visit.",
+    appointmentConfirmationPresetHours: "{{hours}}h before",
+    appointmentConfirmationHoursBeforeLabel: "Custom lead time (hours)",
+    appointmentConfirmationHoursBeforeHint:
+      "Between 1 and 168 hours. The system checks every 15 minutes and sends one notification per appointment.",
+    appointmentConfirmationSettingsSaved: "Confirmation lead time saved successfully.",
+    appointmentConfirmationSettingsSaveFailed: "Could not save the confirmation lead time.",
     appointmentReminderHoursBefore: "Arrival reminder (hours before)",
     choosePreferredLanguage: "Choose the app's preferred language",
     providerAccountSettingsDescription: "Preferences and settings for the provider account",
@@ -832,6 +842,9 @@ export const en = {
     medicalConditions: "Pre-existing conditions",
     medicalSurgeries: "Previous surgeries",
     medicalFamilyHistory: "Family history",
-    medicalLifestyle: "Lifestyle notes",
+  },
+  search: {
+    allHealthInsurancePlans: "All plans",
+    healthInsurancePlanPlaceholder: "Health insurance plan",
   },
 } satisfies LocaleResource;

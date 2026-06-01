@@ -198,7 +198,7 @@ interface UpdateHealthcareProviderData {
 	serviceModalities?: string[];
 	primaryAddress?: import("@/types/address").Address | null;
 	homeCareRadiusKm?: number | null;
-	acceptedInsurance?: string[];
+	acceptedHealthInsurancePlanIds?: string[];
 	paymentMethods?: string[];
 	bookingAvailabilityDays?: number | null;
 	appointmentConfirmationReminderHoursBefore?: number | null;

@@ -53,7 +53,6 @@ const medicalRecordFormSchema = z.object({
 	allergies: medicalTextSchema,
 	surgeries: medicalTextSchema,
 	familyHistory: medicalTextSchema,
-	lifestyleNotes: medicalTextSchema,
 	emergencyContactName: medicalTextSchema,
 	emergencyContactPhone: medicalTextSchema,
 });
@@ -69,7 +68,6 @@ const emptyForm: MedicalRecordFormValues = {
 	allergies: "",
 	surgeries: "",
 	familyHistory: "",
-	lifestyleNotes: "",
 	emergencyContactName: "",
 	emergencyContactPhone: "",
 };
@@ -127,7 +125,6 @@ export default function MedicalRecordScreen() {
 			allergies: record.allergies || "",
 			surgeries: record.surgeries || "",
 			familyHistory: record.familyHistory || "",
-			lifestyleNotes: record.lifestyleNotes || "",
 			emergencyContactName: record.emergencyContactName || "",
 			emergencyContactPhone: record.emergencyContactPhone || "",
 		});
@@ -380,22 +377,6 @@ export default function MedicalRecordScreen() {
 											onChangeText={field.onChange}
 											onBlur={field.onBlur}
 											placeholder={t("common.relevantConditionsInCloseRelatives")}
-										/>
-									)}
-								/>
-							</View>
-
-							<View style={styles.section}>
-								<FieldLabel icon={HeartPulse} label={t("common.lifestyleNotes2")} />
-								<Controller
-									control={control}
-									name="lifestyleNotes"
-									render={({ field }) => (
-										<Textarea
-											value={field.value}
-											onChangeText={field.onChange}
-											onBlur={field.onBlur}
-											placeholder={t("common.sleepExerciseSmokingAlcoholDietOrOtherNotes")}
 										/>
 									)}
 								/>
